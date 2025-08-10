@@ -1,0 +1,22 @@
+/* AVIF Local Support admin styles */
+.avif-local-support-tab { margin-top: 16px; }
+.avif-local-support-tab:not(.active) { display: none; }
+.postbox .inside { display: block; }
+
+/* Align labels and inputs a bit nicer in Settings API tables */
+.form-table th { width: 260px; }
+
+/* Simple progress bar */
+.avif-local-support-progress {
+  width: 320px;
+  height: 8px;
+  background: #e5e5e5;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.avif-local-support-progress-fill {
+  height: 100%;
+  background: #2271b1;
+  width: 0%;
+}
+

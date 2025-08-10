@@ -1,0 +1,309 @@
+# Copyright (C) 2025 David Degner
+# This file is distributed under the GPL v2 or later.
+msgid ""
+msgstr ""
+"Project-Id-Version: AVIF Local Support 0.1.0\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/avif-local-support\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: Spanish\n"
+"Language: es_ES\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2025-08-10T19:41:23+00:00\n"
+"PO-Revision-Date: 2025-08-10 00:00+0000\n"
+"X-Generator: Cursor\n"
+"X-Domain: avif-local-support\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#. Plugin Name of the plugin
+#: avif-local-support.php
+#: includes/class-avif-suite.php:66
+#: includes/class-avif-suite.php:67
+#: includes/class-avif-suite.php:296
+msgid "AVIF Support"
+msgstr "AVIF Support"
+
+#. Plugin URI of the plugin
+#: avif-suite.php
+msgid "https://github.com/daviddegner"
+msgstr "https://github.com/daviddegner"
+
+#. Description of the plugin
+#: avif-suite.php
+msgid "Unified AVIF support and conversion. Local-first processing with a strong focus on image quality when converting JPEGs."
+msgstr "Compatibilidad y conversión AVIF unificadas. Procesamiento local prioritario con gran enfoque en la calidad de imagen al convertir JPEG."
+
+#. Author of the plugin
+#: avif-suite.php
+msgid "David Degner"
+msgstr "David Degner"
+
+#. Author URI of the plugin
+#: avif-suite.php
+msgid "https://www.DavidDegner.com"
+msgstr "https://www.DavidDegner.com"
+
+#: includes/class-avif-suite.php:144
+msgid "Serve AVIF images"
+msgstr "Servir imágenes AVIF"
+
+#: includes/class-avif-suite.php:149
+msgid "Add AVIF sources to JPEG images on the front end"
+msgstr "Añadir fuentes AVIF a las imágenes JPEG en el frontend"
+
+#: includes/class-avif-suite.php:166
+msgid "Convert on upload"
+msgstr "Convertir al subir"
+
+#: includes/class-avif-suite.php:171
+msgid "Recommended; may slow uploads on some servers"
+msgstr "Recomendado; puede ralentizar las subidas en algunos servidores"
+
+#: includes/class-avif-suite.php:181
+msgid "Daily conversion"
+msgstr "Conversión diaria"
+
+#: includes/class-avif-suite.php:187
+msgid "Scan daily and convert missing AVIFs"
+msgstr "Analizar diariamente y convertir los AVIF faltantes"
+
+#: includes/class-avif-suite.php:189
+msgid "Time (24h):"
+msgstr "Hora (24 h):"
+
+#: includes/class-avif-suite.php:199
+msgid "Quality (0–100)"
+msgstr "Calidad (0–100)"
+
+#: includes/class-avif-suite.php:204
+msgid "Higher = better quality and larger files."
+msgstr "Más alto = mayor calidad y archivos más grandes."
+
+#: includes/class-avif-suite.php:214
+msgid "Speed (0–10)"
+msgstr "Velocidad (0–10)"
+
+#: includes/class-avif-suite.php:220
+msgid "Lower = smaller files (slower). Higher = faster (larger files)."
+msgstr "Más bajo = archivos más pequeños (más lento). Más alto = más rápido (archivos más grandes)."
+
+#: includes/class-avif-suite.php:230
+msgid "Keep metadata (EXIF/XMP/IPTC)"
+msgstr "Conservar metadatos (EXIF/XMP/IPTC)"
+
+#: includes/class-avif-suite.php:235
+#: includes/class-avif-suite.php:251
+msgid "When possible (ImageMagick required)."
+msgstr "Cuando sea posible (requiere ImageMagick)."
+
+#: includes/class-avif-suite.php:246
+msgid "Keep color profile (ICC)"
+msgstr "Conservar perfil de color (ICC)"
+
+#: includes/class-avif-suite.php:262
+msgid "Avoid double-resizing"
+msgstr "Evitar el doble redimensionado"
+
+#: includes/class-avif-suite.php:267
+msgid "Use original/-scaled as the source when converting resized JPEGs."
+msgstr "Usar original/-scaled como fuente al convertir JPEG redimensionados."
+
+#: includes/class-avif-suite.php:292
+msgid "You do not have permission to access this page."
+msgstr "No tienes permisos para acceder a esta página."
+
+#: includes/class-avif-suite.php:299
+msgid "AVIF support not available!"
+msgstr "¡Compatibilidad con AVIF no disponible!"
+
+#: includes/class-avif-suite.php:300
+msgid "This plugin requires either GD with AVIF support (imageavif) or ImageMagick with AVIF format support."
+msgstr "Este plugin requiere GD con compatibilidad AVIF (imageavif) o ImageMagick con compatibilidad para el formato AVIF."
+
+#: includes/class-avif-suite.php:305
+#: includes/class-avif-suite.php:315
+#: includes/class-avif-suite.php:551
+msgid "Settings"
+msgstr "Ajustes"
+
+#: includes/class-avif-suite.php:306
+msgid "Tools"
+msgstr "Herramientas"
+
+#: includes/class-avif-suite.php:307
+#: includes/class-avif-suite.php:376
+msgid "Status"
+msgstr "Estado"
+
+#: includes/class-avif-suite.php:308
+#: includes/class-avif-suite.php:454
+msgid "About"
+msgstr "Acerca de"
+
+#: includes/class-avif-suite.php:331
+msgid "Convert missing AVIFs"
+msgstr "Convertir AVIF faltantes"
+
+#: includes/class-avif-suite.php:333
+msgid "Scan the Media Library and convert JPEGs that are missing AVIFs."
+msgstr "Analiza la Biblioteca de medios y convierte los JPEG que no tengan AVIF."
+
+#: includes/class-avif-suite.php:335
+msgid "Convert now"
+msgstr "Convertir ahora"
+
+#: includes/class-avif-suite.php:341
+#: includes/class-avif-suite.php:421
+msgid "JPEG files"
+msgstr "Archivos JPEG"
+
+#: includes/class-avif-suite.php:342
+#: includes/class-avif-suite.php:422
+msgid "AVIF files"
+msgstr "Archivos AVIF"
+
+#: includes/class-avif-suite.php:343
+#: includes/class-avif-suite.php:423
+msgid "Missing AVIFs"
+msgstr "AVIF faltantes"
+
+#: includes/class-avif-suite.php:350
+msgid "Test conversion"
+msgstr "Probar conversión"
+
+#: includes/class-avif-suite.php:352
+msgid "Upload a JPEG to preview resized images and the AVIFs generated by your current settings. The file is added to the Media Library."
+msgstr "Sube un JPEG para previsualizar las imágenes redimensionadas y los AVIF generados por tus ajustes actuales. El archivo se añade a la Biblioteca de medios."
+
+#: includes/class-avif-suite.php:357
+msgid "Convert"
+msgstr "Convertir"
+
+#: includes/class-avif-suite.php:367
+msgid "Test results for attachment:"
+msgstr "Resultados de la prueba para el adjunto:"
+
+#: includes/class-avif-suite.php:370
+msgid "Size"
+msgstr "Tamaño"
+
+#: includes/class-avif-suite.php:371
+msgid "Dimensions"
+msgstr "Dimensiones"
+
+#: includes/class-avif-suite.php:372
+msgid "JPEG"
+msgstr "JPEG"
+
+#: includes/class-avif-suite.php:373
+msgid "JPEG size"
+msgstr "Tamaño JPEG"
+
+#: includes/class-avif-suite.php:374
+msgid "AVIF"
+msgstr "AVIF"
+
+#: includes/class-avif-suite.php:375
+msgid "AVIF size"
+msgstr "Tamaño AVIF"
+
+#: includes/class-avif-suite.php:389
+msgid "Converted"
+msgstr "Convertido"
+
+#: includes/class-avif-suite.php:389
+msgid "Not created"
+msgstr "No creado"
+
+#: includes/class-avif-suite.php:394
+#: includes/class-avif-suite.php:396
+msgid "View"
+msgstr "Ver"
+
+#: includes/class-avif-suite.php:417
+msgid "Library AVIF coverage"
+msgstr "Cobertura AVIF de la biblioteca"
+
+#: includes/class-avif-suite.php:419
+msgid "Overview of JPEGs with and without AVIFs."
+msgstr "Resumen de JPEG con y sin AVIF."
+
+#: includes/class-avif-suite.php:424
+msgid "Rescan"
+msgstr "Volver a analizar"
+
+#: includes/class-avif-suite.php:431
+msgid "Server support"
+msgstr "Compatibilidad del servidor"
+
+#: includes/class-avif-suite.php:433
+msgid "Server capabilities for AVIF conversion."
+msgstr "Capacidades del servidor para la conversión AVIF."
+
+#: includes/class-avif-suite.php:436
+msgid "PHP Version"
+msgstr "Versión de PHP"
+
+#: includes/class-avif-suite.php:437
+msgid "WordPress Version"
+msgstr "Versión de WordPress"
+
+#: includes/class-avif-suite.php:438
+msgid "GD Extension"
+msgstr "Extensión GD"
+
+#: includes/class-avif-suite.php:438
+#: includes/class-avif-suite.php:439
+#: includes/class-avif-suite.php:440
+#: includes/class-avif-suite.php:441
+msgid "Available"
+msgstr "Disponible"
+
+#: includes/class-avif-suite.php:438
+#: includes/class-avif-suite.php:439
+#: includes/class-avif-suite.php:440
+#: includes/class-avif-suite.php:441
+msgid "Not available"
+msgstr "No disponible"
+
+#: includes/class-avif-suite.php:439
+msgid "GD AVIF Support"
+msgstr "Compatibilidad AVIF de GD"
+
+#: includes/class-avif-suite.php:440
+msgid "ImageMagick (Imagick)"
+msgstr "ImageMagick (Imagick)"
+
+#: includes/class-avif-suite.php:441
+msgid "ImageMagick AVIF Support"
+msgstr "Compatibilidad AVIF de ImageMagick"
+
+#: includes/class-avif-suite.php:442
+msgid "Preferred method"
+msgstr "Método preferido"
+
+#: includes/class-avif-suite.php:443
+msgid "AVIF supported"
+msgstr "AVIF compatible"
+
+#: includes/class-avif-suite.php:443
+msgid "Yes"
+msgstr "Sí"
+
+#: includes/class-avif-suite.php:443
+msgid "No"
+msgstr "No"
+
+#: includes/class-avif-suite.php:462
+msgid "Unable to read readme.txt."
+msgstr "No se puede leer readme.txt."
+
+#: includes/class-avif-suite.php:465
+msgid "README not found."
+msgstr "No se encontró el README."
+
+#: includes/class-avif-suite.php:480
+#: includes/class-avif-suite.php:508
+msgid "You do not have permission to do this."
+msgstr "No tienes permisos para hacer esto."

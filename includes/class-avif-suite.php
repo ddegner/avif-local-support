@@ -185,9 +185,8 @@ final class Plugin
                 echo '<label for="avif_local_support_convert_via_schedule">'
                     . '<input id="avif_local_support_convert_via_schedule" type="checkbox" name="avif_local_support_convert_via_schedule" value="1" ' . checked(true, $enabled, false) . ' /> '
                     . esc_html__('Scan daily and convert missing AVIFs', 'avif-local-support')
-                    . '</label>';
-                echo '<br><label for="avif_local_support_schedule_time">' . esc_html__('Time (24h):', 'avif-local-support') . ' '
-                    . '<input id="avif_local_support_schedule_time" type="time" name="avif_local_support_schedule_time" value="' . \esc_attr($time) . '" /></label>';
+                    . '</label> ';
+                echo '<input id="avif_local_support_schedule_time" type="time" name="avif_local_support_schedule_time" value="' . \esc_attr($time) . '" aria-label="' . esc_attr__('Time', 'avif-local-support') . '" />';
             },
             'avif-local-support',
             'avif_local_support_conversion',

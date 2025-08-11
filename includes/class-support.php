@@ -59,36 +59,7 @@ final class Support
         if (!str_contains($content, '<img')) {
             return $content;
         }
-
-        $html = '<?xml encoding="utf-8" ?>' . $content;
-        $dom = new \DOMDocument();
-        \libxml_use_internal_errors(true);
-        if (!$dom->loadHTML($html, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD)) {
-            \libxml_clear_errors();
-            return $content;
-        }
-        \libxml_clear_errors();
-
-        $imgs = $dom->getElementsByTagName('img');
-        // Because NodeList is live, collect first
-        $toProcess = [];
-        foreach ($imgs as $img) { $toProcess[] = $img; }
-        foreach ($toProcess as $img) {
-            if (!($img instanceof \DOMElement)) { continue; }
-            // Skip if already inside a <picture>
-            if ($this->isInsidePicture($img)) { continue; }
-            $src = (string) $img->getAttribute('src');
-            $avifUrl = $this->avifUrlFor($src);
-            if (!$avifUrl) { continue; }
-            // Build AVIF srcset
-            $srcset = (string) $img->getAttribute('srcset');
-            $sizes = (string) $img->getAttribute('sizes');
-            $avifSrcset = $srcset !== '' ? $this->convertSrcsetToAvif($srcset) : $avifUrl;
-            $this->wrapImgNodeToPicture($dom, $img, $avifSrcset, $sizes);
-        }
-
-        $out = $dom->saveHTML();
-        return \is_string($out) && $out !== '' ? $out : $content;
+        return $this->wrapHtmlImages($content);
     }
 
     public function renderBlock(string $block_content, array $block): string
@@ -100,33 +71,7 @@ final class Support
         if ($block_content === '' || strpos($block_content, '<img') === false) {
             return $block_content;
         }
-
-        $html = '<?xml encoding="utf-8" ?>' . $block_content;
-        $dom = new \DOMDocument();
-        \libxml_use_internal_errors(true);
-        if (!$dom->loadHTML($html, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD)) {
-            \libxml_clear_errors();
-            return $block_content;
-        }
-        \libxml_clear_errors();
-
-        $imgs = $dom->getElementsByTagName('img');
-        $toProcess = [];
-        foreach ($imgs as $img) { $toProcess[] = $img; }
-        foreach ($toProcess as $img) {
-            if (!($img instanceof \DOMElement)) { continue; }
-            if ($this->isInsidePicture($img)) { continue; }
-            $src = (string) $img->getAttribute('src');
-            $avifUrl = $this->avifUrlFor($src);
-            if (!$avifUrl) { continue; }
-            $srcset = (string) $img->getAttribute('srcset');
-            $sizes = (string) $img->getAttribute('sizes');
-            $avifSrcset = $srcset !== '' ? $this->convertSrcsetToAvif($srcset) : $avifUrl;
-            $this->wrapImgNodeToPicture($dom, $img, $avifSrcset, $sizes);
-        }
-
-        $out = $dom->saveHTML();
-        return \is_string($out) && $out !== '' ? $out : $block_content;
+        return $this->wrapHtmlImages($block_content);
     }
 
     private function avifUrlFor(string $jpegUrl): ?string
@@ -226,6 +171,36 @@ final class Support
         $picture->appendChild($source);
         $img->parentNode?->replaceChild($picture, $img);
         $picture->appendChild($img);
+    }
+
+    private function wrapHtmlImages(string $htmlInput): string
+    {
+        $html = '<?xml encoding="utf-8" ?>' . $htmlInput;
+        $dom = new \DOMDocument();
+        \libxml_use_internal_errors(true);
+        if (!$dom->loadHTML($html, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD)) {
+            \libxml_clear_errors();
+            return $htmlInput;
+        }
+        \libxml_clear_errors();
+
+        $imgs = $dom->getElementsByTagName('img');
+        $toProcess = [];
+        foreach ($imgs as $img) { $toProcess[] = $img; }
+        foreach ($toProcess as $img) {
+            if (!($img instanceof \DOMElement)) { continue; }
+            if ($this->isInsidePicture($img)) { continue; }
+            $src = (string) $img->getAttribute('src');
+            $avifUrl = $this->avifUrlFor($src);
+            if (!$avifUrl) { continue; }
+            $srcset = (string) $img->getAttribute('srcset');
+            $sizes = (string) $img->getAttribute('sizes');
+            $avifSrcset = $srcset !== '' ? $this->convertSrcsetToAvif($srcset) : $avifUrl;
+            $this->wrapImgNodeToPicture($dom, $img, $avifSrcset, $sizes);
+        }
+
+        $out = $dom->saveHTML();
+        return \is_string($out) && $out !== '' ? $out : $htmlInput;
     }
 
     public function saveCache(): void

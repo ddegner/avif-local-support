@@ -17,8 +17,8 @@ final class Support
         $this->uploadsInfo = \wp_upload_dir();
         $this->fileCache = \get_transient('avif_local_support_file_cache') ?: [];
         add_filter('wp_get_attachment_image', [$this, 'wrapAttachment'], 10, 5);
-        add_filter('the_content', [$this, 'wrapContentImages']);
-        add_filter('post_thumbnail_html', [$this, 'wrapContentImages']);
+        add_filter('wp_content_img_tag', [$this, 'wrapContentImgTag'], 10, 3);
+        add_filter('post_thumbnail_html', [$this, 'wrapSingleImageHtml'], 10, 1);
         add_action('shutdown', [$this, 'saveCache']);
     }
 
@@ -50,76 +50,75 @@ final class Support
         return $this->pictureMarkup($html, $avifSrc, $avifSrcset, $sizes);
     }
 
-    public function wrapContentImages(string $content): string
+    public function wrapContentImgTag(string $html, string $context, int $attachmentId): string
     {
         if (\is_admin() || \wp_doing_ajax() || (\defined('REST_REQUEST') && REST_REQUEST)) {
-            return $content;
+            return $html;
         }
-        if (!str_contains($content, '<img')) {
-            return $content;
+        if ($html === '' || !str_contains($html, '<img')) {
+            return $html;
         }
-
-        $uploadsUrl = $this->uploadsInfo['baseurl'] ?? '';
-        if (!$uploadsUrl) {
-            return $content;
+        if (str_contains($html, '<picture') || str_contains($html, 'type="image/avif"')) {
+            return $html;
         }
 
-        $pattern = sprintf(
-            '/<img\s+([^>]*?)src=["\'](%s[^"\']*?\.(?:jpe?g|JPE?G)(?:\?[^"\']*)?)["\']([^>]*?)>/i',
-            preg_quote($uploadsUrl, '/')
-        );
-
-        if (!preg_match_all($pattern, $content, $matches, PREG_OFFSET_CAPTURE)) {
-            return $content;
+        if (!preg_match('/src=["\']([^"\']+)["\']/', $html, $srcMatch)) {
+            return $html;
+        }
+        $src = $srcMatch[1];
+        if (!$this->isUploadsImage($src)) {
+            return $html;
         }
 
-        $lastPos = 0;
-        $out = '';
-        $total = count($matches[0]);
-        for ($i = 0; $i < $total; $i++) {
-            $fullTag = $matches[0][$i][0];
-            $start = $matches[0][$i][1];
-            $length = strlen($fullTag);
-            $src = $matches[2][$i][0];
+        $avifSrc = $this->avifUrlFor($src);
+        if (!$avifSrc) {
+            return $html;
+        }
 
-            // Determine if this <img> is inside an existing <picture>
-            $insidePicture = false;
-            $before = substr($content, 0, $start);
-            $lastPictureStart = strripos($before, '<picture');
-            if ($lastPictureStart !== false) {
-                $closingPos = stripos($content, '</picture>', $lastPictureStart);
-                if ($closingPos === false || $closingPos > $start) {
-                    $insidePicture = true;
-                }
+        $avifSrcset = $avifSrc;
+        if (preg_match('/srcset=["\']([^"\']*)["\']/', $html, $srcsetMatches)) {
+            $converted = $this->convertSrcsetToAvif($srcsetMatches[1]);
+            if ($converted) {
+                $avifSrcset = $converted;
             }
-
-            $replacement = $fullTag;
-            if (!$insidePicture) {
-                $avifSrc = $this->avifUrlFor($src);
-                if ($avifSrc) {
-                    $avifSrcset = $avifSrc;
-                    if (preg_match('/srcset=["\']([^"\']*)["\']/', $fullTag, $srcsetMatches)) {
-                        $converted = $this->convertSrcsetToAvif($srcsetMatches[1]);
-                        if ($converted) {
-                            $avifSrcset = $converted;
-                        }
-                    }
-
-                    $sizes = '';
-                    if (preg_match('/sizes=["\']([^"\']*)["\']/', $fullTag, $sizesMatches)) {
-                        $sizes = $sizesMatches[1];
-                    }
-
-                    $replacement = $this->pictureMarkup($fullTag, $avifSrc, $avifSrcset, $sizes);
-                }
-            }
-
-            $out .= substr($content, $lastPos, $start - $lastPos) . $replacement;
-            $lastPos = $start + $length;
         }
-        $out .= substr($content, $lastPos);
 
-        return $out;
+        $sizes = '';
+        if (preg_match('/sizes=["\']([^"\']*)["\']/', $html, $sizesMatches)) {
+            $sizes = $sizesMatches[1];
+        }
+
+        return $this->pictureMarkup($html, $avifSrc, $avifSrcset, $sizes);
+    }
+
+    public function wrapSingleImageHtml(string $html): string
+    {
+        if ($html === '' || str_contains($html, '<picture') || str_contains($html, 'type="image/avif"')) {
+            return $html;
+        }
+        if (!preg_match('/src=["\']([^"\']+)["\']/', $html, $srcMatch)) {
+            return $html;
+        }
+        $src = $srcMatch[1];
+        if (!$this->isUploadsImage($src)) {
+            return $html;
+        }
+        $avifSrc = $this->avifUrlFor($src);
+        if (!$avifSrc) {
+            return $html;
+        }
+        $avifSrcset = $avifSrc;
+        if (preg_match('/srcset=["\']([^"\']*)["\']/', $html, $srcsetMatches)) {
+            $converted = $this->convertSrcsetToAvif($srcsetMatches[1]);
+            if ($converted) {
+                $avifSrcset = $converted;
+            }
+        }
+        $sizes = '';
+        if (preg_match('/sizes=["\']([^"\']*)["\']/', $html, $sizesMatches)) {
+            $sizes = $sizesMatches[1];
+        }
+        return $this->pictureMarkup($html, $avifSrc, $avifSrcset, $sizes);
     }
 
     private function avifUrlFor(string $jpegUrl): ?string

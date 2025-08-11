@@ -43,8 +43,8 @@ final class Converter
             $time = '01:00';
         }
         [$hour, $minute] = array_map('intval', explode(':', $time));
-        $now = (int) current_time('timestamp', true);
-        // Use DateTime with site timezone and compare using GMT epoch for correctness
+        $now = (int) current_time('timestamp');
+        // Use DateTime with site timezone for comparisons aligned to server time
         $tz = wp_timezone();
         $dt = new \DateTimeImmutable('@' . $now);
         $dt = $dt->setTimezone($tz);

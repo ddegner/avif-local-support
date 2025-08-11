@@ -88,22 +88,8 @@ final class Converter
         $uploadDir = \wp_upload_dir();
         $baseDir = \trailingslashit($uploadDir['basedir'] ?? '');
 
-        // Convert original
-        if (!empty($metadata['file'])) {
-            $originalPath = $baseDir . $metadata['file'];
-            $this->maybeConvertPathToAvif($originalPath);
-        }
-
-        // Convert sizes
-        if (!empty($metadata['sizes']) && \is_array($metadata['sizes'])) {
-            $relativeDir = $this->dirname($metadata['file'] ?? '');
-            foreach ($metadata['sizes'] as $sizeName => $sizeData) {
-                if (!empty($sizeData['file'])) {
-                    $sizePath = $baseDir . \trailingslashit($relativeDir) . $sizeData['file'];
-                    $this->maybeConvertPathToAvif($sizePath);
-                }
-            }
-        }
+        // De-duped: convert original and sizes via shared helper
+        $this->convertFromMetadata($metadata, $baseDir);
 
         return $metadata;
     }
@@ -122,11 +108,11 @@ final class Converter
         if (!$hasAllowedMime && !$hasJpegExt) {
             return $file;
         }
-        $this->maybeConvertPathToAvif($path);
+        $this->checkMissingAvif($path);
         return $file;
     }
 
-    private function maybeConvertPathToAvif(string $path): void
+    private function checkMissingAvif(string $path): void
     {
         if ($path === '' || !file_exists($path)) {
             return;
@@ -141,10 +127,10 @@ final class Converter
 
         // Determine better source based on WordPress logic (if enabled)
         [$sourcePath, $targetDimensions] = $this->getConversionData($path);
-        $this->convertToAvifAdvanced($sourcePath, $avifPath, $targetDimensions);
+        $this->convertToAvif($sourcePath, $avifPath, $targetDimensions);
     }
 
-    private function convertToAvifAdvanced(string $sourcePath, string $avifPath, ?array $targetDimensions): void
+    private function convertToAvif(string $sourcePath, string $avifPath, ?array $targetDimensions): void
     {
         $quality = max(0, min(100, (int) get_option('avif_local_support_quality', 85)));
         $speedSetting = max(0, min(10, (int) get_option('avif_local_support_speed', 1)));
@@ -342,11 +328,25 @@ final class Converter
         return [$sourcePath, $target];
     }
 
-    // Minimal helper as PHP has no dirname for relative-within metadata conveniently
-    private function dirname(string $path): string
+    /**
+     * Shared: Convert original and generated size JPEGs found in attachment metadata.
+     */
+    private function convertFromMetadata(array $metadata, string $baseDir): void
     {
-        $pos = strrpos($path, '/');
-        return $pos === false ? '' : substr($path, 0, $pos);
+        if (!empty($metadata['file']) && \is_string($metadata['file'])) {
+            $originalPath = $baseDir . $metadata['file'];
+            $this->checkMissingAvif($originalPath);
+        }
+        if (!empty($metadata['sizes']) && \is_array($metadata['sizes'])) {
+            $relativeDir = pathinfo((string) ($metadata['file'] ?? ''), PATHINFO_DIRNAME);
+            if ($relativeDir === '.' || $relativeDir === DIRECTORY_SEPARATOR) { $relativeDir = ''; }
+            foreach ($metadata['sizes'] as $sizeData) {
+                if (!empty($sizeData['file'])) {
+                    $sizePath = $baseDir . \trailingslashit($relativeDir) . $sizeData['file'];
+                    $this->checkMissingAvif($sizePath);
+                }
+            }
+        }
     }
 
     // Optional: WP-CLI bulk conversion
@@ -372,7 +372,7 @@ final class Converter
             }
             $path = get_attached_file($attachmentId);
             if ($path) {
-                $this->maybeConvertPathToAvif($path);
+                $this->checkMissingAvif($path);
             }
             $meta = wp_get_attachment_metadata($attachmentId);
             if ($meta) {
@@ -393,19 +393,9 @@ final class Converter
         }
         $uploadDir = \wp_upload_dir();
         $baseDir = \trailingslashit($uploadDir['basedir'] ?? '');
-        if (!empty($metadata['file'])) {
-            $originalPath = $baseDir . $metadata['file'];
-            $this->maybeConvertPathToAvif($originalPath);
-        }
-        if (!empty($metadata['sizes']) && \is_array($metadata['sizes'])) {
-            $relativeDir = $this->dirname($metadata['file'] ?? '');
-            foreach ($metadata['sizes'] as $sizeName => $sizeData) {
-                if (!empty($sizeData['file'])) {
-                    $sizePath = $baseDir . \trailingslashit($relativeDir) . $sizeData['file'];
-                    $this->maybeConvertPathToAvif($sizePath);
-                }
-            }
-        }
+
+        // De-duped: convert original and sizes via shared helper
+        $this->convertFromMetadata($metadata, $baseDir);
     }
 
     /**
@@ -440,7 +430,8 @@ final class Converter
         } elseif ($originalAbs !== '' && str_starts_with($originalAbs, $baseDir)) {
             $originalRel = ltrim(substr($originalAbs, strlen($baseDir)), '/');
         }
-        $dirRel = $this->dirname($originalRel);
+        $dirRel = pathinfo($originalRel, PATHINFO_DIRNAME);
+        if ($dirRel === '.' || $dirRel === DIRECTORY_SEPARATOR) { $dirRel = ''; }
 
         $addRow = function (string $label, string $jpegAbs, string $jpegRel, ?int $width, ?int $height) use (&$results, $baseUrl): void {
             $avifAbs = (string) preg_replace('/\.(jpe?g)$/i', '.avif', $jpegAbs);
@@ -481,7 +472,7 @@ final class Converter
 
         // Perform conversion for each row using the same pipeline
         foreach ($results['sizes'] as &$row) {
-            $this->maybeConvertPathToAvif($row['jpeg_path']);
+            $this->checkMissingAvif($row['jpeg_path']);
             $row['converted'] = file_exists($row['avif_path']);
             // Refresh sizes after conversion
             $row['jpeg_size'] = file_exists($row['jpeg_path']) ? (int) filesize($row['jpeg_path']) : 0;

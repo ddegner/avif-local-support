@@ -608,7 +608,8 @@ final class Plugin
             $meta = wp_get_attachment_metadata($attachmentId);
             if (!empty($meta['file'])) {
                 $relative = (string) $meta['file'];
-                $dir = $this->dirname($relative);
+                $dir = pathinfo($relative, PATHINFO_DIRNAME);
+                if ($dir === '.' || $dir === DIRECTORY_SEPARATOR) { $dir = ''; }
                 if (!empty($meta['sizes']) && is_array($meta['sizes'])) {
                     foreach ($meta['sizes'] as $size) {
                         if (empty($size['file'])) { continue; }
@@ -627,13 +628,6 @@ final class Plugin
             'existing_avifs' => $existing,
             'missing_avifs' => $missing,
         ];
-    }
-
-    // Minimal helper to get directory of a relative path like "2025/07/file.jpg"
-    private function dirname(string $path): string
-    {
-        $pos = strrpos($path, '/');
-        return $pos === false ? '' : substr($path, 0, $pos);
     }
 
     /**

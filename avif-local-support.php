@@ -12,7 +12,7 @@ declare(strict_types=1);
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Requires at least: 6.5
- * Requires PHP: 8.3
+ * Requires PHP: 8.0
  * Text Domain: avif-local-support
  * Domain Path: /languages
  */
@@ -50,26 +50,6 @@ add_action('init', 'avif_local_support_init');
 // Activation / Deactivation / Uninstall
 function avif_local_support_activate(): void
 {
-    // Migrate existing options from old slug if present
-    $map = [
-        'enable_support', 'convert_on_upload', 'quality', 'speed', 'preserve_metadata',
-        'preserve_color_profile', 'wordpress_logic', 'cache_duration', 'convert_via_schedule', 'schedule_time'
-    ];
-    foreach ($map as $suffix) {
-        // migrate avif_suite_* -> avif_local_support_*
-        $oldKey1 = 'avif_suite_' . $suffix;
-        $newKey = 'avif_local_support_' . $suffix;
-        if (get_option($newKey, null) === null) {
-            $oldVal1 = get_option($oldKey1, null);
-            if ($oldVal1 !== null) { add_option($newKey, $oldVal1); }
-        }
-        // migrate avif_support_* (intermediate) -> avif_local_support_*
-        $oldKey2 = 'avif_support_' . $suffix;
-        if (get_option($newKey, null) === null) {
-            $oldVal2 = get_option($oldKey2, null);
-            if ($oldVal2 !== null) { add_option($newKey, $oldVal2); }
-        }
-    }
     // Ensure defaults
     add_option('avif_local_support_enable_support', true);
     add_option('avif_local_support_convert_on_upload', true);
@@ -91,11 +71,11 @@ function avif_local_support_deactivate(): void
         \wp_clear_scheduled_hook('avif_local_support_run_on_demand');
     } else {
         $timestamp = \wp_next_scheduled('avif_local_support_daily_event');
-        if ($timestamp) {
+        if ($timestamp && \wp_get_schedule('avif_local_support_daily_event')) {
             \wp_unschedule_event($timestamp, 'avif_local_support_daily_event');
         }
         $timestamp = \wp_next_scheduled('avif_local_support_run_on_demand');
-        if ($timestamp) {
+        if ($timestamp && \wp_get_schedule('avif_local_support_run_on_demand')) {
             \wp_unschedule_event($timestamp, 'avif_local_support_run_on_demand');
         }
     }
@@ -107,12 +87,23 @@ register_uninstall_hook(__FILE__, 'avif_local_support_uninstall');
 
 function avif_local_support_uninstall(): void
 {
-    delete_option('avif_local_support_enable_support');
-    delete_option('avif_local_support_convert_on_upload');
-    delete_option('avif_local_support_quality');
-    delete_option('avif_local_support_speed');
-    delete_option('avif_local_support_preserve_metadata');
-    delete_option('avif_local_support_preserve_color_profile');
-    delete_option('avif_local_support_wordpress_logic');
-    delete_option('avif_local_support_cache_duration');
+    // Delete only options created by this plugin
+    $options = [
+        'avif_local_support_enable_support',
+        'avif_local_support_convert_on_upload',
+        'avif_local_support_convert_via_schedule',
+        'avif_local_support_schedule_time',
+        'avif_local_support_quality',
+        'avif_local_support_speed',
+        'avif_local_support_preserve_metadata',
+        'avif_local_support_preserve_color_profile',
+        'avif_local_support_wordpress_logic',
+        'avif_local_support_cache_duration',
+    ];
+
+    foreach ($options as $option) {
+        if (\get_option($option) !== false) {
+            \delete_option($option);
+        }
+    }
 }

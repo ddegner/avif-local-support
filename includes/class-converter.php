@@ -53,8 +53,18 @@ final class Converter
             ? $targetToday->modify('+1 day')
             : $targetToday;
         $next = $nextDt->getTimestamp();
-        if (!\wp_next_scheduled('avif_local_support_daily_event')) {
+        $existing = \wp_next_scheduled('avif_local_support_daily_event');
+        if ($existing === false) {
             \wp_schedule_event($next, 'daily', 'avif_local_support_daily_event');
+        } else {
+            if (abs((int) $existing - (int) $next) > 60) {
+                if (function_exists('wp_clear_scheduled_hook')) {
+                    \wp_clear_scheduled_hook('avif_local_support_daily_event');
+                } else {
+                    \wp_unschedule_event((int) $existing, 'avif_local_support_daily_event');
+                }
+                \wp_schedule_event($next, 'daily', 'avif_local_support_daily_event');
+            }
         }
     }
 
@@ -104,11 +114,15 @@ final class Converter
         if (!$convertOnUpload) {
             return $file;
         }
-        $type = $file['type'] ?? '';
-        if (!\is_string($type) || stripos($type, 'image/jpeg') === false) {
+        $type = isset($file['type']) && \is_string($file['type']) ? strtolower($file['type']) : '';
+        $path = isset($file['file']) && \is_string($file['file']) ? $file['file'] : '';
+        $allowedMimes = ['image/jpeg', 'image/jpg', 'image/pjpeg'];
+        $hasAllowedMime = \in_array($type, $allowedMimes, true);
+        $hasJpegExt = $path !== '' && \preg_match('/\.(jpe?g)$/i', $path) === 1;
+        if (!$hasAllowedMime && !$hasJpegExt) {
             return $file;
         }
-        $this->maybeConvertPathToAvif($file['file']);
+        $this->maybeConvertPathToAvif($path);
         return $file;
     }
 

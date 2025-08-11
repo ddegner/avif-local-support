@@ -19,6 +19,7 @@ final class Support
         add_filter('wp_get_attachment_image', [$this, 'wrapAttachment'], 10, 5);
         add_filter('the_content', [$this, 'wrapContentImages']);
         add_filter('post_thumbnail_html', [$this, 'wrapContentImages']);
+        add_filter('render_block', [$this, 'renderBlock'], 10, 2);
         add_action('shutdown', [$this, 'saveCache']);
     }
 
@@ -58,57 +59,102 @@ final class Support
         if (!str_contains($content, '<img')) {
             return $content;
         }
-        if (str_contains($content, '<picture') || str_contains($content, 'type="image/avif"')) {
+
+        $html = '<?xml encoding="utf-8" ?>' . $content;
+        $dom = new \DOMDocument();
+        \libxml_use_internal_errors(true);
+        if (!$dom->loadHTML($html, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD)) {
+            \libxml_clear_errors();
             return $content;
         }
+        \libxml_clear_errors();
 
-        $uploadsUrl = $this->uploadsInfo['baseurl'] ?? '';
-        if (!$uploadsUrl) {
-            return $content;
+        $imgs = $dom->getElementsByTagName('img');
+        // Because NodeList is live, collect first
+        $toProcess = [];
+        foreach ($imgs as $img) { $toProcess[] = $img; }
+        foreach ($toProcess as $img) {
+            if (!($img instanceof \DOMElement)) { continue; }
+            // Skip if already inside a <picture>
+            if ($this->isInsidePicture($img)) { continue; }
+            $src = (string) $img->getAttribute('src');
+            $avifUrl = $this->avifUrlFor($src);
+            if (!$avifUrl) { continue; }
+            // Build AVIF srcset
+            $srcset = (string) $img->getAttribute('srcset');
+            $sizes = (string) $img->getAttribute('sizes');
+            $avifSrcset = $srcset !== '' ? $this->convertSrcsetToAvif($srcset) : $avifUrl;
+            $this->wrapImgNodeToPicture($dom, $img, $avifSrcset, $sizes);
         }
 
-        $pattern = sprintf(
-            '/<img\s+([^>]*?)src=["\'](%s[^"\']*\.(?:jpe?g|JPE?G))["\']([^>]*?)>/i',
-            preg_quote($uploadsUrl, '/')
-        );
+        $out = $dom->saveHTML();
+        return \is_string($out) && $out !== '' ? $out : $content;
+    }
 
-        $result = preg_replace_callback($pattern, function (array $matches): string {
-            $fullTag = $matches[0];
-            $src = $matches[2];
+    public function renderBlock(string $block_content, array $block): string
+    {
+        $name = $block['blockName'] ?? '';
+        if ($name !== 'core/image' && $name !== 'core/gallery') {
+            return $block_content;
+        }
+        if ($block_content === '' || strpos($block_content, '<img') === false) {
+            return $block_content;
+        }
 
-            $avifSrc = $this->avifUrlFor($src);
-            if (!$avifSrc) {
-                return $fullTag;
-            }
+        $html = '<?xml encoding="utf-8" ?>' . $block_content;
+        $dom = new \DOMDocument();
+        \libxml_use_internal_errors(true);
+        if (!$dom->loadHTML($html, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD)) {
+            \libxml_clear_errors();
+            return $block_content;
+        }
+        \libxml_clear_errors();
 
-            $avifSrcset = $avifSrc;
-            if (preg_match('/srcset=["\']([^"\']*)["\']/', $fullTag, $srcsetMatches)) {
-                $converted = $this->convertSrcsetToAvif($srcsetMatches[1]);
-                if ($converted) {
-                    $avifSrcset = $converted;
-                }
-            }
+        $imgs = $dom->getElementsByTagName('img');
+        $toProcess = [];
+        foreach ($imgs as $img) { $toProcess[] = $img; }
+        foreach ($toProcess as $img) {
+            if (!($img instanceof \DOMElement)) { continue; }
+            if ($this->isInsidePicture($img)) { continue; }
+            $src = (string) $img->getAttribute('src');
+            $avifUrl = $this->avifUrlFor($src);
+            if (!$avifUrl) { continue; }
+            $srcset = (string) $img->getAttribute('srcset');
+            $sizes = (string) $img->getAttribute('sizes');
+            $avifSrcset = $srcset !== '' ? $this->convertSrcsetToAvif($srcset) : $avifUrl;
+            $this->wrapImgNodeToPicture($dom, $img, $avifSrcset, $sizes);
+        }
 
-            $sizes = '';
-            if (preg_match('/sizes=["\']([^"\']*)["\']/', $fullTag, $sizesMatches)) {
-                $sizes = $sizesMatches[1];
-            }
-
-            return $this->pictureMarkup($fullTag, $avifSrc, $avifSrcset, $sizes);
-        }, $content);
-
-        return $result !== null ? $result : $content;
+        $out = $dom->saveHTML();
+        return \is_string($out) && $out !== '' ? $out : $block_content;
     }
 
     private function avifUrlFor(string $jpegUrl): ?string
     {
-        if (!$this->isUploadsImage($jpegUrl) || !preg_match('/\.(jpe?g|JPE?G)$/', $jpegUrl)) {
+        if (!$this->isUploadsImage($jpegUrl)) {
             return null;
         }
-        $avifUrl = preg_replace('/\.(jpe?g|JPE?G)$/i', '.avif', $jpegUrl);
-        $relative = str_replace($this->uploadsInfo['baseurl'] ?? '', '', (string) $avifUrl);
+        $parts = \parse_url($jpegUrl);
+        if ($parts === false || empty($parts['path'])) {
+            return null;
+        }
+        $path = $parts['path'];
+        if (!\preg_match('/\.(jpe?g)$/i', $path)) {
+            return null;
+        }
+        $avifPath = (string) \preg_replace('/\.(jpe?g)$/i', '.avif', $path);
+        $reconstructed = ($parts['scheme'] ?? '') !== ''
+            ? ($parts['scheme'] . '://')
+            : '';
+        if (!empty($parts['host'])) { $reconstructed .= $parts['host']; }
+        if (!empty($parts['port'])) { $reconstructed .= ':' . $parts['port']; }
+        $reconstructed .= $avifPath;
+        if (!empty($parts['query'])) { $reconstructed .= '?' . $parts['query']; }
+        if (!empty($parts['fragment'])) { $reconstructed .= '#' . $parts['fragment']; }
+
+        $relative = str_replace($this->uploadsInfo['baseurl'] ?? '', '', (string) $reconstructed);
         $avifLocal = ($this->uploadsInfo['basedir'] ?? '') . $relative;
-        return $this->avifExists($avifLocal) ? $avifUrl : null;
+        return $this->avifExists($avifLocal) ? $reconstructed : null;
     }
 
     private function isUploadsImage(string $src): bool
@@ -154,6 +200,32 @@ final class Support
         $srcset = $avifSrcset !== '' ? $avifSrcset : $avifSrc;
         $sizesAttr = $sizes !== '' ? sprintf(' sizes="%s"', \esc_attr($sizes)) : '';
         return sprintf('<picture><source type="image/avif" srcset="%s"%s>%s</picture>', \esc_attr($srcset), $sizesAttr, $originalHtml);
+    }
+
+    private function isInsidePicture(\DOMNode $node): bool
+    {
+        $parent = $node->parentNode;
+        while ($parent) {
+            if ($parent instanceof \DOMElement && strtolower($parent->nodeName) === 'picture') {
+                return true;
+            }
+            $parent = $parent->parentNode;
+        }
+        return false;
+    }
+
+    private function wrapImgNodeToPicture(\DOMDocument $dom, \DOMElement $img, string $avifSrcset, string $sizes): void
+    {
+        $picture = $dom->createElement('picture');
+        $source = $dom->createElement('source');
+        $source->setAttribute('type', 'image/avif');
+        $source->setAttribute('srcset', $avifSrcset);
+        if ($sizes !== '') {
+            $source->setAttribute('sizes', $sizes);
+        }
+        $picture->appendChild($source);
+        $img->parentNode?->replaceChild($picture, $img);
+        $picture->appendChild($img);
     }
 
     public function saveCache(): void

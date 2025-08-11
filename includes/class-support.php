@@ -25,7 +25,7 @@ final class Support
 
     public function wrapAttachment(string $html, int $attachmentId, $size, bool $icon, array $attr): string
     {
-        if (str_contains($html, '<picture') || str_contains($html, 'type="image/avif"')) {
+        if (str_contains($html, '<picture')) {
             return $html;
         }
 

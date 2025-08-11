@@ -108,11 +108,11 @@ final class Converter
         if (!$hasAllowedMime && !$hasJpegExt) {
             return $file;
         }
-        $this->maybeConvertPathToAvif($path);
+        $this->checkMissingAvif($path);
         return $file;
     }
 
-    private function maybeConvertPathToAvif(string $path): void
+    private function checkMissingAvif(string $path): void
     {
         if ($path === '' || !file_exists($path)) {
             return;
@@ -127,10 +127,10 @@ final class Converter
 
         // Determine better source based on WordPress logic (if enabled)
         [$sourcePath, $targetDimensions] = $this->getConversionData($path);
-        $this->convertToAvifAdvanced($sourcePath, $avifPath, $targetDimensions);
+        $this->convertToAvif($sourcePath, $avifPath, $targetDimensions);
     }
 
-    private function convertToAvifAdvanced(string $sourcePath, string $avifPath, ?array $targetDimensions): void
+    private function convertToAvif(string $sourcePath, string $avifPath, ?array $targetDimensions): void
     {
         $quality = max(0, min(100, (int) get_option('avif_local_support_quality', 85)));
         $speedSetting = max(0, min(10, (int) get_option('avif_local_support_speed', 1)));
@@ -335,7 +335,7 @@ final class Converter
     {
         if (!empty($metadata['file']) && \is_string($metadata['file'])) {
             $originalPath = $baseDir . $metadata['file'];
-            $this->maybeConvertPathToAvif($originalPath);
+            $this->checkMissingAvif($originalPath);
         }
         if (!empty($metadata['sizes']) && \is_array($metadata['sizes'])) {
             $relativeDir = pathinfo((string) ($metadata['file'] ?? ''), PATHINFO_DIRNAME);
@@ -343,7 +343,7 @@ final class Converter
             foreach ($metadata['sizes'] as $sizeData) {
                 if (!empty($sizeData['file'])) {
                     $sizePath = $baseDir . \trailingslashit($relativeDir) . $sizeData['file'];
-                    $this->maybeConvertPathToAvif($sizePath);
+                    $this->checkMissingAvif($sizePath);
                 }
             }
         }
@@ -372,7 +372,7 @@ final class Converter
             }
             $path = get_attached_file($attachmentId);
             if ($path) {
-                $this->maybeConvertPathToAvif($path);
+                $this->checkMissingAvif($path);
             }
             $meta = wp_get_attachment_metadata($attachmentId);
             if ($meta) {
@@ -472,7 +472,7 @@ final class Converter
 
         // Perform conversion for each row using the same pipeline
         foreach ($results['sizes'] as &$row) {
-            $this->maybeConvertPathToAvif($row['jpeg_path']);
+            $this->checkMissingAvif($row['jpeg_path']);
             $row['converted'] = file_exists($row['avif_path']);
             // Refresh sizes after conversion
             $row['jpeg_size'] = file_exists($row['jpeg_path']) ? (int) filesize($row['jpeg_path']) : 0;

@@ -353,7 +353,7 @@ final class Plugin
         echo '          <input type="hidden" name="action" value="avif_local_support_upload_test" />';
         wp_nonce_field('avif_local_support_upload_test', '_wpnonce');
         echo '          <input type="file" name="avif_local_support_test_file" accept="image/jpeg" required />';
-        echo '          <button type="submit" class="button button-primary">' . esc_html__('Convert', 'avif-local-support') . '</button>';
+        echo '          <button type="submit" class="button button-primary" style="flex-basis:100%;margin-top:8px">' . esc_html__('Convert Now', 'avif-local-support') . '</button>';
         echo '        </form>';
 
         $testId = 0;

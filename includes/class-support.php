@@ -58,9 +58,6 @@ final class Support
         if (!str_contains($content, '<img')) {
             return $content;
         }
-        if (str_contains($content, '<picture') || str_contains($content, 'type="image/avif"')) {
-            return $content;
-        }
 
         $uploadsUrl = $this->uploadsInfo['baseurl'] ?? '';
         if (!$uploadsUrl) {
@@ -68,47 +65,98 @@ final class Support
         }
 
         $pattern = sprintf(
-            '/<img\s+([^>]*?)src=["\'](%s[^"\']*\.(?:jpe?g|JPE?G))["\']([^>]*?)>/i',
+            '/<img\s+([^>]*?)src=["\'](%s[^"\']*?\.(?:jpe?g|JPE?G)(?:\?[^"\']*)?)["\']([^>]*?)>/i',
             preg_quote($uploadsUrl, '/')
         );
 
-        $result = preg_replace_callback($pattern, function (array $matches): string {
-            $fullTag = $matches[0];
-            $src = $matches[2];
+        if (!preg_match_all($pattern, $content, $matches, PREG_OFFSET_CAPTURE)) {
+            return $content;
+        }
 
-            $avifSrc = $this->avifUrlFor($src);
-            if (!$avifSrc) {
-                return $fullTag;
-            }
+        $lastPos = 0;
+        $out = '';
+        $total = count($matches[0]);
+        for ($i = 0; $i < $total; $i++) {
+            $fullTag = $matches[0][$i][0];
+            $start = $matches[0][$i][1];
+            $length = strlen($fullTag);
+            $src = $matches[2][$i][0];
 
-            $avifSrcset = $avifSrc;
-            if (preg_match('/srcset=["\']([^"\']*)["\']/', $fullTag, $srcsetMatches)) {
-                $converted = $this->convertSrcsetToAvif($srcsetMatches[1]);
-                if ($converted) {
-                    $avifSrcset = $converted;
+            // Determine if this <img> is inside an existing <picture>
+            $insidePicture = false;
+            $before = substr($content, 0, $start);
+            $lastPictureStart = strripos($before, '<picture');
+            if ($lastPictureStart !== false) {
+                $closingPos = stripos($content, '</picture>', $lastPictureStart);
+                if ($closingPos === false || $closingPos > $start) {
+                    $insidePicture = true;
                 }
             }
 
-            $sizes = '';
-            if (preg_match('/sizes=["\']([^"\']*)["\']/', $fullTag, $sizesMatches)) {
-                $sizes = $sizesMatches[1];
+            $replacement = $fullTag;
+            if (!$insidePicture) {
+                $avifSrc = $this->avifUrlFor($src);
+                if ($avifSrc) {
+                    $avifSrcset = $avifSrc;
+                    if (preg_match('/srcset=["\']([^"\']*)["\']/', $fullTag, $srcsetMatches)) {
+                        $converted = $this->convertSrcsetToAvif($srcsetMatches[1]);
+                        if ($converted) {
+                            $avifSrcset = $converted;
+                        }
+                    }
+
+                    $sizes = '';
+                    if (preg_match('/sizes=["\']([^"\']*)["\']/', $fullTag, $sizesMatches)) {
+                        $sizes = $sizesMatches[1];
+                    }
+
+                    $replacement = $this->pictureMarkup($fullTag, $avifSrc, $avifSrcset, $sizes);
+                }
             }
 
-            return $this->pictureMarkup($fullTag, $avifSrc, $avifSrcset, $sizes);
-        }, $content);
+            $out .= substr($content, $lastPos, $start - $lastPos) . $replacement;
+            $lastPos = $start + $length;
+        }
+        $out .= substr($content, $lastPos);
 
-        return $result !== null ? $result : $content;
+        return $out;
     }
 
     private function avifUrlFor(string $jpegUrl): ?string
     {
-        if (!$this->isUploadsImage($jpegUrl) || !preg_match('/\.(jpe?g|JPE?G)$/', $jpegUrl)) {
+        if (!$this->isUploadsImage($jpegUrl)) {
             return null;
         }
-        $avifUrl = preg_replace('/\.(jpe?g|JPE?G)$/i', '.avif', $jpegUrl);
-        $relative = str_replace($this->uploadsInfo['baseurl'] ?? '', '', (string) $avifUrl);
+
+        $queryString = '';
+        $jpegUrlNoQuery = $jpegUrl;
+        $hashPos = strpos($jpegUrl, '#');
+        $qPos = strpos($jpegUrl, '?');
+        $cutPos = false;
+        if ($qPos !== false && $hashPos !== false) {
+            $cutPos = min($qPos, $hashPos);
+        } elseif ($qPos !== false) {
+            $cutPos = $qPos;
+        } elseif ($hashPos !== false) {
+            $cutPos = $hashPos;
+        }
+        if ($cutPos !== false) {
+            $queryString = substr($jpegUrl, (int) $cutPos);
+            $jpegUrlNoQuery = substr($jpegUrl, 0, (int) $cutPos);
+        }
+
+        if (!preg_match('/\.(jpe?g|JPE?G)$/', $jpegUrlNoQuery)) {
+            return null;
+        }
+
+        $avifNoQuery = preg_replace('/\.(jpe?g|JPE?G)$/i', '.avif', $jpegUrlNoQuery);
+        $relative = str_replace($this->uploadsInfo['baseurl'] ?? '', '', (string) $avifNoQuery);
         $avifLocal = ($this->uploadsInfo['basedir'] ?? '') . $relative;
-        return $this->avifExists($avifLocal) ? $avifUrl : null;
+        if (!$this->avifExists($avifLocal)) {
+            return null;
+        }
+
+        return $avifNoQuery . $queryString;
     }
 
     private function isUploadsImage(string $src): bool

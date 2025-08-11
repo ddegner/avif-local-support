@@ -4,7 +4,7 @@ Tags: images, avif, performance, conversion, media
 Requires at least: 6.5
 Tested up to: 6.8
 Requires PHP: 8.0
-Stable tag: 0.1.0
+Stable tag: 0.1.1
 License: GPL v2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -61,10 +61,19 @@ No. The plugin does not track users or send data to external services.
 
 == Changelog ==
 
+= 0.1.1 =
+- Improve accessibility and settings labels; better time input handling for scheduled conversions
+- More robust DOM handling for wrapping images and avoiding double-wrapping
+- UI: clearer Convert Now button text and styling on the settings page
+- Minor performance and reliability improvements in scheduling and conversion pipeline
+
 = 0.1.0 =
 Initial release.
 
 == Upgrade Notice ==
+
+= 0.1.1 =
+Accessibility and scheduling improvements; recommended update.
 
 = 0.1.0 =
 Initial release of AVIF Local Support.

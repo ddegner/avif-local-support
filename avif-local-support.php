@@ -61,6 +61,8 @@ function avif_local_support_activate(): void
     add_option('avif_local_support_preserve_color_profile', true);
     add_option('avif_local_support_wordpress_logic', true);
     add_option('avif_local_support_cache_duration', 3600);
+    add_option('avif_local_support_chroma_subsampling', '4:2:0');
+    add_option('avif_local_support_bit_depth', 8);
 }
 
 function avif_local_support_deactivate(): void
@@ -99,6 +101,8 @@ function avif_local_support_uninstall(): void
         'avif_local_support_preserve_color_profile',
         'avif_local_support_wordpress_logic',
         'avif_local_support_cache_duration',
+        'avif_local_support_chroma_subsampling',
+        'avif_local_support_bit_depth',
     ];
 
     foreach ($options as $option) {

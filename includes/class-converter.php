@@ -136,6 +136,10 @@ final class Converter
         $speedSetting = max(0, min(10, (int) get_option('avif_local_support_speed', 1)));
         $preserveMeta = (bool) get_option('avif_local_support_preserve_metadata', true);
         $preserveICC = (bool) get_option('avif_local_support_preserve_color_profile', true);
+        $chromaSubsampling = (string) get_option('avif_local_support_chroma_subsampling', '4:2:0');
+        if (!in_array($chromaSubsampling, ['4:2:0','4:2:2','4:4:4'], true)) { $chromaSubsampling = '4:2:0'; }
+        $bitDepthSetting = (int) get_option('avif_local_support_bit_depth', 8);
+        if (!in_array($bitDepthSetting, [8,10,12], true)) { $bitDepthSetting = 8; }
 
         // Ensure directory exists
         $dir = \dirname($avifPath);
@@ -156,6 +160,10 @@ final class Converter
                     }
                 }
 
+                // Detect whether source has an embedded ICC profile
+                $hasIcc = false;
+                try { $maybeIcc = $im->getImageProfile('icc'); $hasIcc = !empty($maybeIcc); } catch (\Throwable $e) {}
+
                 if ($targetDimensions && isset($targetDimensions['width'], $targetDimensions['height'])) {
                     $srcW = $im->getImageWidth();
                     $srcH = $im->getImageHeight();
@@ -175,19 +183,47 @@ final class Converter
                         $cropY = (int) (($srcH - $cropH) / 2);
                     }
                     $im->cropImage($cropW, $cropH, $cropX, $cropY);
+
+                    // Tweak Lanczos filter and use linear-light resize for untagged images
+                    try { $im->setOption('filter:blur', '0.985'); } catch (\Throwable $e) {}
+                    try { $im->setOption('filter:window', 'Jinc'); } catch (\Throwable $e) {}
+                    try { $im->setOption('filter:lobes', '3'); } catch (\Throwable $e) {}
+                    if (!$hasIcc) {
+                        try { $im->transformImageColorspace(\Imagick::COLORSPACE_RGB); } catch (\Throwable $e) {}
+                    }
                     $im->resizeImage($tW, $tH, \Imagick::FILTER_LANCZOS, 1.0);
+                    if (!$hasIcc) {
+                        try { $im->transformImageColorspace(\Imagick::COLORSPACE_SRGB); } catch (\Throwable $e) {}
+                    }
+                    // Mild post-resize sharpening to restore micro-contrast
+                    try { $im->unsharpMaskImage(0.0, 0.8, 0.9, 0.02); } catch (\Throwable $e) {}
                 }
 
                 $im->setImageFormat('AVIF');
                 $im->setImageCompressionQuality($quality);
                 $im->setOption('avif:speed', (string) min(8, $speedSetting));
+                // Advanced: chroma subsampling and bit depth
+                $im->setOption('avif:chroma-subsampling', $chromaSubsampling);
+                $im->setOption('avif:depth', (string) $bitDepthSetting);
+                try { $im->setImageDepth($bitDepthSetting); } catch (\Throwable $e) {}
 
                 if ($preserveMeta || $preserveICC) {
                     try {
                         $src = new \Imagick($sourcePath);
                         if ($preserveICC) {
                             $icc = $src->getImageProfile('icc');
-                            if (!empty($icc)) { $im->setImageProfile('icc', $icc); }
+                            if (!empty($icc)) {
+                                $im->setImageProfile('icc', $icc);
+                            } else {
+                                // Assign sRGB only (do not transform) when no ICC exists
+                                $srgbPath = $this->findSrgbProfile();
+                                if ($srgbPath && is_readable($srgbPath)) {
+                                    $srgbBytes = @file_get_contents($srgbPath);
+                                    if ($srgbBytes !== false && $srgbBytes !== '') {
+                                        $im->setImageProfile('icc', $srgbBytes);
+                                    }
+                                }
+                            }
                         }
                         if ($preserveMeta) {
                             foreach (['exif', 'xmp', 'iptc'] as $profile) {
@@ -481,5 +517,27 @@ final class Converter
         unset($row);
 
         return $results;
+    }
+
+    /**
+     * Try to locate a system sRGB ICC profile to tag unprofiled images without converting pixels.
+     */
+    private function findSrgbProfile(): ?string
+    {
+        $candidates = [
+            '/usr/share/color/icc/sRGB.icc',
+            '/usr/share/color/icc/colord/sRGB.icc',
+            '/usr/share/color/icc/ghostscript/sRGB.icc',
+            '/usr/local/share/color/icc/sRGB.icc',
+            '/usr/share/icc/sRGB.icc',
+            'C:\\Windows\\System32\\spool\\drivers\\color\\sRGB Color Space Profile.icm',
+            '/System/Library/ColorSync/Profiles/sRGB Profile.icc',
+        ];
+        foreach ($candidates as $path) {
+            if (@is_file($path) && @is_readable($path)) {
+                return $path;
+            }
+        }
+        return null;
     }
 }

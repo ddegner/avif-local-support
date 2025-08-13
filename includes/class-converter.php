@@ -187,9 +187,7 @@ final class Converter
                 $im->setOption('avif:speed', (string) min(8, $speedSetting));
                 // Advanced: chroma subsampling and bit depth
                 $im->setOption('avif:chroma-subsampling', $chromaSubsampling);
-                $im->setOption('heic:chroma-subsampling', $chromaSubsampling);
                 $im->setOption('avif:depth', (string) $bitDepthSetting);
-                $im->setOption('heic:depth', (string) $bitDepthSetting);
                 try { $im->setImageDepth($bitDepthSetting); } catch (\Throwable $e) {}
 
                 if ($preserveMeta || $preserveICC) {

@@ -136,6 +136,10 @@ final class Converter
         $speedSetting = max(0, min(10, (int) get_option('avif_local_support_speed', 1)));
         $preserveMeta = (bool) get_option('avif_local_support_preserve_metadata', true);
         $preserveICC = (bool) get_option('avif_local_support_preserve_color_profile', true);
+        $chromaSubsampling = (string) get_option('avif_local_support_chroma_subsampling', '4:2:0');
+        if (!in_array($chromaSubsampling, ['4:2:0','4:2:2','4:4:4'], true)) { $chromaSubsampling = '4:2:0'; }
+        $bitDepthSetting = (int) get_option('avif_local_support_bit_depth', 8);
+        if (!in_array($bitDepthSetting, [8,10,12], true)) { $bitDepthSetting = 8; }
 
         // Ensure directory exists
         $dir = \dirname($avifPath);
@@ -181,6 +185,12 @@ final class Converter
                 $im->setImageFormat('AVIF');
                 $im->setImageCompressionQuality($quality);
                 $im->setOption('avif:speed', (string) min(8, $speedSetting));
+                // Advanced: chroma subsampling and bit depth
+                $im->setOption('avif:chroma-subsampling', $chromaSubsampling);
+                $im->setOption('heic:chroma-subsampling', $chromaSubsampling);
+                $im->setOption('avif:depth', (string) $bitDepthSetting);
+                $im->setOption('heic:depth', (string) $bitDepthSetting);
+                try { $im->setImageDepth($bitDepthSetting); } catch (\Throwable $e) {}
 
                 if ($preserveMeta || $preserveICC) {
                     try {

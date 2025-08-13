@@ -270,6 +270,63 @@ final class Plugin
             'avif_local_support_conversion',
             [ 'label_for' => 'avif_local_support_wordpress_logic' ]
         );
+
+        // Advanced options section
+        register_setting('avif_local_support_settings', 'avif_local_support_chroma_subsampling', [
+            'type' => 'string',
+            'default' => '4:2:0',
+            'sanitize_callback' => [$this, 'sanitize_chroma_subsampling'],
+            'show_in_rest' => true,
+        ]);
+        register_setting('avif_local_support_settings', 'avif_local_support_bit_depth', [
+            'type' => 'integer',
+            'default' => 8,
+            'sanitize_callback' => [$this, 'sanitize_bit_depth'],
+            'show_in_rest' => true,
+        ]);
+
+        add_settings_section(
+            'avif_local_support_advanced',
+            '',
+            function (): void {},
+            'avif-local-support'
+        );
+
+        add_settings_field(
+            'avif_local_support_chroma_subsampling',
+            __('Chroma subsampling', 'avif-local-support'),
+            function (): void {
+                $value = (string) get_option('avif_local_support_chroma_subsampling', '4:2:0');
+                $options = ['4:2:0', '4:2:2', '4:4:4'];
+                echo '<select id="avif_local_support_chroma_subsampling" name="avif_local_support_chroma_subsampling">';
+                foreach ($options as $opt) {
+                    echo '<option value="' . esc_attr($opt) . '" ' . selected($opt, $value, false) . '>' . esc_html($opt) . '</option>';
+                }
+                echo '</select>';
+                echo '<p class="description">' . esc_html__('Lower subsampling reduces file size; 4:4:4 preserves the most color detail (best for graphics/text).', 'avif-local-support') . '</p>';
+            },
+            'avif-local-support',
+            'avif_local_support_advanced',
+            [ 'label_for' => 'avif_local_support_chroma_subsampling' ]
+        );
+
+        add_settings_field(
+            'avif_local_support_bit_depth',
+            __('Bit depth', 'avif-local-support'),
+            function (): void {
+                $value = (int) get_option('avif_local_support_bit_depth', 8);
+                $options = [8, 10, 12];
+                echo '<select id="avif_local_support_bit_depth" name="avif_local_support_bit_depth">';
+                foreach ($options as $opt) {
+                    echo '<option value="' . esc_attr((string) $opt) . '" ' . selected($opt, $value, false) . '>' . esc_html((string) $opt) . '</option>';
+                }
+                echo '</select>';
+                echo '<p class="description">' . esc_html__('Higher bit depths can reduce banding and improve gradients (requires Imagick with AVIF support).', 'avif-local-support') . '</p>';
+            },
+            'avif-local-support',
+            'avif_local_support_advanced',
+            [ 'label_for' => 'avif_local_support_bit_depth' ]
+        );
     }
 
     public function sanitize_schedule_time(string $value): string
@@ -283,6 +340,20 @@ final class Plugin
         if ($n < 0) { $n = 0; }
         if ($n > 10) { $n = 10; }
         return $n;
+    }
+
+    public function sanitize_chroma_subsampling($value): string
+    {
+        $val = is_string($value) ? $value : '';
+        $allowed = ['4:2:0', '4:2:2', '4:4:4'];
+        return in_array($val, $allowed, true) ? $val : '4:2:0';
+    }
+
+    public function sanitize_bit_depth($value): int
+    {
+        $n = (int) $value;
+        $allowed = [8, 10, 12];
+        return in_array($n, $allowed, true) ? $n : 8;
     }
 
     public function render_admin_page(): void

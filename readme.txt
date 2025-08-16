@@ -1,5 +1,5 @@
 === AVIF Local Support ===
-Contributors: daviddegner
+Contributors: ddegner
 Tags: images, avif, performance, conversion, media
 Requires at least: 6.5
 Tested up to: 6.8

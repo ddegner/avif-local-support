@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace AVIFSuite;
+namespace Ddegner\AvifLocalSupport;
 
 // Prevent direct access
 \defined('ABSPATH') || exit;
@@ -15,7 +15,7 @@ final class Support
     public function init(): void
     {
         $this->uploadsInfo = \wp_upload_dir();
-        $this->fileCache = \get_transient('avif_local_support_file_cache') ?: [];
+        $this->fileCache = \get_transient('aviflosu_file_cache') ?: [];
         add_filter('wp_get_attachment_image', [$this, 'wrapAttachment'], 10, 5);
         add_filter('the_content', [$this, 'wrapContentImages']);
         add_filter('post_thumbnail_html', [$this, 'wrapContentImages']);
@@ -205,6 +205,6 @@ final class Support
 
     public function saveCache(): void
     {
-        set_transient('avif_local_support_file_cache', $this->fileCache, (int) get_option('avif_local_support_cache_duration', 3600));
+        set_transient('aviflosu_file_cache', $this->fileCache, (int) get_option('aviflosu_cache_duration', 3600));
     }
 }

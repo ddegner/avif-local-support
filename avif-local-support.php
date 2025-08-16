@@ -38,8 +38,6 @@ function aviflosu_init(): void
 {
 	static $instance = null;
 	if ($instance === null) {
-		// one-time migration of options and scheduled hooks
-		aviflosu_maybe_migrate();
 		$instance = new AVIFLOSU_Plugin();
 		$instance->init();
 	}
@@ -110,38 +108,4 @@ function aviflosu_uninstall(): void
 	}
 	// Clean transients
 	\delete_transient('aviflosu_file_cache');
-}
-
-function aviflosu_maybe_migrate(): void
-{
-	// Map old option names to new option names
-	$map = [
-		'avif_local_support_enable_support' => 'aviflosu_enable_support',
-		'avif_local_support_convert_on_upload' => 'aviflosu_convert_on_upload',
-		'avif_local_support_convert_via_schedule' => 'aviflosu_convert_via_schedule',
-		'avif_local_support_schedule_time' => 'aviflosu_schedule_time',
-		'avif_local_support_quality' => 'aviflosu_quality',
-		'avif_local_support_speed' => 'aviflosu_speed',
-		'avif_local_support_preserve_metadata' => 'aviflosu_preserve_metadata',
-		'avif_local_support_preserve_color_profile' => 'aviflosu_preserve_color_profile',
-		'avif_local_support_wordpress_logic' => 'aviflosu_wordpress_logic',
-		'avif_local_support_cache_duration' => 'aviflosu_cache_duration',
-	];
-	foreach ($map as $old => $new) {
-		if (\get_option($new, null) === null) {
-			$val = \get_option($old, null);
-			if ($val !== null) {
-				\update_option($new, $val);
-			}
-		}
-	}
-	// Migrate scheduled hooks if any (best-effort)
-	$oldHooks = ['avif_local_support_daily_event' => 'aviflosu_daily_event', 'avif_local_support_run_on_demand' => 'aviflosu_run_on_demand'];
-	foreach ($oldHooks as $old => $new) {
-		$timestamp = \wp_next_scheduled($old);
-		if ($timestamp) {
-			\wp_unschedule_event($timestamp, $old);
-			\wp_schedule_event(time() + 10, 'daily', $new);
-		}
-	}
 }

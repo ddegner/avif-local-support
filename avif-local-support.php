@@ -21,89 +21,127 @@ declare(strict_types=1);
 \defined('ABSPATH') || exit;
 
 // Define constants
-\define('AVIF_SUITE_VERSION', '0.1.1');
-\define('AVIF_SUITE_PLUGIN_FILE', __FILE__);
-\define('AVIF_SUITE_PLUGIN_DIR', __DIR__);
-\define('AVIF_SUITE_INC_DIR', __DIR__ . '/includes');
+\define('AVIFLOSU_VERSION', '0.1.1');
+\define('AVIFLOSU_PLUGIN_FILE', __FILE__);
+\define('AVIFLOSU_PLUGIN_DIR', __DIR__);
+\define('AVIFLOSU_INC_DIR', __DIR__ . '/includes');
 
 // Includes (simple autoload)
-require_once AVIF_SUITE_INC_DIR . '/class-avif-suite.php';
-require_once AVIF_SUITE_INC_DIR . '/class-support.php';
-require_once AVIF_SUITE_INC_DIR . '/class-converter.php';
+require_once AVIFLOSU_INC_DIR . '/class-avif-suite.php';
+require_once AVIFLOSU_INC_DIR . '/class-support.php';
+require_once AVIFLOSU_INC_DIR . '/class-converter.php';
 
-use AVIFSuite\Plugin as AVIF_Suite_Plugin;
+use Ddegner\AvifLocalSupport\Plugin as AVIFLOSU_Plugin;
 
 // Initialize
-function avif_local_support_init(): void
+function aviflosu_init(): void
 {
-    static $instance = null;
-    if ($instance === null) {
-        $instance = new AVIF_Suite_Plugin();
-        $instance->init();
-    }
+	static $instance = null;
+	if ($instance === null) {
+		// one-time migration of options and scheduled hooks
+		aviflosu_maybe_migrate();
+		$instance = new AVIFLOSU_Plugin();
+		$instance->init();
+	}
 }
-add_action('init', 'avif_local_support_init');
+add_action('init', 'aviflosu_init');
 
 // i18n: WordPress.org will auto-load translations for plugins hosted there.
 // Keeping manual loader disabled to satisfy Plugin Check recommendations.
 
 // Activation / Deactivation / Uninstall
-function avif_local_support_activate(): void
+function aviflosu_activate(): void
 {
-    // Ensure defaults
-    add_option('avif_local_support_enable_support', true);
-    add_option('avif_local_support_convert_on_upload', true);
-    add_option('avif_local_support_convert_via_schedule', true);
-    add_option('avif_local_support_schedule_time', '01:00');
-    add_option('avif_local_support_quality', 85);
-    add_option('avif_local_support_speed', 1);
-    add_option('avif_local_support_preserve_metadata', true);
-    add_option('avif_local_support_preserve_color_profile', true);
-    add_option('avif_local_support_wordpress_logic', true);
-    add_option('avif_local_support_cache_duration', 3600);
+	// Ensure defaults
+	add_option('aviflosu_enable_support', true);
+	add_option('aviflosu_convert_on_upload', true);
+	add_option('aviflosu_convert_via_schedule', true);
+	add_option('aviflosu_schedule_time', '01:00');
+	add_option('aviflosu_quality', 85);
+	add_option('aviflosu_speed', 1);
+	add_option('aviflosu_preserve_metadata', true);
+	add_option('aviflosu_preserve_color_profile', true);
+	add_option('aviflosu_wordpress_logic', true);
+	add_option('aviflosu_cache_duration', 3600);
 }
 
-function avif_local_support_deactivate(): void
+function aviflosu_deactivate(): void
 {
-    // Clear any scheduled events created by this plugin
-    if (function_exists('wp_clear_scheduled_hook')) {
-        \wp_clear_scheduled_hook('avif_local_support_daily_event');
-        \wp_clear_scheduled_hook('avif_local_support_run_on_demand');
-    } else {
-        $timestamp = \wp_next_scheduled('avif_local_support_daily_event');
-        if ($timestamp && \wp_get_schedule('avif_local_support_daily_event')) {
-            \wp_unschedule_event($timestamp, 'avif_local_support_daily_event');
-        }
-        $timestamp = \wp_next_scheduled('avif_local_support_run_on_demand');
-        if ($timestamp && \wp_get_schedule('avif_local_support_run_on_demand')) {
-            \wp_unschedule_event($timestamp, 'avif_local_support_run_on_demand');
-        }
-    }
+	// Clear any scheduled events created by this plugin
+	if (function_exists('wp_clear_scheduled_hook')) {
+		\wp_clear_scheduled_hook('aviflosu_daily_event');
+		\wp_clear_scheduled_hook('aviflosu_run_on_demand');
+	} else {
+		$timestamp = \wp_next_scheduled('aviflosu_daily_event');
+		if ($timestamp && \wp_get_schedule('aviflosu_daily_event')) {
+			\wp_unschedule_event($timestamp, 'aviflosu_daily_event');
+		}
+		$timestamp = \wp_next_scheduled('aviflosu_run_on_demand');
+		if ($timestamp && \wp_get_schedule('aviflosu_run_on_demand')) {
+			\wp_unschedule_event($timestamp, 'aviflosu_run_on_demand');
+		}
+	}
 }
 
-register_activation_hook(__FILE__, 'avif_local_support_activate');
-register_deactivation_hook(__FILE__, 'avif_local_support_deactivate');
-register_uninstall_hook(__FILE__, 'avif_local_support_uninstall');
+register_activation_hook(__FILE__, 'aviflosu_activate');
+register_deactivation_hook(__FILE__, 'aviflosu_deactivate');
+register_uninstall_hook(__FILE__, 'aviflosu_uninstall');
 
-function avif_local_support_uninstall(): void
+function aviflosu_uninstall(): void
 {
-    // Delete only options created by this plugin
-    $options = [
-        'avif_local_support_enable_support',
-        'avif_local_support_convert_on_upload',
-        'avif_local_support_convert_via_schedule',
-        'avif_local_support_schedule_time',
-        'avif_local_support_quality',
-        'avif_local_support_speed',
-        'avif_local_support_preserve_metadata',
-        'avif_local_support_preserve_color_profile',
-        'avif_local_support_wordpress_logic',
-        'avif_local_support_cache_duration',
-    ];
+	// Delete only options created by this plugin
+	$options = [
+		'aviflosu_enable_support',
+		'aviflosu_convert_on_upload',
+		'aviflosu_convert_via_schedule',
+		'aviflosu_schedule_time',
+		'aviflosu_quality',
+		'aviflosu_speed',
+		'aviflosu_preserve_metadata',
+		'aviflosu_preserve_color_profile',
+		'aviflosu_wordpress_logic',
+		'aviflosu_cache_duration',
+	];
 
-    foreach ($options as $option) {
-        if (\get_option($option) !== false) {
-            \delete_option($option);
-        }
-    }
+	foreach ($options as $option) {
+		if (\get_option($option) !== false) {
+			\delete_option($option);
+		}
+	}
+	// Clean transients
+	\delete_transient('aviflosu_file_cache');
+}
+
+function aviflosu_maybe_migrate(): void
+{
+	// Map old option names to new option names
+	$map = [
+		'avif_local_support_enable_support' => 'aviflosu_enable_support',
+		'avif_local_support_convert_on_upload' => 'aviflosu_convert_on_upload',
+		'avif_local_support_convert_via_schedule' => 'aviflosu_convert_via_schedule',
+		'avif_local_support_schedule_time' => 'aviflosu_schedule_time',
+		'avif_local_support_quality' => 'aviflosu_quality',
+		'avif_local_support_speed' => 'aviflosu_speed',
+		'avif_local_support_preserve_metadata' => 'aviflosu_preserve_metadata',
+		'avif_local_support_preserve_color_profile' => 'aviflosu_preserve_color_profile',
+		'avif_local_support_wordpress_logic' => 'aviflosu_wordpress_logic',
+		'avif_local_support_cache_duration' => 'aviflosu_cache_duration',
+	];
+	foreach ($map as $old => $new) {
+		if (\get_option($new, null) === null) {
+			$val = \get_option($old, null);
+			if ($val !== null) {
+				\update_option($new, $val);
+			}
+		}
+	}
+	// Migrate scheduled hooks if any (best-effort)
+	$oldHooks = ['avif_local_support_daily_event' => 'aviflosu_daily_event', 'avif_local_support_run_on_demand' => 'aviflosu_run_on_demand'];
+	foreach ($oldHooks as $old => $new) {
+		$timestamp = \wp_next_scheduled($old);
+		if ($timestamp) {
+			\wp_unschedule_event($timestamp, $old);
+			\wp_schedule_event(time() + 10, 'daily', $new);
+		}
+	}
 }

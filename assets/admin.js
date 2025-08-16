@@ -57,7 +57,7 @@
     function scan() {
       setLoading();
       var form = new URLSearchParams();
-      form.append('action', 'avif_local_support_scan_missing');
+      form.append('action', 'aviflosu_scan_missing');
       form.append('_wpnonce', nonce);
       fetch(ajaxUrl, {
         method: 'POST',
@@ -120,7 +120,7 @@
         if (spinner) spinner.classList.add('is-active');
         if (statusEl) statusEl.textContent = '';
         var form = new URLSearchParams();
-        form.append('action', 'avif_local_support_convert_now');
+        form.append('action', 'aviflosu_convert_now');
         form.append('_wpnonce', nonce);
         fetch(ajaxUrl, {
           method: 'POST',
@@ -141,7 +141,7 @@
             var MAX_DURATION_MS = 5 * 60 * 1000; // 5 minutes safety
             function updateLocal() {
               var sform = new URLSearchParams();
-              sform.append('action', 'avif_local_support_scan_missing');
+              sform.append('action', 'aviflosu_scan_missing');
               sform.append('_wpnonce', AVIFLocalSupportData.scanNonce);
               fetch(ajaxUrl, {
                 method: 'POST',

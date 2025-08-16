@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace AVIFSuite;
+namespace Ddegner\AvifLocalSupport;
 
 // Prevent direct access
 \defined('ABSPATH') || exit;
@@ -17,8 +17,8 @@ final class Converter
 
         // Scheduling
         add_action('init', [$this, 'maybe_schedule_daily']);
-        add_action('avif_local_support_daily_event', [$this, 'run_daily_scan']);
-        add_action('avif_local_support_run_on_demand', [$this, 'run_daily_scan']);
+        add_action('aviflosu_daily_event', [$this, 'run_daily_scan']);
+        add_action('aviflosu_run_on_demand', [$this, 'run_daily_scan']);
 
         if (\defined('WP_CLI') && \WP_CLI) {
             \WP_CLI::add_command('avif-local-support convert', [$this, 'cliConvertAll']);
@@ -27,18 +27,18 @@ final class Converter
 
     public function maybe_schedule_daily(): void
     {
-        $enabled = (bool) get_option('avif_local_support_convert_via_schedule', true);
+        $enabled = (bool) get_option('aviflosu_convert_via_schedule', true);
         if (!$enabled) {
             // clear if exists
-            $timestamp = \wp_next_scheduled('avif_local_support_daily_event');
+            $timestamp = \wp_next_scheduled('aviflosu_daily_event');
             if ($timestamp) {
-                \wp_unschedule_event($timestamp, 'avif_local_support_daily_event');
+                \wp_unschedule_event($timestamp, 'aviflosu_daily_event');
             }
             return;
         }
 
         // compute next based on time option
-        $time = (string) get_option('avif_local_support_schedule_time', '01:00');
+        $time = (string) get_option('aviflosu_schedule_time', '01:00');
         if (!preg_match('/^([01]?\d|2[0-3]):[0-5]\d$/', $time)) {
             $time = '01:00';
         }
@@ -53,17 +53,17 @@ final class Converter
             ? $targetToday->modify('+1 day')
             : $targetToday;
         $next = $nextDt->getTimestamp();
-        $existing = \wp_next_scheduled('avif_local_support_daily_event');
+        $existing = \wp_next_scheduled('aviflosu_daily_event');
         if ($existing === false) {
-            \wp_schedule_event($next, 'daily', 'avif_local_support_daily_event');
+            \wp_schedule_event($next, 'daily', 'aviflosu_daily_event');
         } else {
             if (abs((int) $existing - (int) $next) > 60) {
                 if (function_exists('wp_clear_scheduled_hook')) {
-                    \wp_clear_scheduled_hook('avif_local_support_daily_event');
+                    \wp_clear_scheduled_hook('aviflosu_daily_event');
                 } else {
-                    \wp_unschedule_event((int) $existing, 'avif_local_support_daily_event');
+                    \wp_unschedule_event((int) $existing, 'aviflosu_daily_event');
                 }
-                \wp_schedule_event($next, 'daily', 'avif_local_support_daily_event');
+                \wp_schedule_event($next, 'daily', 'aviflosu_daily_event');
             }
         }
     }
@@ -75,7 +75,7 @@ final class Converter
 
     public function convertGeneratedSizes(array $metadata, int $attachmentId): array
     {
-        $convertOnUpload = (bool) get_option('avif_local_support_convert_on_upload', true);
+        $convertOnUpload = (bool) get_option('aviflosu_convert_on_upload', true);
         if (!$convertOnUpload) {
             return $metadata;
         }
@@ -96,7 +96,7 @@ final class Converter
 
     public function convertOriginalOnUpload(array $file): array
     {
-        $convertOnUpload = (bool) get_option('avif_local_support_convert_on_upload', true);
+        $convertOnUpload = (bool) get_option('aviflosu_convert_on_upload', true);
         if (!$convertOnUpload) {
             return $file;
         }
@@ -132,10 +132,10 @@ final class Converter
 
     private function convertToAvif(string $sourcePath, string $avifPath, ?array $targetDimensions): void
     {
-        $quality = max(0, min(100, (int) get_option('avif_local_support_quality', 85)));
-        $speedSetting = max(0, min(10, (int) get_option('avif_local_support_speed', 1)));
-        $preserveMeta = (bool) get_option('avif_local_support_preserve_metadata', true);
-        $preserveICC = (bool) get_option('avif_local_support_preserve_color_profile', true);
+        $quality = max(0, min(100, (int) get_option('aviflosu_quality', 85)));
+        $speedSetting = max(0, min(10, (int) get_option('aviflosu_speed', 1)));
+        $preserveMeta = (bool) get_option('aviflosu_preserve_metadata', true);
+        $preserveICC = (bool) get_option('aviflosu_preserve_color_profile', true);
 
         // Ensure directory exists
         $dir = \dirname($avifPath);
@@ -297,7 +297,7 @@ final class Converter
 
     private function getConversionData(string $jpegPath): array
     {
-        $useWpLogic = (bool) get_option('avif_local_support_wordpress_logic', true);
+        $useWpLogic = (bool) get_option('aviflosu_wordpress_logic', true);
         $sourcePath = $jpegPath;
         $target = null;
         if ($useWpLogic) {

@@ -50,9 +50,9 @@ final class Plugin
         if ($hook !== 'settings_page_avif-local-support') {
             return;
         }
-        $base = plugins_url('', \AVIFLOSU_PLUGIN_FILE);
-        wp_enqueue_style('avif-local-support-admin', $base . '/assets/admin.css', [], \AVIFLOSU_VERSION);
-        wp_enqueue_script('avif-local-support-admin', $base . '/assets/admin.js', [], \AVIFLOSU_VERSION, true);
+        $base = \AVIFLOSU_PLUGIN_URL;
+        wp_enqueue_style('avif-local-support-admin', $base . 'assets/admin.css', [], \AVIFLOSU_VERSION);
+        wp_enqueue_script('avif-local-support-admin', $base . 'assets/admin.js', [], \AVIFLOSU_VERSION, true);
         wp_localize_script('avif-local-support-admin', 'AVIFLocalSupportData', [
             'ajaxUrl' => admin_url('admin-ajax.php'),
             'scanNonce' => wp_create_nonce('aviflosu_scan_missing'),
@@ -463,7 +463,7 @@ final class Plugin
         echo '    <div class="postbox">';
         echo '      <h2 class="hndle"><span>' . esc_html__('About', 'avif-local-support') . '</span></h2>';
         echo '      <div class="inside">';
-        $readme_path = \AVIFLOSU_PLUGIN_DIR . '/readme.txt';
+        $readme_path = \AVIFLOSU_PLUGIN_DIR . 'readme.txt';
         if (file_exists($readme_path) && is_readable($readme_path)) {
             $readme_contents = @file_get_contents($readme_path);
             if ($readme_contents !== false) {

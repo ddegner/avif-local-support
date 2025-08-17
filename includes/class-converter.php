@@ -362,7 +362,6 @@ final class Converter
             'post_status' => 'inherit',
             'posts_per_page' => -1,
             'fields' => 'ids',
-            'meta_query' => [],
         ]);
         $count = 0;
         foreach ($query->posts as $attachmentId) {

@@ -79,7 +79,7 @@ final class Support
         if (!$this->isUploadsImage($jpegUrl)) {
             return null;
         }
-        $parts = \parse_url($jpegUrl);
+        $parts = \wp_parse_url($jpegUrl);
         if ($parts === false || empty($parts['path'])) {
             return null;
         }

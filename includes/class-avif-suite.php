@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace AVIFSuite;
+namespace Ddegner\AvifLocalSupport;
 
 // Prevent direct access
 \defined('ABSPATH') || exit;
@@ -24,14 +24,14 @@ final class Plugin
         add_action('admin_menu', [$this, 'add_admin_menu']);
         add_action('admin_init', [$this, 'register_settings']);
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_assets']);
-        add_filter('plugin_action_links_' . plugin_basename(\AVIF_SUITE_PLUGIN_FILE), [$this, 'add_settings_link']);
-        add_action('admin_post_avif_local_support_convert_now', [$this, 'handle_convert_now']);
-        add_action('admin_post_avif_local_support_upload_test', [$this, 'handle_upload_test']);
-        add_action('wp_ajax_avif_local_support_scan_missing', [$this, 'ajax_scan_missing']);
-        add_action('wp_ajax_avif_local_support_convert_now', [$this, 'ajax_convert_now']);
+        add_filter('plugin_action_links_' . plugin_basename(\AVIFLOSU_PLUGIN_FILE), [$this, 'add_settings_link']);
+        add_action('admin_post_aviflosu_convert_now', [$this, 'handle_convert_now']);
+        add_action('admin_post_aviflosu_upload_test', [$this, 'handle_upload_test']);
+        add_action('wp_ajax_aviflosu_scan_missing', [$this, 'ajax_scan_missing']);
+        add_action('wp_ajax_aviflosu_convert_now', [$this, 'ajax_convert_now']);
 
         // Features
-        if ((bool) get_option('avif_local_support_enable_support', true)) {
+        if ((bool) get_option('aviflosu_enable_support', true)) {
             $this->support->init();
         }
         // Always init converter so schedule/on-demand are available
@@ -50,13 +50,13 @@ final class Plugin
         if ($hook !== 'settings_page_avif-local-support') {
             return;
         }
-        $base = plugins_url('', \AVIF_SUITE_PLUGIN_FILE);
-        wp_enqueue_style('avif-local-support-admin', $base . '/assets/admin.css', [], \AVIF_SUITE_VERSION);
-        wp_enqueue_script('avif-local-support-admin', $base . '/assets/admin.js', [], \AVIF_SUITE_VERSION, true);
+        $base = plugins_url('', \AVIFLOSU_PLUGIN_FILE);
+        wp_enqueue_style('avif-local-support-admin', $base . '/assets/admin.css', [], \AVIFLOSU_VERSION);
+        wp_enqueue_script('avif-local-support-admin', $base . '/assets/admin.js', [], \AVIFLOSU_VERSION, true);
         wp_localize_script('avif-local-support-admin', 'AVIFLocalSupportData', [
             'ajaxUrl' => admin_url('admin-ajax.php'),
-            'scanNonce' => wp_create_nonce('avif_local_support_scan_missing'),
-            'convertNonce' => wp_create_nonce('avif_local_support_convert_now'),
+            'scanNonce' => wp_create_nonce('aviflosu_scan_missing'),
+            'convertNonce' => wp_create_nonce('aviflosu_convert_now'),
         ]);
     }
 
@@ -73,59 +73,65 @@ final class Plugin
 
     public function register_settings(): void
     {
-        // Group: avif_local_support_settings, Page: avif-local-support
-        register_setting('avif_local_support_settings', 'avif_local_support_enable_support', [
+        // Group: aviflosu_settings, Page: avif-local-support
+        register_setting('aviflosu_settings', 'aviflosu_enable_support', [
             'type' => 'boolean',
             'default' => true,
+            'sanitize_callback' => 'rest_sanitize_boolean',
             'show_in_rest' => true,
         ]);
-        register_setting('avif_local_support_settings', 'avif_local_support_convert_on_upload', [
+        register_setting('aviflosu_settings', 'aviflosu_convert_on_upload', [
             'type' => 'boolean',
             'default' => true,
+            'sanitize_callback' => 'rest_sanitize_boolean',
             'show_in_rest' => true,
         ]);
-        register_setting('avif_local_support_settings', 'avif_local_support_convert_via_schedule', [
+        register_setting('aviflosu_settings', 'aviflosu_convert_via_schedule', [
             'type' => 'boolean',
             'default' => true,
+            'sanitize_callback' => 'rest_sanitize_boolean',
             'show_in_rest' => true,
         ]);
-        register_setting('avif_local_support_settings', 'avif_local_support_schedule_time', [
+        register_setting('aviflosu_settings', 'aviflosu_schedule_time', [
             'type' => 'string',
             'default' => '01:00',
             'sanitize_callback' => [$this, 'sanitize_schedule_time'],
             'show_in_rest' => true,
         ]);
-        register_setting('avif_local_support_settings', 'avif_local_support_quality', [
+        register_setting('aviflosu_settings', 'aviflosu_quality', [
             'type' => 'integer',
             'default' => 85,
             'sanitize_callback' => 'absint',
             'show_in_rest' => true,
         ]);
         // New: speed setting (0-10)
-        register_setting('avif_local_support_settings', 'avif_local_support_speed', [
+        register_setting('aviflosu_settings', 'aviflosu_speed', [
             'type' => 'integer',
             'default' => 1,
             'sanitize_callback' => [$this, 'sanitize_speed'],
             'show_in_rest' => true,
         ]);
         // New: preserve metadata/profile toggles
-        register_setting('avif_local_support_settings', 'avif_local_support_preserve_metadata', [
+        register_setting('aviflosu_settings', 'aviflosu_preserve_metadata', [
             'type' => 'boolean',
             'default' => true,
+            'sanitize_callback' => 'rest_sanitize_boolean',
             'show_in_rest' => true,
         ]);
-        register_setting('avif_local_support_settings', 'avif_local_support_preserve_color_profile', [
+        register_setting('aviflosu_settings', 'aviflosu_preserve_color_profile', [
             'type' => 'boolean',
             'default' => true,
+            'sanitize_callback' => 'rest_sanitize_boolean',
             'show_in_rest' => true,
         ]);
         // New: WordPress thumbnail intelligence
-        register_setting('avif_local_support_settings', 'avif_local_support_wordpress_logic', [
+        register_setting('aviflosu_settings', 'aviflosu_wordpress_logic', [
             'type' => 'boolean',
             'default' => true,
+            'sanitize_callback' => 'rest_sanitize_boolean',
             'show_in_rest' => true,
         ]);
-        register_setting('avif_local_support_settings', 'avif_local_support_cache_duration', [
+        register_setting('aviflosu_settings', 'aviflosu_cache_duration', [
             'type' => 'integer',
             'default' => 3600,
             'sanitize_callback' => 'absint',
@@ -133,7 +139,7 @@ final class Plugin
         ]);
 
         add_settings_section(
-            'avif_local_support_main',
+            'aviflosu_main',
             '',
             function (): void {},
             'avif-local-support'
@@ -143,19 +149,19 @@ final class Plugin
             'avif_local_support_enable_support',
             __('Serve AVIF images', 'avif-local-support'),
             function (): void {
-                $value = (bool) get_option('avif_local_support_enable_support', true);
-                echo '<label for="avif_local_support_enable_support">'
-                    . '<input id="avif_local_support_enable_support" type="checkbox" name="avif_local_support_enable_support" value="1" ' . checked(true, $value, false) . ' /> '
+                $value = (bool) get_option('aviflosu_enable_support', true);
+                echo '<label for="aviflosu_enable_support">'
+                    . '<input id="aviflosu_enable_support" type="checkbox" name="aviflosu_enable_support" value="1" ' . checked(true, $value, false) . ' /> '
                     . esc_html__('Add AVIF sources to JPEG images on the front end', 'avif-local-support')
                     . '</label>';
             },
             'avif-local-support',
-            'avif_local_support_main',
-            [ 'label_for' => 'avif_local_support_enable_support' ]
+            'aviflosu_main',
+            [ 'label_for' => 'aviflosu_enable_support' ]
         );
 
         add_settings_section(
-            'avif_local_support_conversion',
+            'aviflosu_conversion',
             '',
             function (): void {},
             'avif-local-support'
@@ -165,46 +171,46 @@ final class Plugin
             'avif_local_support_convert_on_upload',
             __('Convert on upload', 'avif-local-support'),
             function (): void {
-                $value = (bool) get_option('avif_local_support_convert_on_upload', true);
-                echo '<label for="avif_local_support_convert_on_upload">'
-                    . '<input id="avif_local_support_convert_on_upload" type="checkbox" name="avif_local_support_convert_on_upload" value="1" ' . checked(true, $value, false) . ' /> '
+                $value = (bool) get_option('aviflosu_convert_on_upload', true);
+                echo '<label for="aviflosu_convert_on_upload">'
+                    . '<input id="aviflosu_convert_on_upload" type="checkbox" name="aviflosu_convert_on_upload" value="1" ' . checked(true, $value, false) . ' /> '
                     . esc_html__('Recommended; may slow uploads on some servers', 'avif-local-support')
                     . '</label>';
             },
             'avif-local-support',
-            'avif_local_support_conversion',
-            [ 'label_for' => 'avif_local_support_convert_on_upload' ]
+            'aviflosu_conversion',
+            [ 'label_for' => 'aviflosu_convert_on_upload' ]
         );
 
         add_settings_field(
             'avif_local_support_convert_via_schedule',
             __('Daily conversion', 'avif-local-support'),
             function (): void {
-                $enabled = (bool) get_option('avif_local_support_convert_via_schedule', true);
-                $time = (string) get_option('avif_local_support_schedule_time', '01:00');
-                echo '<label for="avif_local_support_convert_via_schedule">'
-                    . '<input id="avif_local_support_convert_via_schedule" type="checkbox" name="avif_local_support_convert_via_schedule" value="1" ' . checked(true, $enabled, false) . ' /> '
+                $enabled = (bool) get_option('aviflosu_convert_via_schedule', true);
+                $time = (string) get_option('aviflosu_schedule_time', '01:00');
+                echo '<label for="aviflosu_convert_via_schedule">'
+                    . '<input id="aviflosu_convert_via_schedule" type="checkbox" name="aviflosu_convert_via_schedule" value="1" ' . checked(true, $enabled, false) . ' /> '
                     . esc_html__('Scan daily and convert missing AVIFs', 'avif-local-support')
                     . '</label> ';
-                echo '<input id="avif_local_support_schedule_time" type="time" name="avif_local_support_schedule_time" value="' . \esc_attr($time) . '" aria-label="' . esc_attr__('Time', 'avif-local-support') . '" />';
+                echo '<input id="aviflosu_schedule_time" type="time" name="aviflosu_schedule_time" value="' . \esc_attr($time) . '" aria-label="' . esc_attr__('Time', 'avif-local-support') . '" />';
             },
             'avif-local-support',
-            'avif_local_support_conversion',
-            [ 'label_for' => 'avif_local_support_convert_via_schedule' ]
+            'aviflosu_conversion',
+            [ 'label_for' => 'aviflosu_convert_via_schedule' ]
         );
 
         add_settings_field(
             'avif_local_support_quality',
             __('Quality (0–100)', 'avif-local-support'),
             function (): void {
-                $value = (int) get_option('avif_local_support_quality', 85);
-                echo '<input id="avif_local_support_quality" type="range" name="avif_local_support_quality" min="0" max="100" value="' . \esc_attr((string) $value) . '" oninput="this.nextElementSibling.innerText=this.value" /> ';
+                $value = (int) get_option('aviflosu_quality', 85);
+                echo '<input id="aviflosu_quality" type="range" name="aviflosu_quality" min="0" max="100" value="' . \esc_attr((string) $value) . '" oninput="this.nextElementSibling.innerText=this.value" /> ';
                 echo '<span>' . \esc_html((string) $value) . '</span>';
                 echo '<p class="description">' . esc_html__('Higher = better quality and larger files.', 'avif-local-support') . '</p>';
             },
             'avif-local-support',
-            'avif_local_support_conversion',
-            [ 'label_for' => 'avif_local_support_quality' ]
+            'aviflosu_conversion',
+            [ 'label_for' => 'aviflosu_quality' ]
         );
 
         // New: Speed slider (0-10)
@@ -212,15 +218,15 @@ final class Plugin
             'avif_local_support_speed',
             __('Speed (0–10)', 'avif-local-support'),
             function (): void {
-                $value = (int) get_option('avif_local_support_speed', 1);
+                $value = (int) get_option('aviflosu_speed', 1);
                 $value = max(0, min(10, $value));
-                echo '<input id="avif_local_support_speed" type="range" name="avif_local_support_speed" min="0" max="10" value="' . \esc_attr((string) $value) . '" oninput="this.nextElementSibling.innerText=this.value" /> ';
+                echo '<input id="aviflosu_speed" type="range" name="aviflosu_speed" min="0" max="10" value="' . \esc_attr((string) $value) . '" oninput="this.nextElementSibling.innerText=this.value" /> ';
                 echo '<span>' . \esc_html((string) $value) . '</span>';
                 echo '<p class="description">' . esc_html__('Lower = smaller files (slower). Higher = faster (larger files).', 'avif-local-support') . '</p>';
             },
             'avif-local-support',
-            'avif_local_support_conversion',
-            [ 'label_for' => 'avif_local_support_speed' ]
+            'aviflosu_conversion',
+            [ 'label_for' => 'aviflosu_speed' ]
         );
 
         // New: Preserve metadata
@@ -228,15 +234,15 @@ final class Plugin
             'avif_local_support_preserve_metadata',
             __('Keep metadata (EXIF/XMP/IPTC)', 'avif-local-support'),
             function (): void {
-                $value = (bool) get_option('avif_local_support_preserve_metadata', true);
-                echo '<label for="avif_local_support_preserve_metadata">'
-                    . '<input id="avif_local_support_preserve_metadata" type="checkbox" name="avif_local_support_preserve_metadata" value="1" ' . checked(true, $value, false) . ' /> '
+                $value = (bool) get_option('aviflosu_preserve_metadata', true);
+                echo '<label for="aviflosu_preserve_metadata">'
+                    . '<input id="aviflosu_preserve_metadata" type="checkbox" name="aviflosu_preserve_metadata" value="1" ' . checked(true, $value, false) . ' /> '
                     . esc_html__('When possible (ImageMagick required).', 'avif-local-support')
                     . '</label>';
             },
             'avif-local-support',
-            'avif_local_support_conversion',
-            [ 'label_for' => 'avif_local_support_preserve_metadata' ]
+            'aviflosu_conversion',
+            [ 'label_for' => 'aviflosu_preserve_metadata' ]
         );
 
         // New: Preserve color profile
@@ -244,15 +250,15 @@ final class Plugin
             'avif_local_support_preserve_color_profile',
             __('Keep color profile (ICC)', 'avif-local-support'),
             function (): void {
-                $value = (bool) get_option('avif_local_support_preserve_color_profile', true);
-                echo '<label for="avif_local_support_preserve_color_profile">'
-                    . '<input id="avif_local_support_preserve_color_profile" type="checkbox" name="avif_local_support_preserve_color_profile" value="1" ' . checked(true, $value, false) . ' /> '
+                $value = (bool) get_option('aviflosu_preserve_color_profile', true);
+                echo '<label for="aviflosu_preserve_color_profile">'
+                    . '<input id="aviflosu_preserve_color_profile" type="checkbox" name="aviflosu_preserve_color_profile" value="1" ' . checked(true, $value, false) . ' /> '
                     . esc_html__('When possible (ImageMagick required).', 'avif-local-support')
                     . '</label>';
             },
             'avif-local-support',
-            'avif_local_support_conversion',
-            [ 'label_for' => 'avif_local_support_preserve_color_profile' ]
+            'aviflosu_conversion',
+            [ 'label_for' => 'aviflosu_preserve_color_profile' ]
         );
 
         // New: WordPress thumbnail intelligence
@@ -260,15 +266,15 @@ final class Plugin
             'avif_local_support_wordpress_logic',
             __('Avoid double-resizing', 'avif-local-support'),
             function (): void {
-                $value = (bool) get_option('avif_local_support_wordpress_logic', true);
-                echo '<label for="avif_local_support_wordpress_logic">'
-                    . '<input id="avif_local_support_wordpress_logic" type="checkbox" name="avif_local_support_wordpress_logic" value="1" ' . checked(true, $value, false) . ' /> '
+                $value = (bool) get_option('aviflosu_wordpress_logic', true);
+                echo '<label for="aviflosu_wordpress_logic">'
+                    . '<input id="aviflosu_wordpress_logic" type="checkbox" name="aviflosu_wordpress_logic" value="1" ' . checked(true, $value, false) . ' /> '
                     . esc_html__('Use original/-scaled as the source when converting resized JPEGs.', 'avif-local-support')
                     . '</label>';
             },
             'avif-local-support',
-            'avif_local_support_conversion',
-            [ 'label_for' => 'avif_local_support_wordpress_logic' ]
+            'aviflosu_conversion',
+            [ 'label_for' => 'aviflosu_wordpress_logic' ]
         );
     }
 
@@ -314,7 +320,7 @@ final class Plugin
         echo '      <h2 class="hndle"><span>' . esc_html__('Settings', 'avif-local-support') . '</span></h2>';
         echo '      <div class="inside">';
         echo '        <form action="options.php" method="post">';
-        settings_fields('avif_local_support_settings');
+        settings_fields('aviflosu_settings');
         do_settings_sections('avif-local-support');
         submit_button();
         echo '        </form>';
@@ -350,16 +356,16 @@ final class Plugin
         echo '      <div class="inside">';
         echo '        <p class="description">' . esc_html__('Upload a JPEG to preview resized images and the AVIFs generated by your current settings. The file is added to the Media Library.', 'avif-local-support') . '</p>';
         echo '        <form action="' . esc_url(admin_url('admin-post.php')) . '" method="post" enctype="multipart/form-data" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">';
-        echo '          <input type="hidden" name="action" value="avif_local_support_upload_test" />';
-        wp_nonce_field('avif_local_support_upload_test', '_wpnonce');
+        echo '          <input type="hidden" name="action" value="aviflosu_upload_test" />';
+        wp_nonce_field('aviflosu_upload_test', '_wpnonce');
         echo '          <input type="file" name="avif_local_support_test_file" accept="image/jpeg" required />';
-        echo '          <button type="submit" class="button button-primary" style="flex-basis:100%;margin-top:8px">' . esc_html__('Convert Now', 'avif-local-support') . '</button>';
+        echo '          <button type="submit" class="button button-primary" style="margin-top:8px">' . esc_html__('Convert now', 'avif-local-support') . '</button>';
         echo '        </form>';
 
         $testId = 0;
-        $viewNonce = isset($_GET['_wpnonce']) ? sanitize_text_field((string) wp_unslash($_GET['_wpnonce'])) : '';
-        $uploadIdRaw = isset($_GET['avif-local-support-upload-id']) ? sanitize_text_field((string) wp_unslash($_GET['avif-local-support-upload-id'])) : '';
-        if ($viewNonce !== '' && wp_verify_nonce($viewNonce, 'avif_local_support_view_results')) {
+        $viewNonce = (string) (filter_input(INPUT_GET, '_wpnonce', FILTER_SANITIZE_FULL_SPECIAL_CHARS) ?? '');
+        $uploadIdRaw = (string) (filter_input(INPUT_GET, 'avif-local-support-upload-id', FILTER_SANITIZE_NUMBER_INT) ?? '');
+        if ($viewNonce !== '' && wp_verify_nonce($viewNonce, 'aviflosu_view_results')) {
             $testId = absint($uploadIdRaw);
         }
         if ($testId > 0) {
@@ -457,7 +463,7 @@ final class Plugin
         echo '    <div class="postbox">';
         echo '      <h2 class="hndle"><span>' . esc_html__('About', 'avif-local-support') . '</span></h2>';
         echo '      <div class="inside">';
-        $readme_path = \AVIF_SUITE_PLUGIN_DIR . '/readme.txt';
+        $readme_path = \AVIFLOSU_PLUGIN_DIR . '/readme.txt';
         if (file_exists($readme_path) && is_readable($readme_path)) {
             $readme_contents = @file_get_contents($readme_path);
             if ($readme_contents !== false) {
@@ -483,10 +489,10 @@ final class Plugin
         if (!current_user_can('manage_options')) {
             wp_die(esc_html__('You do not have permission to do this.', 'avif-local-support'));
         }
-        check_admin_referer('avif_local_support_convert_now');
+        check_admin_referer('aviflosu_convert_now');
         // schedule a single immediate event handled by Converter
-        if (!\wp_next_scheduled('avif_local_support_run_on_demand')) {
-            \wp_schedule_single_event(time() + 5, 'avif_local_support_run_on_demand');
+        if (!\wp_next_scheduled('aviflosu_run_on_demand')) {
+            \wp_schedule_single_event(time() + 5, 'aviflosu_run_on_demand');
         }
         \wp_safe_redirect(\add_query_arg('avif-local-support-convert', 'queued', \admin_url('options-general.php?page=avif-local-support')));
         exit;
@@ -497,10 +503,10 @@ final class Plugin
         if (!current_user_can('manage_options')) {
             wp_send_json_error(['message' => 'forbidden'], 403);
         }
-        check_ajax_referer('avif_local_support_convert_now', '_wpnonce');
+        check_ajax_referer('aviflosu_convert_now', '_wpnonce');
         $queued = false;
-        if (!\wp_next_scheduled('avif_local_support_run_on_demand')) {
-            \wp_schedule_single_event(time() + 5, 'avif_local_support_run_on_demand');
+        if (!\wp_next_scheduled('aviflosu_run_on_demand')) {
+            \wp_schedule_single_event(time() + 5, 'aviflosu_run_on_demand');
             $queued = true;
         }
         wp_send_json_success(['queued' => $queued]);
@@ -511,7 +517,7 @@ final class Plugin
         if (!current_user_can('manage_options')) {
             wp_die(esc_html__('You do not have permission to do this.', 'avif-local-support'));
         }
-        check_admin_referer('avif_local_support_upload_test');
+        check_admin_referer('aviflosu_upload_test');
 
         // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Accessing the uploaded file array; individual fields are validated/sanitized below
         $fileArray = isset($_FILES['avif_local_support_test_file']) ? $_FILES['avif_local_support_test_file'] : [];
@@ -530,7 +536,13 @@ final class Plugin
             exit;
         }
         $tmpName = (string) $fileArray['tmp_name'];
-        $originalName = sanitize_file_name((string) wp_unslash($fileArray['name']));
+        $originalName = sanitize_file_name((string) $fileArray['name']);
+
+        $errorCode = isset($fileArray['error']) ? (int) $fileArray['error'] : UPLOAD_ERR_OK;
+        if ($errorCode !== UPLOAD_ERR_OK || $tmpName === '' || !is_uploaded_file($tmpName)) {
+            \wp_safe_redirect(\add_query_arg('avif-local-support-upload-error', 'upload', \admin_url('options-general.php?page=avif-local-support#tools')));
+            exit;
+        }
 
         $fileType = wp_check_filetype_and_ext($tmpName, $originalName, ['jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg']);
         if (empty($fileType['ext']) || !\in_array($fileType['ext'], ['jpg', 'jpeg'], true)) {
@@ -554,7 +566,7 @@ final class Plugin
 
         $this->converter->convertAttachmentNow((int) $attachment_id);
 
-        $view_nonce = wp_create_nonce('avif_local_support_view_results');
+        $view_nonce = wp_create_nonce('aviflosu_view_results');
         \wp_safe_redirect(\add_query_arg([
             'avif-local-support-upload-id' => (string) $attachment_id,
             '_wpnonce' => $view_nonce,
@@ -564,7 +576,7 @@ final class Plugin
 
     public function add_settings_link(array $links): array
     {
-        $settings_link = sprintf('<a href="%s">%s</a>', admin_url('options-general.php?page=avif-local-support'), __('Settings', 'avif-local-support'));
+        $settings_link = sprintf('<a href="%s">%s</a>', esc_url(admin_url('options-general.php?page=avif-local-support')), __('Settings', 'avif-local-support'));
         array_unshift($links, $settings_link);
         return $links;
     }
@@ -574,7 +586,7 @@ final class Plugin
         if (!current_user_can('manage_options')) {
             wp_send_json_error(['message' => 'forbidden'], 403);
         }
-        check_ajax_referer('avif_local_support_scan_missing', '_wpnonce');
+        check_ajax_referer('aviflosu_scan_missing', '_wpnonce');
         $stats = $this->compute_missing_counts();
         wp_send_json_success($stats);
     }

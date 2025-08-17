@@ -23,8 +23,9 @@ declare(strict_types=1);
 // Define constants
 \define('AVIFLOSU_VERSION', '0.1.2');
 \define('AVIFLOSU_PLUGIN_FILE', __FILE__);
-\define('AVIFLOSU_PLUGIN_DIR', __DIR__);
-\define('AVIFLOSU_INC_DIR', __DIR__ . '/includes');
+\define('AVIFLOSU_PLUGIN_DIR', plugin_dir_path(__FILE__));
+\define('AVIFLOSU_PLUGIN_URL', plugin_dir_url(__FILE__));
+\define('AVIFLOSU_INC_DIR', AVIFLOSU_PLUGIN_DIR . 'includes');
 
 // Includes (simple autoload)
 require_once AVIFLOSU_INC_DIR . '/class-avif-suite.php';
@@ -47,7 +48,7 @@ add_action('init', 'aviflosu_init');
 // i18n: WordPress.org will auto-load translations for plugins hosted there.
 // Keeping manual loader disabled to satisfy Plugin Check recommendations.
 
-// Activation / Deactivation / Uninstall
+// Activation / Deactivation
 function aviflosu_activate(): void
 {
 	// Ensure defaults
@@ -83,29 +84,4 @@ function aviflosu_deactivate(): void
 
 register_activation_hook(__FILE__, 'aviflosu_activate');
 register_deactivation_hook(__FILE__, 'aviflosu_deactivate');
-register_uninstall_hook(__FILE__, 'aviflosu_uninstall');
-
-function aviflosu_uninstall(): void
-{
-	// Delete only options created by this plugin
-	$options = [
-		'aviflosu_enable_support',
-		'aviflosu_convert_on_upload',
-		'aviflosu_convert_via_schedule',
-		'aviflosu_schedule_time',
-		'aviflosu_quality',
-		'aviflosu_speed',
-		'aviflosu_preserve_metadata',
-		'aviflosu_preserve_color_profile',
-		'aviflosu_wordpress_logic',
-		'aviflosu_cache_duration',
-	];
-
-	foreach ($options as $option) {
-		if (\get_option($option) !== false) {
-			\delete_option($option);
-		}
-	}
-	// Clean transients
-	\delete_transient('aviflosu_file_cache');
-}
+// Uninstall is handled by uninstall.php

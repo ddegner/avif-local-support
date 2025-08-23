@@ -519,9 +519,16 @@ final class Plugin
         }
         check_admin_referer('aviflosu_upload_test');
 
-        // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Accessing the uploaded file array; individual fields are validated/sanitized below
-        $fileArray = isset($_FILES['avif_local_support_test_file']) ? $_FILES['avif_local_support_test_file'] : [];
-        if (empty($fileArray) || !is_array($fileArray)) {
+        // Build a sanitized, validated view of the uploaded file entry
+        // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Reading from $_FILES; individual fields are sanitized below
+        $rawFile = isset($_FILES['avif_local_support_test_file']) && is_array($_FILES['avif_local_support_test_file']) ? $_FILES['avif_local_support_test_file'] : [];
+        $fileArray = [
+            'name' => isset($rawFile['name']) ? sanitize_file_name((string) $rawFile['name']) : '',
+            'tmp_name' => isset($rawFile['tmp_name']) ? (string) $rawFile['tmp_name'] : '',
+            'error' => isset($rawFile['error']) ? (int) $rawFile['error'] : UPLOAD_ERR_NO_FILE,
+            'size' => isset($rawFile['size']) ? (int) $rawFile['size'] : 0,
+        ];
+        if (empty($rawFile) || !is_array($rawFile)) {
             \wp_safe_redirect(\add_query_arg('avif-local-support-upload-error', 'nofile', \admin_url('options-general.php?page=avif-local-support#tools')));
             exit;
         }
@@ -531,14 +538,14 @@ final class Plugin
             require_once ABSPATH . 'wp-admin/includes/media.php';
             require_once ABSPATH . 'wp-admin/includes/image.php';
         }
-        if (!isset($fileArray['tmp_name'], $fileArray['name'])) {
+        if ($fileArray['tmp_name'] === '' || $fileArray['name'] === '') {
             \wp_safe_redirect(\add_query_arg('avif-local-support-upload-error', 'nofile', \admin_url('options-general.php?page=avif-local-support#tools')));
             exit;
         }
-        $tmpName = (string) $fileArray['tmp_name'];
-        $originalName = sanitize_file_name((string) $fileArray['name']);
+        $tmpName = $fileArray['tmp_name'];
+        $originalName = $fileArray['name'];
 
-        $errorCode = isset($fileArray['error']) ? (int) $fileArray['error'] : UPLOAD_ERR_OK;
+        $errorCode = $fileArray['error'];
         if ($errorCode !== UPLOAD_ERR_OK || $tmpName === '' || !is_uploaded_file($tmpName)) {
             \wp_safe_redirect(\add_query_arg('avif-local-support-upload-error', 'upload', \admin_url('options-general.php?page=avif-local-support#tools')));
             exit;

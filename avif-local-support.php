@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 /**
  * Plugin Name: AVIF Local Support
- * Plugin URI: https://github.com/daviddegner
+ * Plugin URI: https://github.com/ddegner/avif-local-support
  * Description: Unified AVIF support and conversion. Local-first processing with a strong focus on image quality when converting JPEGs.
  * Version: 0.1.3
  * Author: David Degner

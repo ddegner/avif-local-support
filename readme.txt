@@ -44,6 +44,30 @@ No external services. No tracking. All processing happens on your server (includ
 2. Activate the plugin through the 'Plugins' screen in WordPress.
 3. Go to Settings → AVIF Local Support to configure options.
 
+== Ubuntu/Debian setup (summary) ==
+
+For local JPEG→AVIF conversion you need either Imagick with AVIF-enabled ImageMagick, or GD with AVIF support:
+
+- Imagick path (recommended)
+  - PHP extension: imagick
+  - System libraries: ImageMagick built with HEIF/AVIF support (via libheif)
+  - Notes: This path enables higher-quality resizing and preserves metadata/ICC profiles
+
+- GD path (fallback)
+  - PHP extension: gd built with AVIF support (provides `imageavif` on PHP 8.1+)
+  - Notes: Ensure your distro’s PHP GD is compiled with AVIF; some builds omit it
+
+- Helpful extras
+  - PHP exif extension (for orientation handling in the GD fallback)
+  - Web server configured to serve `.avif` as `image/avif` (Apache/Nginx/LiteSpeed)
+
+Official documentation:
+- PHP Imagick installation: https://www.php.net/imagick
+- PHP GD installation (AVIF details): https://www.php.net/manual/en/image.installation.php
+- ImageMagick format support (AVIF/HEIF): https://imagemagick.org/script/formats.php
+- Apache MIME configuration: https://httpd.apache.org/docs/current/mod/mod_mime.html
+- Nginx MIME configuration: https://nginx.org/en/docs/http/ngx_http_types_module.html
+
 == Frequently Asked Questions ==
 
 = Does this modify my original JPEGs? =

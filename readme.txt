@@ -4,7 +4,7 @@ Tags: images, avif, performance, conversion, media
 Requires at least: 6.5
 Tested up to: 6.8
 Requires PHP: 8.0
-Stable tag: 0.1.2
+Stable tag: 0.1.3
 License: GPL v2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -61,6 +61,12 @@ No. The plugin does not track users or send data to external services.
 
 == Changelog ==
 
+= 0.1.3 =
+- Cleanup: remove unused admin-post “Convert now” handler; AJAX is the single path.
+- Cleanup: simplify deactivation routine to directly clear scheduled hooks.
+- Cleanup: remove unused global polling object and helpers in `assets/admin.js`.
+- Internal: no user-facing changes; reduces complexity and maintenance overhead.
+
 = 0.1.2 =
 - Security: ensure all settings use sanitize_callback and validate/escape inputs consistently
 - Admin: sanitize GET/FILES handling for the Tools → Upload Test
@@ -77,6 +83,9 @@ No. The plugin does not track users or send data to external services.
 Initial release.
 
 == Upgrade Notice ==
+
+= 0.1.3 =
+Cleanup and maintenance. No behavior changes.
 
 = 0.1.2 =
 Security and compatibility improvements; recommended update.

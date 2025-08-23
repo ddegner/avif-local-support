@@ -45,7 +45,6 @@
     if (!btn || typeof AVIFLocalSupportData === 'undefined') return;
     var ajaxUrl = AVIFLocalSupportData.ajaxUrl;
     var nonce = AVIFLocalSupportData.scanNonce;
-    var pollingTimer = null;
     function setLoading() {
       var totalEl = $('#avif-local-support-total-jpegs');
       var avifsEl = $('#avif-local-support-existing-avifs');
@@ -85,17 +84,7 @@
     }
     btn.addEventListener('click', scan);
 
-    // Expose a polling controller for convert-now UX
-    function startPolling(intervalMs) {
-      if (pollingTimer) window.clearInterval(pollingTimer);
-      pollingTimer = window.setInterval(scan, intervalMs || 4000);
-      scan();
-    }
-    function stopPolling() {
-      if (pollingTimer) window.clearInterval(pollingTimer);
-      pollingTimer = null;
-    }
-    window.AVIFLocalSupportStatus = { startPolling: startPolling, stopPolling: stopPolling, rescan: scan };
+    // No global polling controller needed; tools tab has its own progress/polling
   }
 
   function initAll() {

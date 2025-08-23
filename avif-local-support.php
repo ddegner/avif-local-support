@@ -6,7 +6,7 @@ declare(strict_types=1);
  * Plugin Name: AVIF Local Support
  * Plugin URI: https://github.com/daviddegner
  * Description: Unified AVIF support and conversion. Local-first processing with a strong focus on image quality when converting JPEGs.
- * Version: 0.1.2
+ * Version: 0.1.3
  * Author: David Degner
  * Author URI: https://www.DavidDegner.com
  * License: GPL v2 or later
@@ -21,7 +21,7 @@ declare(strict_types=1);
 \defined('ABSPATH') || exit;
 
 // Define constants
-\define('AVIFLOSU_VERSION', '0.1.2');
+\define('AVIFLOSU_VERSION', '0.1.3');
 \define('AVIFLOSU_PLUGIN_FILE', __FILE__);
 \define('AVIFLOSU_PLUGIN_DIR', plugin_dir_path(__FILE__));
 \define('AVIFLOSU_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -67,19 +67,8 @@ function aviflosu_activate(): void
 function aviflosu_deactivate(): void
 {
 	// Clear any scheduled events created by this plugin
-	if (function_exists('wp_clear_scheduled_hook')) {
-		\wp_clear_scheduled_hook('aviflosu_daily_event');
-		\wp_clear_scheduled_hook('aviflosu_run_on_demand');
-	} else {
-		$timestamp = \wp_next_scheduled('aviflosu_daily_event');
-		if ($timestamp && \wp_get_schedule('aviflosu_daily_event')) {
-			\wp_unschedule_event($timestamp, 'aviflosu_daily_event');
-		}
-		$timestamp = \wp_next_scheduled('aviflosu_run_on_demand');
-		if ($timestamp && \wp_get_schedule('aviflosu_run_on_demand')) {
-			\wp_unschedule_event($timestamp, 'aviflosu_run_on_demand');
-		}
-	}
+	\wp_clear_scheduled_hook('aviflosu_daily_event');
+	\wp_clear_scheduled_hook('aviflosu_run_on_demand');
 }
 
 register_activation_hook(__FILE__, 'aviflosu_activate');

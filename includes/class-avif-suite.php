@@ -25,7 +25,6 @@ final class Plugin
         add_action('admin_init', [$this, 'register_settings']);
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_assets']);
         add_filter('plugin_action_links_' . plugin_basename(\AVIFLOSU_PLUGIN_FILE), [$this, 'add_settings_link']);
-        add_action('admin_post_aviflosu_convert_now', [$this, 'handle_convert_now']);
         add_action('admin_post_aviflosu_upload_test', [$this, 'handle_upload_test']);
         add_action('wp_ajax_aviflosu_scan_missing', [$this, 'ajax_scan_missing']);
         add_action('wp_ajax_aviflosu_convert_now', [$this, 'ajax_convert_now']);
@@ -484,19 +483,7 @@ final class Plugin
         echo '</div>';
     }
 
-    public function handle_convert_now(): void
-    {
-        if (!current_user_can('manage_options')) {
-            wp_die(esc_html__('You do not have permission to do this.', 'avif-local-support'));
-        }
-        check_admin_referer('aviflosu_convert_now');
-        // schedule a single immediate event handled by Converter
-        if (!\wp_next_scheduled('aviflosu_run_on_demand')) {
-            \wp_schedule_single_event(time() + 5, 'aviflosu_run_on_demand');
-        }
-        \wp_safe_redirect(\add_query_arg('avif-local-support-convert', 'queued', \admin_url('options-general.php?page=avif-local-support')));
-        exit;
-    }
+    
 
     public function ajax_convert_now(): void
     {

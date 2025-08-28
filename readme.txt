@@ -1,11 +1,10 @@
 === AVIF Local Support ===
 Contributors: ddegner
-Donate link: https://www.daviddegner.com
 Plugin URI: https://github.com/ddegner/avif-local-support
 Tags: images, avif, performance, conversion, media
 Requires at least: 6.5
 Tested up to: 6.8
-Stable tag: 0.1.5
+Stable tag: 0.1.6
 Requires PHP: 8.0
 License: GPL v2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -14,7 +13,7 @@ AVIF support for converting and serving high quality photos. Built by a photogra
 
 == Description ==
 
-AVIF Local Support adds modern AVIF image support to WordPress while keeping compatibility with existing JPEG media.  Built by a [Boston photographer]() who just wanted their website to look as good as possible.
+AVIF Local Support adds modern AVIF image support to WordPress while keeping compatibility with existing JPEG media.  Built by a [Boston photographer](https://www.daviddegner.com) who just wanted their website to look as good as possible.
 
 **GitHub Repository:** [https://github.com/ddegner/avif-local-support](https://github.com/ddegner/avif-local-support)
 
@@ -94,6 +93,13 @@ No. The plugin does not track users or send data to external services.
 
 
 == Changelog ==
+= 0.1.6 =
+- Color: Preserve ICC profiles when present; add sRGB nclx only when no ICC.
+- Color: Avoid transforming tagged images; transform untagged to sRGB to prevent desaturation.
+- Color: Explicitly set AVIF nclx to sRGB/full range when applicable.
+- Orientation: Normalize EXIF Orientation to 1 after auto-orienting to prevent double-rotate.
+- UI: Status tab warns when GD is the preferred method about lack of color management.
+
 = 0.1.5 =
 - Tools: Add “Delete all AVIF files” action with security checks.
 - Admin: Show “Running…” on convert start and poll progress more frequently.
@@ -131,6 +137,9 @@ No. The plugin does not track users or send data to external services.
 Initial release.
 
 == Upgrade Notice ==
+= 0.1.6 =
+More accurate color handling: preserves ICC for tagged images, avoids sRGB-desaturation of AdobeRGB/P3, and normalizes EXIF Orientation. Adds Status warning for GD color limits. Recommended update.
+
 = 0.1.5 =
 New Tools action to delete AVIF files; improved progress UI and more accurate Status counts. Recommended update.
 

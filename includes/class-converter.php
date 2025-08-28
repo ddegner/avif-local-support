@@ -189,6 +189,29 @@ final class Converter
                 $im->setImageCompressionQuality($quality);
                 $im->setOption('avif:speed', (string) min(8, $speedSetting));
 
+                // Determine if source has an embedded ICC profile
+                $hasIcc = false;
+                try {
+                    $existingIcc = $im->getImageProfile('icc');
+                    $hasIcc = !empty($existingIcc);
+                } catch (\Exception $e) {
+                    $hasIcc = false;
+                }
+
+                // If no ICC, ensure output is in sRGB to avoid desaturation across viewers
+                $transformedToSrgb = false;
+                if (!$hasIcc) {
+                    $originalColorspace = method_exists($im, 'getImageColorspace') ? (int) $im->getImageColorspace() : null;
+                    if (method_exists($im, 'transformImageColorspace')) {
+                        $im->transformImageColorspace(\Imagick::COLORSPACE_SRGB);
+                    } elseif (method_exists($im, 'setImageColorspace')) {
+                        $im->setImageColorspace(\Imagick::COLORSPACE_SRGB);
+                    }
+                    if ($originalColorspace !== null && method_exists($im, 'getImageColorspace')) {
+                        $transformedToSrgb = ($originalColorspace !== \Imagick::COLORSPACE_SRGB) && ((int) $im->getImageColorspace() === \Imagick::COLORSPACE_SRGB);
+                    }
+                }
+
                 // Apply chroma subsampling and bit depth when possible
                 $chromaLabel = $subsampling === '444' ? '4:4:4' : ($subsampling === '422' ? '4:2:2' : '4:2:0');
                 // Try both avif:* and heic:* defines for broader libheif compatibility
@@ -199,9 +222,24 @@ final class Converter
                 // Also set image depth as a fallback
                 $im->setImageDepth((int) $bitDepth);
 
+                // Explicitly tag AVIF color information (nclx) only when no ICC is present
+                if (!$hasIcc) {
+                    // sRGB: BT.709 primaries (1), sRGB transfer (13), BT.709 matrix (1), full range
+                    @ $im->setOption('avif:color-primaries', '1');
+                    @ $im->setOption('avif:transfer-characteristics', '13');
+                    @ $im->setOption('avif:matrix-coefficients', '1');
+                    @ $im->setOption('avif:range', 'full');
+                    // Also try heic:* for older ImageMagick/libheif option names
+                    @ $im->setOption('heic:color-primaries', '1');
+                    @ $im->setOption('heic:transfer-characteristics', '13');
+                    @ $im->setOption('heic:matrix-coefficients', '1');
+                    @ $im->setOption('heic:range', 'full');
+                }
+
                 if ($preserveMeta || $preserveICC) {
                     try {
                         $src = new \Imagick($sourcePath);
+                        // Preserve ICC when present so color-managed viewers render accurately (e.g., AdobeRGB)
                         if ($preserveICC) {
                             $icc = $src->getImageProfile('icc');
                             if (!empty($icc)) { $im->setImageProfile('icc', $icc); }
@@ -217,6 +255,13 @@ final class Converter
                         // ignore metadata errors
                     }
                 }
+
+                // Normalize EXIF Orientation tag to top-left after auto-orienting
+                if (method_exists($im, 'setImageProperty')) {
+                    try { $im->setImageProperty('exif:Orientation', '1'); } catch (\Exception $e) {}
+                }
+
+                // Do not strip ICC; rely on ICC when present, nclx when not
 
                 $im->writeImage($avifPath);
                 $im->destroy();

@@ -469,6 +469,9 @@ final class Plugin
         echo '            <tr><td><strong>' . esc_html__('Preferred method', 'avif-local-support') . '</strong></td><td>' . esc_html($system_status['preferred_method']) . '</td></tr>';
         echo '            <tr><td><strong>' . esc_html__('AVIF supported', 'avif-local-support') . '</strong></td><td>' . (!empty($system_status['avif_support']) ? esc_html__('Yes', 'avif-local-support') : esc_html__('No', 'avif-local-support')) . '</td></tr>';
         echo '          </tbody></table>';
+        if (!empty($system_status['preferred_method']) && $system_status['preferred_method'] === 'gd') {
+            echo '<p class="description" style="margin-top:8px;"><strong>' . esc_html__('Color management note:', 'avif-local-support') . '</strong> ' . esc_html__('GD does not perform color management; non‑sRGB JPEGs (Adobe RGB, Display P3) may appear desaturated. For accurate color and metadata preservation, enable Imagick with AVIF support.', 'avif-local-support') . '</p>';
+        }
         echo '      </div>';
         echo '    </div>';
         echo '  </div>'; // .metabox-holder
@@ -628,7 +631,7 @@ final class Plugin
             if (preg_match('/\.avif$/i', $path)) {
                 // Do not follow symlinks
                 if ($fileInfo->isLink()) { continue; }
-                $ok = @unlink($path);
+                $ok = \wp_delete_file($path);
                 if ($ok) { $deleted++; } else { $failed++; }
             }
         }

@@ -4,7 +4,7 @@ Plugin URI: https://github.com/ddegner/avif-local-support
 Tags: images, avif, performance, conversion, media
 Requires at least: 6.5
 Tested up to: 6.8
-Stable tag: 0.1.6
+Stable tag: 0.1.8
 Requires PHP: 8.0
 License: GPL v2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -93,6 +93,12 @@ No. The plugin does not track users or send data to external services.
 
 
 == Changelog ==
+= 0.1.8 =
+- Performance: Optimize Imagick conversion by using single instance for both processing and metadata extraction, reducing memory usage and file I/O operations.
+
+= 0.1.7 =
+- Bugfix: Correct AdobeRGB desaturation by preserving ICC from a fresh read and only adding nclx when untagged; continue to prefer Imagick so ICC survives.
+
 = 0.1.6 =
 - Color: Preserve ICC profiles when present; add sRGB nclx only when no ICC.
 - Color: Avoid transforming tagged images; transform untagged to sRGB to prevent desaturation.
@@ -137,6 +143,12 @@ No. The plugin does not track users or send data to external services.
 Initial release.
 
 == Upgrade Notice ==
+= 0.1.8 =
+Performance optimization for Imagick-based conversions: reduces memory usage and I/O operations while maintaining all quality features. Recommended update.
+
+= 0.1.7 =
+Fixes color desaturation for AdobeRGB JPEGs converted to AVIF by preserving ICC correctly and avoiding conflicting nclx. Recommended update.
+
 = 0.1.6 =
 More accurate color handling: preserves ICC for tagged images, avoids sRGB-desaturation of AdobeRGB/P3, and normalizes EXIF Orientation. Adds Status warning for GD color limits. Recommended update.
 

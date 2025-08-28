@@ -13,12 +13,18 @@ final class Converter
     {
         // Convert on upload (toggle)
         add_filter('wp_generate_attachment_metadata', [$this, 'convertGeneratedSizes'], 20, 2);
+        // Also catch edits/regenerations that update metadata outside of generation
+        add_filter('wp_update_attachment_metadata', [$this, 'convertGeneratedSizes'], 20, 2);
         add_filter('wp_handle_upload', [$this, 'convertOriginalOnUpload'], 20);
 
         // Scheduling
         add_action('init', [$this, 'maybe_schedule_daily']);
         add_action('aviflosu_daily_event', [$this, 'run_daily_scan']);
         add_action('aviflosu_run_on_demand', [$this, 'run_daily_scan']);
+
+        // Deletion: keep .avif companions in sync when media is removed
+        add_action('delete_attachment', [$this, 'deleteAvifsForAttachment']);
+        add_filter('wp_delete_file', [$this, 'deleteCompanionAvif']);
 
         if (\defined('WP_CLI') && \WP_CLI) {
             \WP_CLI::add_command('avif-local-support convert', [$this, 'cliConvertAll']);
@@ -154,6 +160,19 @@ final class Converter
         if (extension_loaded('imagick')) {
             try {
                 $im = new \Imagick($sourcePath);
+                // Capture ICC/metadata profiles from the same instance BEFORE any transforms
+                $originalIcc = '';
+                $hadIcc = false;
+                $profileBlobs = ['exif' => '', 'xmp' => '', 'iptc' => ''];
+                try {
+                    $originalIcc = $im->getImageProfile('icc');
+                    $hadIcc = !empty($originalIcc);
+                } catch (\Exception $e) {
+                    $hadIcc = false;
+                }
+                foreach (array_keys($profileBlobs) as $pName) {
+                    try { $profileBlobs[$pName] = $im->getImageProfile($pName); } catch (\Exception $e) { $profileBlobs[$pName] = ''; }
+                }
                 // Normalize orientation before any cropping/resizing
                 if (method_exists($im, 'autoOrientImage')) {
                     $im->autoOrientImage();
@@ -189,18 +208,9 @@ final class Converter
                 $im->setImageCompressionQuality($quality);
                 $im->setOption('avif:speed', (string) min(8, $speedSetting));
 
-                // Determine if source has an embedded ICC profile
-                $hasIcc = false;
-                try {
-                    $existingIcc = $im->getImageProfile('icc');
-                    $hasIcc = !empty($existingIcc);
-                } catch (\Exception $e) {
-                    $hasIcc = false;
-                }
-
-                // If no ICC, ensure output is in sRGB to avoid desaturation across viewers
+                // If original had no ICC, ensure output is in sRGB to avoid desaturation across viewers
                 $transformedToSrgb = false;
-                if (!$hasIcc) {
+                if (!$hadIcc) {
                     $originalColorspace = method_exists($im, 'getImageColorspace') ? (int) $im->getImageColorspace() : null;
                     if (method_exists($im, 'transformImageColorspace')) {
                         $im->transformImageColorspace(\Imagick::COLORSPACE_SRGB);
@@ -222,8 +232,8 @@ final class Converter
                 // Also set image depth as a fallback
                 $im->setImageDepth((int) $bitDepth);
 
-                // Explicitly tag AVIF color information (nclx) only when no ICC is present
-                if (!$hasIcc) {
+                // Explicitly tag AVIF color information (nclx) only when the original had no ICC
+                if (!$hadIcc) {
                     // sRGB: BT.709 primaries (1), sRGB transfer (13), BT.709 matrix (1), full range
                     @ $im->setOption('avif:color-primaries', '1');
                     @ $im->setOption('avif:transfer-characteristics', '13');
@@ -238,19 +248,15 @@ final class Converter
 
                 if ($preserveMeta || $preserveICC) {
                     try {
-                        $src = new \Imagick($sourcePath);
                         // Preserve ICC when present so color-managed viewers render accurately (e.g., AdobeRGB)
-                        if ($preserveICC) {
-                            $icc = $src->getImageProfile('icc');
-                            if (!empty($icc)) { $im->setImageProfile('icc', $icc); }
+                        if ($preserveICC && $hadIcc && !empty($originalIcc)) {
+                            $im->setImageProfile('icc', $originalIcc);
                         }
                         if ($preserveMeta) {
-                            foreach (['exif', 'xmp', 'iptc'] as $profile) {
-                                $blob = $src->getImageProfile($profile);
+                            foreach ($profileBlobs as $profile => $blob) {
                                 if (!empty($blob)) { $im->setImageProfile($profile, $blob); }
                             }
                         }
-                        $src->destroy();
                     } catch (\Exception $e) {
                         // ignore metadata errors
                     }
@@ -543,5 +549,66 @@ final class Converter
         unset($row);
 
         return $results;
+    }
+
+    /**
+     * When an attachment is permanently deleted, remove any companion .avif files
+     * for the original and its generated sizes.
+     */
+    public function deleteAvifsForAttachment(int $attachmentId): void
+    {
+        $mime = get_post_mime_type($attachmentId);
+        if (!\is_string($mime) || !\in_array($mime, ['image/jpeg', 'image/jpg'], true)) {
+            return;
+        }
+
+        $uploads = \wp_upload_dir();
+        $baseDir = \trailingslashit($uploads['basedir'] ?? '');
+
+        $meta = \wp_get_attachment_metadata($attachmentId) ?: [];
+
+        $paths = [];
+        if (!empty($meta['file']) && \is_string($meta['file'])) {
+            $paths[] = $baseDir . $meta['file'];
+        } else {
+            $attached = \get_attached_file($attachmentId);
+            if ($attached) { $paths[] = (string) $attached; }
+        }
+
+        if (!empty($meta['sizes']) && \is_array($meta['sizes'])) {
+            $dirRel = pathinfo((string) ($meta['file'] ?? ''), PATHINFO_DIRNAME);
+            if ($dirRel === '.' || $dirRel === DIRECTORY_SEPARATOR) { $dirRel = ''; }
+            foreach ($meta['sizes'] as $sizeData) {
+                if (!empty($sizeData['file']) && \is_string($sizeData['file'])) {
+                    $paths[] = $baseDir . \trailingslashit($dirRel) . $sizeData['file'];
+                }
+            }
+        }
+
+        foreach ($paths as $jpegPath) {
+            if (!\is_string($jpegPath) || $jpegPath === '' || !@file_exists($jpegPath)) { continue; }
+            if (!preg_match('/\.(jpe?g)$/i', $jpegPath)) { continue; }
+            $avifPath = (string) preg_replace('/\.(jpe?g)$/i', '.avif', $jpegPath);
+            if ($avifPath !== '' && @file_exists($avifPath)) {
+                // Do not follow symlinks
+                if (@is_link($avifPath)) { continue; }
+                \wp_delete_file($avifPath);
+            }
+        }
+    }
+
+    /**
+     * When WordPress deletes a specific file (e.g., a resized JPEG), also delete its
+     * .avif companion if present. Must return the original path so core proceeds.
+     */
+    public function deleteCompanionAvif(string $path): string
+    {
+        if (\is_string($path) && $path !== '' && preg_match('/\.(jpe?g)$/i', $path)) {
+            $avifPath = (string) preg_replace('/\.(jpe?g)$/i', '.avif', $path);
+            if ($avifPath !== '' && @file_exists($avifPath) && !@is_link($avifPath)) {
+                \wp_delete_file($avifPath);
+            }
+        }
+        return $path;
     }
 }

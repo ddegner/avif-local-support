@@ -1,35 +1,38 @@
 === AVIF Local Support ===
 Contributors: ddegner
+Donate link: https://www.daviddegner.com
+Plugin URI: https://github.com/ddegner/avif-local-support
 Tags: images, avif, performance, conversion, media
 Requires at least: 6.5
 Tested up to: 6.8
+Stable tag: 0.1.5
 Requires PHP: 8.0
-Stable tag: 0.1.3
 License: GPL v2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Unified AVIF support and conversion for WordPress. Local-first processing with a focus on image quality when converting JPEGs.
+AVIF support for converting and serving high quality photos. Built by a photographer, not trying to sell subscriptions.
 
 == Description ==
 
-AVIF Local Support adds modern AVIF image support to WordPress while keeping compatibility with existing JPEG media.
+AVIF Local Support adds modern AVIF image support to WordPress while keeping compatibility with existing JPEG media.  Built by a [Boston photographer]() who just wanted their website to look as good as possible.
+
+**GitHub Repository:** [https://github.com/ddegner/avif-local-support](https://github.com/ddegner/avif-local-support)
 
 - Local-first: all processing happens on your own server (works great on local environments like Local, MAMP, Docker) — no external calls.
-- Image quality first: uses Imagick when available for high-quality resizing (LANCZOS), corrects EXIF orientation, and can preserve ICC color profiles and EXIF/XMP/IPTC metadata.
+- Image quality first: uses Imagick when available for high-quality resizing (LANCZOS), corrects EXIF orientation, and preserves ICC color profiles and EXIF/XMP/IPTC metadata when possible.
 - Tunable quality and speed: set AVIF quality (0–100) and encoder speed (0–10) to balance fidelity and performance.
 
 - Wraps existing `<img>` tags in `<picture>` with an AVIF `<source>` when an `.avif` version is present.
 - Converts JPEG originals and generated sizes to AVIF on upload, or via a daily/background scan.
-- Optional preservation of EXIF/XMP/IPTC metadata and ICC color profiles (when using ImageMagick/Imagick).
-- WordPress-aware resizing logic to avoid double-resizing when generating AVIF sizes from originals.
-- Allows AVIF uploads (`image/avif`).
-
-No external services. No tracking. All processing happens on your server (including local setups).
+- Preserves EXIF/XMP/IPTC metadata and ICC color profiles by default (when using ImageMagick/Imagick).
+- WordPress-aware resizing logic enabled by default to avoid double-resizing when generating AVIF sizes from originals.
+ - New encoder controls: choose chroma subsampling (4:2:0, 4:2:2, 4:4:4) and bit depth (8/10/12-bit). Defaults: 4:2:0 and 8-bit.
+ - Tools include: convert missing AVIFs, upload a test JPEG, and delete all AVIF files in uploads.
 
 = How it works =
 
 - Front end: Filters common image outputs to add an AVIF `<source>` ahead of the original JPEG. Browsers that support AVIF will use it; others fall back to JPEG.
-- Conversion: Uses Imagick when available (preferred) — with auto-orientation and LANCZOS resizing — or GD with an AVIF encoder. Quality and speed are configurable.
+- Conversion: Uses Imagick when available (preferred) — with auto-orientation and LANCZOS resizing — or GD with an AVIF encoder. Quality, speed, chroma subsampling, and bit depth are configurable (subsampling/bit depth applied via Imagick when supported).
 - Scheduling: Optional daily scan to backfill missing `.avif` files for existing JPEGs.
 
 = Requirements =
@@ -68,6 +71,13 @@ Official documentation:
 - Apache MIME configuration: https://httpd.apache.org/docs/current/mod/mod_mime.html
 - Nginx MIME configuration: https://nginx.org/en/docs/http/ngx_http_types_module.html
 
+== Screenshots ==
+
+1. Settings — configure AVIF conversion and output.
+2. Tools — convert missing AVIFs, test a conversion, and delete AVIFs.
+3. Status — server capability check and library coverage.
+4. About — in-admin readme for quick reference.
+
 == Frequently Asked Questions ==
 
 = Does this modify my original JPEGs? =
@@ -84,6 +94,20 @@ No. The plugin does not track users or send data to external services.
 
 
 == Changelog ==
+= 0.1.5 =
+- Tools: Add “Delete all AVIF files” action with security checks.
+- Admin: Show “Running…” on convert start and poll progress more frequently.
+- Admin: Increase spacing and add non-breaking spaces between radio options.
+- Admin: Place “Convert now” under file input in Upload Test.
+- Status: Deduplicate counts by real JPEG path to avoid double-counting.
+
+= 0.1.4 =
+- Defaults: Always preserve metadata (EXIF/XMP/IPTC) and ICC color profiles.
+- Defaults: Always avoid double-resizing by using WordPress original/-scaled logic.
+- Settings: Remove toggles for metadata/ICC/avoid double-resizing (now defaults).
+- Settings: Add chroma subsampling radios (4:2:0, 4:2:2, 4:4:4) and bit depth radios (8/10/12-bit). Defaults: 4:2:0 and 8-bit.
+- Security: Continue strict sanitization of new settings with whitelists.
+- Docs: Update descriptions to reflect new defaults and controls.
 
 = 0.1.3 =
 - Cleanup: remove unused admin-post “Convert now” handler; AJAX is the single path.
@@ -107,6 +131,11 @@ No. The plugin does not track users or send data to external services.
 Initial release.
 
 == Upgrade Notice ==
+= 0.1.5 =
+New Tools action to delete AVIF files; improved progress UI and more accurate Status counts. Recommended update.
+
+= 0.1.4 =
+New encoder controls; improved defaults. Recommended update.
 
 = 0.1.3 =
 Cleanup and maintenance. No behavior changes.

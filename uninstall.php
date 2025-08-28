@@ -13,6 +13,9 @@ $options = [
 	'aviflosu_schedule_time',
 	'aviflosu_quality',
 	'aviflosu_speed',
+	'aviflosu_subsampling',
+	'aviflosu_bit_depth',
+	// legacy options left behind in older versions
 	'aviflosu_preserve_metadata',
 	'aviflosu_preserve_color_profile',
 	'aviflosu_wordpress_logic',

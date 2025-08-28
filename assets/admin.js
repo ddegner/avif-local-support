@@ -107,7 +107,7 @@
         var nonce = AVIFLocalSupportData.convertNonce;
         convertBtn.disabled = true;
         if (spinner) spinner.classList.add('is-active');
-        if (statusEl) statusEl.textContent = '';
+        if (statusEl) statusEl.textContent = 'Running…';
         var form = new URLSearchParams();
         form.append('action', 'aviflosu_convert_now');
         form.append('_wpnonce', nonce);
@@ -118,7 +118,10 @@
         })
         .then(function (r) { return r.json(); })
         .then(function (json) {
-          if (statusEl) statusEl.textContent = json && json.success ? 'Queued' : 'Failed';
+          if (!(json && json.success)) {
+            if (statusEl) statusEl.textContent = 'Failed';
+            return;
+          }
           // Show inline progress on this tab
           if (json && json.success) {
             if (toolsProgress) toolsProgress.style.display = '';
@@ -170,7 +173,8 @@
               .catch(function () {});
             }
             if (pollingTimerLocal) window.clearInterval(pollingTimerLocal);
-            pollingTimerLocal = window.setInterval(updateLocal, 4000);
+            // Poll more frequently for a snappier progress display
+            pollingTimerLocal = window.setInterval(updateLocal, 1500);
             updateLocal();
           }
         })
@@ -180,6 +184,45 @@
         .finally(function () {
           if (spinner) spinner.classList.remove('is-active');
           convertBtn.disabled = false;
+        });
+      });
+    }
+
+    // Delete all AVIF files
+    var deleteBtn = document.querySelector('#avif-local-support-delete-avifs');
+    var deleteSpinner = document.querySelector('#avif-local-support-delete-spinner');
+    var deleteStatus = document.querySelector('#avif-local-support-delete-status');
+    if (deleteBtn && typeof AVIFLocalSupportData !== 'undefined') {
+      deleteBtn.addEventListener('click', function () {
+        if (!confirm('Delete all .avif files in uploads? This cannot be undone.')) {
+          return;
+        }
+        var ajaxUrl = AVIFLocalSupportData.ajaxUrl;
+        var nonce = AVIFLocalSupportData.deleteNonce;
+        deleteBtn.disabled = true;
+        if (deleteSpinner) deleteSpinner.classList.add('is-active');
+        if (deleteStatus) deleteStatus.textContent = '';
+        var form = new URLSearchParams();
+        form.append('action', 'aviflosu_delete_all_avifs');
+        form.append('_wpnonce', nonce);
+        fetch(ajaxUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+          body: form.toString()
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (json) {
+          if (json && json.success && json.data) {
+            var d = json.data;
+            if (deleteStatus) deleteStatus.textContent = 'Deleted ' + String(d.deleted || 0) + (d.failed ? (', failed ' + String(d.failed)) : '');
+          } else {
+            if (deleteStatus) deleteStatus.textContent = 'Failed';
+          }
+        })
+        .catch(function () { if (deleteStatus) deleteStatus.textContent = 'Failed'; })
+        .finally(function () {
+          if (deleteSpinner) deleteSpinner.classList.remove('is-active');
+          deleteBtn.disabled = false;
         });
       });
     }

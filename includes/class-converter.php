@@ -134,8 +134,15 @@ final class Converter
     {
         $quality = max(0, min(100, (int) get_option('aviflosu_quality', 85)));
         $speedSetting = max(0, min(10, (int) get_option('aviflosu_speed', 1)));
-        $preserveMeta = (bool) get_option('aviflosu_preserve_metadata', true);
-        $preserveICC = (bool) get_option('aviflosu_preserve_color_profile', true);
+        // Always preserve metadata and ICC by default (options removed from UI)
+        $preserveMeta = true;
+        $preserveICC = true;
+
+        // New options: chroma subsampling and bit depth (Imagick only)
+        $subsampling = (string) get_option('aviflosu_subsampling', '420');
+        if (!in_array($subsampling, ['420', '422', '444'], true)) { $subsampling = '420'; }
+        $bitDepth = (string) get_option('aviflosu_bit_depth', '8');
+        if (!in_array($bitDepth, ['8', '10', '12'], true)) { $bitDepth = '8'; }
 
         // Ensure directory exists
         $dir = \dirname($avifPath);
@@ -181,6 +188,16 @@ final class Converter
                 $im->setImageFormat('AVIF');
                 $im->setImageCompressionQuality($quality);
                 $im->setOption('avif:speed', (string) min(8, $speedSetting));
+
+                // Apply chroma subsampling and bit depth when possible
+                $chromaLabel = $subsampling === '444' ? '4:4:4' : ($subsampling === '422' ? '4:2:2' : '4:2:0');
+                // Try both avif:* and heic:* defines for broader libheif compatibility
+                @ $im->setOption('avif:chroma-subsample', $chromaLabel);
+                @ $im->setOption('heic:chroma-subsample', $chromaLabel);
+                @ $im->setOption('avif:bit-depth', $bitDepth);
+                @ $im->setOption('heic:bit-depth', $bitDepth);
+                // Also set image depth as a fallback
+                $im->setImageDepth((int) $bitDepth);
 
                 if ($preserveMeta || $preserveICC) {
                     try {
@@ -297,7 +314,8 @@ final class Converter
 
     private function getConversionData(string $jpegPath): array
     {
-        $useWpLogic = (bool) get_option('aviflosu_wordpress_logic', true);
+        // Always use WordPress logic to avoid double-resizing
+        $useWpLogic = true;
         $sourcePath = $jpegPath;
         $target = null;
         if ($useWpLogic) {

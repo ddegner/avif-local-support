@@ -28,6 +28,7 @@ final class Plugin
         add_action('admin_post_aviflosu_upload_test', [$this, 'handle_upload_test']);
         add_action('wp_ajax_aviflosu_scan_missing', [$this, 'ajax_scan_missing']);
         add_action('wp_ajax_aviflosu_convert_now', [$this, 'ajax_convert_now']);
+        add_action('wp_ajax_aviflosu_delete_all_avifs', [$this, 'ajax_delete_all_avifs']);
 
         // Features
         if ((bool) get_option('aviflosu_enable_support', true)) {
@@ -56,6 +57,7 @@ final class Plugin
             'ajaxUrl' => admin_url('admin-ajax.php'),
             'scanNonce' => wp_create_nonce('aviflosu_scan_missing'),
             'convertNonce' => wp_create_nonce('aviflosu_convert_now'),
+            'deleteNonce' => wp_create_nonce('aviflosu_delete_all_avifs'),
         ]);
     }
 
@@ -110,24 +112,17 @@ final class Plugin
             'sanitize_callback' => [$this, 'sanitize_speed'],
             'show_in_rest' => true,
         ]);
-        // New: preserve metadata/profile toggles
-        register_setting('aviflosu_settings', 'aviflosu_preserve_metadata', [
-            'type' => 'boolean',
-            'default' => true,
-            'sanitize_callback' => 'rest_sanitize_boolean',
+        // New: AVIF chroma subsampling and bit depth
+        register_setting('aviflosu_settings', 'aviflosu_subsampling', [
+            'type' => 'string',
+            'default' => '420',
+            'sanitize_callback' => [$this, 'sanitize_subsampling'],
             'show_in_rest' => true,
         ]);
-        register_setting('aviflosu_settings', 'aviflosu_preserve_color_profile', [
-            'type' => 'boolean',
-            'default' => true,
-            'sanitize_callback' => 'rest_sanitize_boolean',
-            'show_in_rest' => true,
-        ]);
-        // New: WordPress thumbnail intelligence
-        register_setting('aviflosu_settings', 'aviflosu_wordpress_logic', [
-            'type' => 'boolean',
-            'default' => true,
-            'sanitize_callback' => 'rest_sanitize_boolean',
+        register_setting('aviflosu_settings', 'aviflosu_bit_depth', [
+            'type' => 'string',
+            'default' => '8',
+            'sanitize_callback' => [$this, 'sanitize_bit_depth'],
             'show_in_rest' => true,
         ]);
         register_setting('aviflosu_settings', 'aviflosu_cache_duration', [
@@ -228,52 +223,48 @@ final class Plugin
             [ 'label_for' => 'aviflosu_speed' ]
         );
 
-        // New: Preserve metadata
+        // New: Chroma subsampling (radio)
         add_settings_field(
-            'avif_local_support_preserve_metadata',
-            __('Keep metadata (EXIF/XMP/IPTC)', 'avif-local-support'),
+            'avif_local_support_subsampling',
+            __('Chroma subsampling', 'avif-local-support'),
             function (): void {
-                $value = (bool) get_option('aviflosu_preserve_metadata', true);
-                echo '<label for="aviflosu_preserve_metadata">'
-                    . '<input id="aviflosu_preserve_metadata" type="checkbox" name="aviflosu_preserve_metadata" value="1" ' . checked(true, $value, false) . ' /> '
-                    . esc_html__('When possible (ImageMagick required).', 'avif-local-support')
-                    . '</label>';
+                $value = (string) get_option('aviflosu_subsampling', '420');
+                $allowed = ['420' => '4:2:0', '422' => '4:2:2', '444' => '4:4:4'];
+                echo '<fieldset id="aviflosu_subsampling">';
+                foreach ($allowed as $key => $label) {
+                    $id = 'aviflosu_subsampling_' . $key;
+                    echo '<label for="' . \esc_attr($id) . '" style="margin-right:12px;">';
+                    echo '<input type="radio" name="aviflosu_subsampling" id="' . \esc_attr($id) . '" value="' . \esc_attr($key) . '" ' . checked($key, $value, false) . ' /> ' . \esc_html($label) . '&nbsp;&nbsp;';
+                    echo '</label>';
+                }
+                echo '</fieldset>';
+                echo '<p class="description">' . esc_html__('4:2:0 is most compatible and smallest; 4:4:4 preserves more color detail.', 'avif-local-support') . '</p>';
             },
             'avif-local-support',
             'aviflosu_conversion',
-            [ 'label_for' => 'aviflosu_preserve_metadata' ]
+            [ 'label_for' => 'aviflosu_subsampling' ]
         );
 
-        // New: Preserve color profile
+        // New: Bit depth (radio)
         add_settings_field(
-            'avif_local_support_preserve_color_profile',
-            __('Keep color profile (ICC)', 'avif-local-support'),
+            'avif_local_support_bit_depth',
+            __('Bit depth', 'avif-local-support'),
             function (): void {
-                $value = (bool) get_option('aviflosu_preserve_color_profile', true);
-                echo '<label for="aviflosu_preserve_color_profile">'
-                    . '<input id="aviflosu_preserve_color_profile" type="checkbox" name="aviflosu_preserve_color_profile" value="1" ' . checked(true, $value, false) . ' /> '
-                    . esc_html__('When possible (ImageMagick required).', 'avif-local-support')
-                    . '</label>';
+                $value = (string) get_option('aviflosu_bit_depth', '8');
+                $allowed = ['8' => '8-bit', '10' => '10-bit', '12' => '12-bit'];
+                echo '<fieldset id="aviflosu_bit_depth">';
+                foreach ($allowed as $key => $label) {
+                    $id = 'aviflosu_bit_depth_' . $key;
+                    echo '<label for="' . \esc_attr($id) . '" style="margin-right:12px;">';
+                    echo '<input type="radio" name="aviflosu_bit_depth" id="' . \esc_attr($id) . '" value="' . \esc_attr($key) . '" ' . checked($key, $value, false) . ' /> ' . \esc_html($label) . '&nbsp;&nbsp;';
+                    echo '</label>';
+                }
+                echo '</fieldset>';
+                echo '<p class="description">' . esc_html__('8-bit is standard; higher bit depths may increase file size and require broader support.', 'avif-local-support') . '</p>';
             },
             'avif-local-support',
             'aviflosu_conversion',
-            [ 'label_for' => 'aviflosu_preserve_color_profile' ]
-        );
-
-        // New: WordPress thumbnail intelligence
-        add_settings_field(
-            'avif_local_support_wordpress_logic',
-            __('Avoid double-resizing', 'avif-local-support'),
-            function (): void {
-                $value = (bool) get_option('aviflosu_wordpress_logic', true);
-                echo '<label for="aviflosu_wordpress_logic">'
-                    . '<input id="aviflosu_wordpress_logic" type="checkbox" name="aviflosu_wordpress_logic" value="1" ' . checked(true, $value, false) . ' /> '
-                    . esc_html__('Use original/-scaled as the source when converting resized JPEGs.', 'avif-local-support')
-                    . '</label>';
-            },
-            'avif-local-support',
-            'aviflosu_conversion',
-            [ 'label_for' => 'aviflosu_wordpress_logic' ]
+            [ 'label_for' => 'aviflosu_bit_depth' ]
         );
     }
 
@@ -288,6 +279,20 @@ final class Plugin
         if ($n < 0) { $n = 0; }
         if ($n > 10) { $n = 10; }
         return $n;
+    }
+
+    public function sanitize_subsampling($value): string
+    {
+        $v = (string) $value;
+        $allowed = ['420', '422', '444'];
+        return in_array($v, $allowed, true) ? $v : '420';
+    }
+
+    public function sanitize_bit_depth($value): string
+    {
+        $v = (string) $value;
+        $allowed = ['8', '10', '12'];
+        return in_array($v, $allowed, true) ? $v : '8';
     }
 
     public function render_admin_page(): void
@@ -354,11 +359,11 @@ final class Plugin
         echo '      <h2 class="hndle"><span>' . esc_html__('Test conversion', 'avif-local-support') . '</span></h2>';
         echo '      <div class="inside">';
         echo '        <p class="description">' . esc_html__('Upload a JPEG to preview resized images and the AVIFs generated by your current settings. The file is added to the Media Library.', 'avif-local-support') . '</p>';
-        echo '        <form action="' . esc_url(admin_url('admin-post.php')) . '" method="post" enctype="multipart/form-data" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">';
+        echo '        <form action="' . esc_url(admin_url('admin-post.php')) . '" method="post" enctype="multipart/form-data" style="display:flex;flex-direction:column;align-items:flex-start;gap:8px">';
         echo '          <input type="hidden" name="action" value="aviflosu_upload_test" />';
         wp_nonce_field('aviflosu_upload_test', '_wpnonce');
         echo '          <input type="file" name="avif_local_support_test_file" accept="image/jpeg" required />';
-        echo '          <button type="submit" class="button button-primary" style="margin-top:8px">' . esc_html__('Convert now', 'avif-local-support') . '</button>';
+        echo '          <button type="submit" class="button button-primary">' . esc_html__('Convert now', 'avif-local-support') . '</button>';
         echo '        </form>';
 
         $testId = 0;
@@ -411,6 +416,19 @@ final class Plugin
                 echo '</table>';
             }
         }
+        echo '      </div>';
+        echo '    </div>';
+
+        // Delete all AVIFs
+        echo '    <div class="postbox">';
+        echo '      <h2 class="hndle"><span>' . esc_html__('Delete all AVIF files', 'avif-local-support') . '</span></h2>';
+        echo '      <div class="inside">';
+        echo '        <p class="description">' . esc_html__('Remove all .avif files from the uploads directory. Originals (JPEG/PNG) are not touched.', 'avif-local-support') . '</p>';
+        echo '        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">';
+        echo '          <button type="button" class="button" id="avif-local-support-delete-avifs">' . esc_html__('Delete AVIFs', 'avif-local-support') . '</button>';
+        echo '          <span class="spinner" id="avif-local-support-delete-spinner" style="float:none;margin:0 6px;"></span>';
+        echo '          <span id="avif-local-support-delete-status" class="description"></span>';
+        echo '        </div>';
         echo '      </div>';
         echo '    </div>';
 
@@ -585,6 +603,39 @@ final class Plugin
         wp_send_json_success($stats);
     }
 
+    public function ajax_delete_all_avifs(): void
+    {
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => 'forbidden'], 403);
+        }
+        check_ajax_referer('aviflosu_delete_all_avifs', '_wpnonce');
+
+        $uploads = \wp_upload_dir();
+        $baseDir = (string) ($uploads['basedir'] ?? '');
+        if ($baseDir === '' || !is_dir($baseDir)) {
+            wp_send_json_error(['message' => 'uploads_not_found']);
+        }
+
+        $deleted = 0;
+        $failed = 0;
+
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($baseDir, \FilesystemIterator::SKIP_DOTS)
+        );
+        foreach ($iterator as $fileInfo) {
+            if (!$fileInfo instanceof \SplFileInfo) { continue; }
+            $path = $fileInfo->getPathname();
+            if (preg_match('/\.avif$/i', $path)) {
+                // Do not follow symlinks
+                if ($fileInfo->isLink()) { continue; }
+                $ok = @unlink($path);
+                if ($ok) { $deleted++; } else { $failed++; }
+            }
+        }
+
+        wp_send_json_success(['deleted' => $deleted, 'failed' => $failed]);
+    }
+
     private function compute_missing_counts(): array
     {
         $uploadDir = \wp_upload_dir();
@@ -592,6 +643,8 @@ final class Plugin
         $total = 0;
         $existing = 0;
         $missing = 0;
+        // Deduplicate by absolute JPEG path so identical size files aren't double-counted
+        $seenJpegs = [];
 
         $query = new \WP_Query([
             'post_type' => 'attachment',
@@ -605,9 +658,13 @@ final class Plugin
             // Original
             $file = get_attached_file($attachmentId);
             if ($file && preg_match('/\.(jpe?g)$/i', $file) && file_exists($file)) {
-                $total++;
-                $avif = (string) preg_replace('/\.(jpe?g)$/i', '.avif', $file);
-                if ($avif && file_exists($avif)) { $existing++; } else { $missing++; }
+                $real = (string) (@realpath($file) ?: $file);
+                if (!isset($seenJpegs[$real])) {
+                    $seenJpegs[$real] = true;
+                    $total++;
+                    $avif = (string) preg_replace('/\.(jpe?g)$/i', '.avif', $real);
+                    if ($avif && file_exists($avif)) { $existing++; } else { $missing++; }
+                }
             }
             // Sizes via metadata
             $meta = wp_get_attachment_metadata($attachmentId);
@@ -620,8 +677,11 @@ final class Plugin
                         if (empty($size['file'])) { continue; }
                         $p = $baseDir . \trailingslashit($dir) . $size['file'];
                         if (!preg_match('/\.(jpe?g)$/i', $p) || !file_exists($p)) { continue; }
+                        $realP = (string) (@realpath($p) ?: $p);
+                        if (isset($seenJpegs[$realP])) { continue; }
+                        $seenJpegs[$realP] = true;
                         $total++;
-                        $avif = (string) preg_replace('/\.(jpe?g)$/i', '.avif', $p);
+                        $avif = (string) preg_replace('/\.(jpe?g)$/i', '.avif', $realP);
                         if ($avif && file_exists($avif)) { $existing++; } else { $missing++; }
                     }
                 }

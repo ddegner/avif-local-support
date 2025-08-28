@@ -5,6 +5,9 @@
 
 /* Align labels and inputs a bit nicer in Settings API tables */
 .form-table th { width: 260px; }
+/* Increase spacing between inline radio options */
+#aviflosu_subsampling label,
+#aviflosu_bit_depth label { margin-right: 18px; display: inline-flex; align-items: center; }
 
 /* Simple progress bar */
 .avif-local-support-progress {

@@ -139,7 +139,7 @@ final class Converter
     private function convertToAvif(string $sourcePath, string $avifPath, ?array $targetDimensions): void
     {
         $quality = max(0, min(100, (int) get_option('aviflosu_quality', 85)));
-        $speedSetting = max(0, min(10, (int) get_option('aviflosu_speed', 1)));
+        $speedSetting = max(0, min(8, (int) get_option('aviflosu_speed', 1)));
         // Always preserve metadata and ICC by default (options removed from UI)
         $preserveMeta = true;
         $preserveICC = true;

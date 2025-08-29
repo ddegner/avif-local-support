@@ -90,6 +90,17 @@
   function initAll() {
     initTabs();
     initStatus();
+    // Disable/enable schedule time based on checkbox
+    var scheduleToggle = document.querySelector('#aviflosu_convert_via_schedule');
+    var scheduleTime = document.querySelector('#aviflosu_schedule_time');
+    function syncScheduleState() {
+      if (!scheduleToggle || !scheduleTime) return;
+      scheduleTime.disabled = !scheduleToggle.checked;
+    }
+    if (scheduleToggle && scheduleTime) {
+      scheduleToggle.addEventListener('change', syncScheduleState);
+      syncScheduleState();
+    }
 
     // Convert-now button (AJAX queue + switch to Status with spinner + polling)
     var convertBtn = document.querySelector('#avif-local-support-convert-now');

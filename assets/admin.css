@@ -27,6 +27,5 @@
 .form-table tr.aviflosu-separator-top th,
 .form-table tr.aviflosu-separator-top td { border-top: 1px solid #dcdcde; }
 
-/* hr separators inside settings fields */
-.aviflosu-sep { border: 0; border-top: 1px solid #dcdcde; margin: 12px 0; }
+/* removed hr-based separators; using row border class instead */
 

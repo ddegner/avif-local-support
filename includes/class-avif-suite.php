@@ -26,6 +26,7 @@ final class Plugin
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_assets']);
         add_filter('plugin_action_links_' . plugin_basename(\AVIFLOSU_PLUGIN_FILE), [$this, 'add_settings_link']);
         add_action('admin_post_aviflosu_upload_test', [$this, 'handle_upload_test']);
+        add_action('admin_post_aviflosu_reset_defaults', [$this, 'handle_reset_defaults']);
         add_action('wp_ajax_aviflosu_scan_missing', [$this, 'ajax_scan_missing']);
         add_action('wp_ajax_aviflosu_convert_now', [$this, 'ajax_convert_now']);
         add_action('wp_ajax_aviflosu_delete_all_avifs', [$this, 'ajax_delete_all_avifs']);
@@ -148,7 +149,7 @@ final class Plugin
                     . '<input id="aviflosu_enable_support" type="checkbox" name="aviflosu_enable_support" value="1" ' . checked(true, $value, false) . ' /> '
                     . esc_html__('Add AVIF sources to JPEG images on the front end', 'avif-local-support')
                     . '</label>';
-                echo '<hr class="aviflosu-sep" />';
+                // spacing handled via CSS row borders
             },
             'avif-local-support',
             'aviflosu_main',
@@ -169,12 +170,13 @@ final class Plugin
                 $value = (bool) get_option('aviflosu_convert_on_upload', true);
                 echo '<label for="aviflosu_convert_on_upload">'
                     . '<input id="aviflosu_convert_on_upload" type="checkbox" name="aviflosu_convert_on_upload" value="1" ' . checked(true, $value, false) . ' /> '
-                    . esc_html__('Recommended; may slow uploads on some servers', 'avif-local-support')
+                    . esc_html__('Convert images to AVIF immediately after upload', 'avif-local-support')
                     . '</label>';
+                echo '<p class="description">' . esc_html__('Recommended for completeness; can add a small delay to uploads on some servers.', 'avif-local-support') . '</p>';
             },
             'avif-local-support',
             'aviflosu_conversion',
-            [ 'label_for' => 'aviflosu_convert_on_upload' ]
+            [ 'label_for' => 'aviflosu_convert_on_upload', 'class' => 'aviflosu-separator-top' ]
         );
 
         add_settings_field(
@@ -185,12 +187,11 @@ final class Plugin
                 $time = (string) get_option('aviflosu_schedule_time', '01:00');
                 echo '<label for="aviflosu_convert_via_schedule">'
                     . '<input id="aviflosu_convert_via_schedule" type="checkbox" name="aviflosu_convert_via_schedule" value="1" ' . checked(true, $enabled, false) . ' /> '
-                    . esc_html__('Scan daily and convert missing AVIFs', 'avif-local-support')
+                    . esc_html__('Daily conversion', 'avif-local-support')
                     . '</label> ';
                 echo '<input id="aviflosu_schedule_time" type="time" name="aviflosu_schedule_time" value="' . \esc_attr($time) . '" aria-label="' . esc_attr__('Time', 'avif-local-support') . '" />';
-                // Link to Tools tab for immediate conversion
                 echo ' <a href="#tools" class="button-link">' . esc_html__('Convert missing AVIFs', 'avif-local-support') . '</a>';
-                echo '<hr class="aviflosu-sep" />';
+                echo '<p class="description" style="margin-top:6px;">' . esc_html__('Scan daily and convert JPEGs that are missing AVIFs.', 'avif-local-support') . '</p>';
             },
             'avif-local-support',
             'aviflosu_conversion',
@@ -208,17 +209,17 @@ final class Plugin
             },
             'avif-local-support',
             'aviflosu_conversion',
-            [ 'label_for' => 'aviflosu_quality' ]
+            [ 'label_for' => 'aviflosu_quality', 'class' => 'aviflosu-separator-top' ]
         );
 
-        // New: Speed slider (0-10)
+        // New: Speed slider (0-8)
         add_settings_field(
             'avif_local_support_speed',
-            __('Speed (0–10)', 'avif-local-support'),
+            __('Speed (0–8)', 'avif-local-support'),
             function (): void {
                 $value = (int) get_option('aviflosu_speed', 1);
-                $value = max(0, min(10, $value));
-                echo '<input id="aviflosu_speed" type="range" name="aviflosu_speed" min="0" max="10" value="' . \esc_attr((string) $value) . '" oninput="this.nextElementSibling.innerText=this.value" /> ';
+                $value = max(0, min(8, $value));
+                echo '<input id="aviflosu_speed" type="range" name="aviflosu_speed" min="0" max="8" value="' . \esc_attr((string) $value) . '" oninput="this.nextElementSibling.innerText=this.value" /> ';
                 echo '<span>' . \esc_html((string) $value) . '</span>';
                 echo '<p class="description">' . esc_html__('Lower = smaller files (slower). Higher = faster (larger files).', 'avif-local-support') . '</p>';
             },
@@ -226,49 +227,47 @@ final class Plugin
             'aviflosu_conversion',
             [ 'label_for' => 'aviflosu_speed' ]
         );
-
-        // New: Chroma subsampling (radio)
+        // Advanced: Group subsampling and bit depth inside disclosure
         add_settings_field(
-            'avif_local_support_subsampling',
-            __('Chroma subsampling', 'avif-local-support'),
+            'avif_local_support_advanced',
+            __('Advanced', 'avif-local-support'),
             function (): void {
-                $value = (string) get_option('aviflosu_subsampling', '420');
-                $allowed = ['420' => '4:2:0', '422' => '4:2:2', '444' => '4:4:4'];
-                echo '<fieldset id="aviflosu_subsampling">';
-                foreach ($allowed as $key => $label) {
+                $subsampling = (string) get_option('aviflosu_subsampling', '420');
+                $bitDepth = (string) get_option('aviflosu_bit_depth', '8');
+                $allowedSub = ['420' => '4:2:0', '422' => '4:2:2', '444' => '4:4:4'];
+                $allowedBits = ['8' => '8-bit', '10' => '10-bit', '12' => '12-bit'];
+                echo '<details>';
+                echo '<summary>' . esc_html__('Chroma subsampling and bit depth', 'avif-local-support') . '</summary>';
+                echo '<div style="margin-top:8px">';
+                echo '  <div style="margin-bottom:8px">';
+                echo '    <label><strong>' . esc_html__('Chroma subsampling', 'avif-local-support') . '</strong></label>';
+                echo '    <fieldset id="aviflosu_subsampling">';
+                foreach ($allowedSub as $key => $label) {
                     $id = 'aviflosu_subsampling_' . $key;
                     echo '<label for="' . \esc_attr($id) . '" style="margin-right:12px;">';
-                    echo '<input type="radio" name="aviflosu_subsampling" id="' . \esc_attr($id) . '" value="' . \esc_attr($key) . '" ' . checked($key, $value, false) . ' /> ' . \esc_html($label) . '&nbsp;&nbsp;';
+                    echo '<input type="radio" name="aviflosu_subsampling" id="' . \esc_attr($id) . '" value="' . \esc_attr($key) . '" ' . checked($key, $subsampling, false) . ' /> ' . \esc_html($label) . '&nbsp;&nbsp;';
                     echo '</label>';
                 }
-                echo '</fieldset>';
-                echo '<p class="description">' . esc_html__('4:2:0 is most compatible and smallest; 4:4:4 preserves more color detail.', 'avif-local-support') . '</p>';
-            },
-            'avif-local-support',
-            'aviflosu_conversion',
-            [ 'label_for' => 'aviflosu_subsampling' ]
-        );
-
-        // New: Bit depth (radio)
-        add_settings_field(
-            'avif_local_support_bit_depth',
-            __('Bit depth', 'avif-local-support'),
-            function (): void {
-                $value = (string) get_option('aviflosu_bit_depth', '8');
-                $allowed = ['8' => '8-bit', '10' => '10-bit', '12' => '12-bit'];
-                echo '<fieldset id="aviflosu_bit_depth">';
-                foreach ($allowed as $key => $label) {
+                echo '    </fieldset>';
+                echo '    <p class="description">' . esc_html__('4:2:0 is most compatible and smallest; 4:4:4 preserves more color detail.', 'avif-local-support') . '</p>';
+                echo '  </div>';
+                echo '  <div>';
+                echo '    <label><strong>' . esc_html__('Bit depth', 'avif-local-support') . '</strong></label>';
+                echo '    <fieldset id="aviflosu_bit_depth">';
+                foreach ($allowedBits as $key => $label) {
                     $id = 'aviflosu_bit_depth_' . $key;
                     echo '<label for="' . \esc_attr($id) . '" style="margin-right:12px;">';
-                    echo '<input type="radio" name="aviflosu_bit_depth" id="' . \esc_attr($id) . '" value="' . \esc_attr($key) . '" ' . checked($key, $value, false) . ' /> ' . \esc_html($label) . '&nbsp;&nbsp;';
+                    echo '<input type="radio" name="aviflosu_bit_depth" id="' . \esc_attr($id) . '" value="' . \esc_attr($key) . '" ' . checked($key, $bitDepth, false) . ' /> ' . \esc_html($label) . '&nbsp;&nbsp;';
                     echo '</label>';
                 }
-                echo '</fieldset>';
-                echo '<p class="description">' . esc_html__('8-bit is standard; higher bit depths may increase file size and require broader support.', 'avif-local-support') . '</p>';
+                echo '    </fieldset>';
+                echo '    <p class="description">' . esc_html__('8-bit is standard; higher bit depths may increase file size and require broader support.', 'avif-local-support') . '</p>';
+                echo '  </div>';
+                echo '</div>';
+                echo '</details>';
             },
             'avif-local-support',
-            'aviflosu_conversion',
-            [ 'label_for' => 'aviflosu_bit_depth' ]
+            'aviflosu_conversion'
         );
     }
 
@@ -331,6 +330,12 @@ final class Plugin
         do_settings_sections('avif-local-support');
         submit_button();
         echo '        </form>';
+        // Restore defaults button
+        echo '        <form action="' . esc_url(admin_url('admin-post.php')) . '" method="post" style="margin-top:8px;">';
+        echo '          <input type="hidden" name="action" value="aviflosu_reset_defaults" />';
+        wp_nonce_field('aviflosu_reset_defaults');
+        echo '          <button type="submit" class="button">' . esc_html__('Restore defaults', 'avif-local-support') . '</button>';
+        echo '        </form>';
         echo '      </div>';
         echo '    </div>';
         echo '  </div>';
@@ -364,10 +369,11 @@ final class Plugin
         // Show conversion environment summary
         $lib = extension_loaded('imagick') ? 'Imagick' : (function_exists('imageavif') ? 'GD' : 'None');
         $quality = (int) get_option('aviflosu_quality', 85);
-        $speed = (int) get_option('aviflosu_speed', 1);
+        $speed = max(0, min(8, (int) get_option('aviflosu_speed', 1)));
         $subsampling = (string) get_option('aviflosu_subsampling', '420');
+        $subLabel = ($subsampling === '444') ? '4:4:4' : (($subsampling === '422') ? '4:2:2' : '4:2:0');
         $bitDepth = (string) get_option('aviflosu_bit_depth', '8');
-        echo '<p><strong>' . esc_html__('Conversion environment', 'avif-local-support') . ':</strong> ' . esc_html($lib) . ' · ' . esc_html(sprintf(__('quality %d, speed %d, subsampling %s, %s‑bit', 'avif-local-support'), $quality, min(10, max(0, $speed)), $subsampling, $bitDepth)) . '</p>';
+        echo '<p><strong>' . esc_html__('Conversion environment', 'avif-local-support') . ':</strong> ' . esc_html($lib) . ' · ' . esc_html(sprintf(__('quality %d, speed %d, subsampling %s, %s‑bit', 'avif-local-support'), $quality, $speed, $subLabel, $bitDepth)) . '</p>';
         echo '        <p class="description">' . esc_html__('Upload a JPEG to preview resized images and the AVIFs generated by your current settings. The file is added to the Media Library.', 'avif-local-support') . '</p>';
         echo '        <form action="' . esc_url(admin_url('admin-post.php')) . '" method="post" enctype="multipart/form-data" style="display:flex;flex-direction:column;align-items:flex-start;gap:8px">';
         echo '          <input type="hidden" name="action" value="aviflosu_upload_test" />';
@@ -387,7 +393,7 @@ final class Plugin
             if ($attachment && $attachment->post_type === 'attachment') {
                 $results = $this->converter->convertAttachmentNow($testId);
                 $editLink = get_edit_post_link($testId);
-                echo '<hr />';
+                echo '<div style="border-top:1px solid #dcdcde;margin:12px 0"></div>';
                 echo '<p><strong>' . esc_html__('Test results for attachment:', 'avif-local-support') . '</strong> ' . sprintf('<a href="%s">%s</a>', esc_url($editLink ?: '#'), esc_html(get_the_title($testId) ?: (string) $testId)) . '</p>';
                 echo '<table class="widefat striped" style="max-width:960px">';
                 echo '  <thead><tr>'
@@ -596,6 +602,31 @@ final class Plugin
             'avif-local-support-upload-id' => (string) $attachment_id,
             '_wpnonce' => $view_nonce,
         ], \admin_url('options-general.php?page=avif-local-support#tools')));
+        exit;
+    }
+
+    public function handle_reset_defaults(): void
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html__('You do not have permission to do this.', 'avif-local-support'));
+        }
+        check_admin_referer('aviflosu_reset_defaults');
+
+        // Reset options to defaults
+        update_option('aviflosu_enable_support', true);
+        update_option('aviflosu_convert_on_upload', true);
+        update_option('aviflosu_convert_via_schedule', true);
+        update_option('aviflosu_schedule_time', '01:00');
+        update_option('aviflosu_quality', 85);
+        update_option('aviflosu_speed', 1);
+        update_option('aviflosu_subsampling', '420');
+        update_option('aviflosu_bit_depth', '8');
+        update_option('aviflosu_cache_duration', 3600);
+
+        // Ensure schedule matches defaults
+        $this->converter->maybe_schedule_daily();
+
+        \wp_safe_redirect(\add_query_arg('avif-local-support-reset', '1', \admin_url('options-general.php?page=avif-local-support#settings')));
         exit;
     }
 

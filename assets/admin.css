@@ -23,3 +23,9 @@
   width: 0%;
 }
 
+/* Simple separators between certain settings rows */
+.form-table tr.aviflosu-separator-top th,
+.form-table tr.aviflosu-separator-top td { border-top: 1px solid #dcdcde; }
+
+/* removed hr-based separators; using row border class instead */
+

@@ -26,6 +26,7 @@ final class Plugin
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_assets']);
         add_filter('plugin_action_links_' . plugin_basename(\AVIFLOSU_PLUGIN_FILE), [$this, 'add_settings_link']);
         add_action('admin_post_aviflosu_upload_test', [$this, 'handle_upload_test']);
+        add_action('admin_post_aviflosu_reset_defaults', [$this, 'handle_reset_defaults']);
         add_action('wp_ajax_aviflosu_scan_missing', [$this, 'ajax_scan_missing']);
         add_action('wp_ajax_aviflosu_convert_now', [$this, 'ajax_convert_now']);
         add_action('wp_ajax_aviflosu_delete_all_avifs', [$this, 'ajax_delete_all_avifs']);
@@ -129,6 +130,20 @@ final class Plugin
             'type' => 'integer',
             'default' => 3600,
             'sanitize_callback' => 'absint',
+            'show_in_rest' => true,
+        ]);
+
+        // Engine selection
+        register_setting('aviflosu_settings', 'aviflosu_engine_mode', [
+            'type' => 'string',
+            'default' => 'auto',
+            'sanitize_callback' => [$this, 'sanitize_engine_mode'],
+            'show_in_rest' => true,
+        ]);
+        register_setting('aviflosu_settings', 'aviflosu_cli_path', [
+            'type' => 'string',
+            'default' => '',
+            'sanitize_callback' => 'sanitize_text_field',
             'show_in_rest' => true,
         ]);
 
@@ -266,6 +281,49 @@ final class Plugin
             'aviflosu_conversion',
             [ 'label_for' => 'aviflosu_bit_depth' ]
         );
+
+        // Engine selection section
+        add_settings_section(
+            'aviflosu_engine',
+            '',
+            function (): void {},
+            'avif-local-support'
+        );
+
+        add_settings_field(
+            'avif_local_support_engine_mode',
+            __('Engine selection', 'avif-local-support'),
+            function (): void {
+                $mode = (string) get_option('aviflosu_engine_mode', 'auto');
+                $cliPath = (string) get_option('aviflosu_cli_path', '');
+                $detected = $this->detect_cli_binaries();
+                echo '<fieldset id="aviflosu_engine_mode">';
+                echo '<label style="display:block;margin-bottom:6px;"><input type="radio" name="aviflosu_engine_mode" value="auto" ' . checked('auto', $mode, false) . ' /> ' . esc_html__('Auto (use Imagick if available; fallback to GD)', 'avif-local-support') . '</label>';
+                echo '<label style="display:block;margin-bottom:6px;"><input type="radio" name="aviflosu_engine_mode" value="cli" ' . checked('cli', $mode, false) . ' /> ' . esc_html__('ImageMagick CLI', 'avif-local-support') . '</label>';
+                // CLI binary list
+                echo '<div style="margin-left:20px;margin-top:6px;">';
+                if (!empty($detected)) {
+                    echo '<label for="aviflosu_cli_path_select" style="display:block;margin:6px 0 4px;">' . esc_html__('Detected binaries', 'avif-local-support') . '</label>';
+                    echo '<select id="aviflosu_cli_path_select" onchange="var v=this.value; if(v){ document.getElementById(\'aviflosu_cli_path\').value=v; }" style="min-width:360px;">';
+                    echo '<option value="">' . esc_html__('— Select detected binary —', 'avif-local-support') . '</option>';
+                    foreach ($detected as $bin) {
+                        $label = $bin['path'] . ' — ' . $bin['version'] . ' — ' . ($bin['avif'] ? 'AVIF: yes' : 'AVIF: no');
+                        echo '<option value="' . esc_attr($bin['path']) . '">' . esc_html($label) . '</option>';
+                    }
+                    echo '</select>';
+                } else {
+                    echo '<p class="description" style="margin:0 0 6px;">' . esc_html__('No ImageMagick CLI detected. You can still enter a custom path below.', 'avif-local-support') . '</p>';
+                }
+                echo '<label for="aviflosu_cli_path" style="display:block;margin-top:8px;">' . esc_html__('Custom path', 'avif-local-support') . '</label>';
+                echo '<input type="text" id="aviflosu_cli_path" name="aviflosu_cli_path" value="' . esc_attr($cliPath) . '" placeholder="/usr/local/bin/magick" style="min-width:360px;" />';
+                echo '<p class="description" style="margin-top:6px;">' . esc_html__('Provide full path to `magick` or `convert`. Must support writing AVIF.', 'avif-local-support') . '</p>';
+                echo '</div>';
+                echo '</fieldset>';
+            },
+            'avif-local-support',
+            'aviflosu_engine',
+            [ 'label_for' => 'aviflosu_engine_mode' ]
+        );
     }
 
     public function sanitize_schedule_time(string $value): string
@@ -295,6 +353,13 @@ final class Plugin
         return in_array($v, $allowed, true) ? $v : '8';
     }
 
+    public function sanitize_engine_mode($value): string
+    {
+        $v = (string) $value;
+        $allowed = ['auto', 'cli'];
+        return in_array($v, $allowed, true) ? $v : 'auto';
+    }
+
     public function render_admin_page(): void
     {
         if (!current_user_can('manage_options')) {
@@ -313,22 +378,48 @@ final class Plugin
         echo '<h2 class="nav-tab-wrapper">';
         echo '  <a href="#settings" class="nav-tab nav-tab-active" id="avif-local-support-tab-link-settings">' . esc_html__('Settings', 'avif-local-support') . '</a>';
         echo '  <a href="#tools" class="nav-tab" id="avif-local-support-tab-link-tools">' . esc_html__('Tools', 'avif-local-support') . '</a>';
-        echo '  <a href="#status" class="nav-tab" id="avif-local-support-tab-link-status">' . esc_html__('Status', 'avif-local-support') . '</a>';
         echo '  <a href="#about" class="nav-tab" id="avif-local-support-tab-link-about">' . esc_html__('About', 'avif-local-support') . '</a>';
         echo '</h2>';
 
         // Tab: Settings
         echo '<div id="avif-local-support-tab-settings" class="avif-local-support-tab active">';
         echo '  <div class="metabox-holder">';
-        echo '    <div class="postbox">';
-        echo '      <h2 class="hndle"><span>' . esc_html__('Settings', 'avif-local-support') . '</span></h2>';
-        echo '      <div class="inside">';
-        echo '        <form action="options.php" method="post">';
+        echo '    <form action="options.php" method="post">';
         settings_fields('aviflosu_settings');
-        do_settings_sections('avif-local-support');
-        submit_button();
-        echo '        </form>';
+        echo '    <div class="postbox">';
+        echo '      <h2 class="avif-header"><span>' . esc_html__('Serve AVIF files', 'avif-local-support') . '</span></h2>';
+        echo '      <div class="inside">';
+        echo '        <table class="form-table" role="presentation">';
+        do_settings_fields('avif-local-support', 'aviflosu_main');
+        echo '        </table>';
         echo '      </div>';
+        echo '    </div>';
+        echo '    <div class="postbox">';
+        echo '      <h2 class="avif-header"><span>' . esc_html__('Engine Selection', 'avif-local-support') . '</span></h2>';
+        echo '      <div class="inside">';
+        echo '        <table class="form-table" role="presentation">';
+        do_settings_fields('avif-local-support', 'aviflosu_engine');
+        echo '        </table>';
+        echo '      </div>';
+        echo '    </div>';
+        echo '    <div class="postbox">';
+        echo '      <h2 class="avif-header"><span>' . esc_html__('Conversion Settings', 'avif-local-support') . '</span></h2>';
+        echo '      <div class="inside">';
+        echo '        <table class="form-table" role="presentation">';
+        do_settings_fields('avif-local-support', 'aviflosu_conversion');
+        echo '        </table>';
+        echo '      </div>';
+        echo '    </div>';
+        echo '    <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">';
+        submit_button('', 'primary', 'submit', false);
+        echo '    </div>';
+        echo '    </form>';
+        echo '    <div style="margin-top:10px;">';
+        echo '      <form action="' . esc_url(admin_url('admin-post.php')) . '" method="post" style="display:inline">';
+        echo '        <input type="hidden" name="action" value="aviflosu_reset_defaults" />';
+        wp_nonce_field('aviflosu_reset_defaults', '_wpnonce', false, true);
+        echo '        <button type="submit" class="button">' . esc_html__('Restore defaults', 'avif-local-support') . '</button>';
+        echo '      </form>';
         echo '    </div>';
         echo '  </div>';
         echo '</div>';
@@ -336,8 +427,21 @@ final class Plugin
         // Tab: Tools
         echo '<div id="avif-local-support-tab-tools" class="avif-local-support-tab">';
         echo '  <div class="metabox-holder">';
+        $initial_stats = $this->compute_missing_counts();
         echo '    <div class="postbox">';
-        echo '      <h2 class="hndle"><span>' . esc_html__('Convert missing AVIFs', 'avif-local-support') . '</span></h2>';
+        echo '      <h2 class="avif-header"><span>' . esc_html__('Library AVIF coverage', 'avif-local-support') . '</span></h2>';
+        echo '      <div class="inside">';
+        echo '        <p>' . esc_html__('Overview of JPEGs with and without AVIFs.', 'avif-local-support') . '</p>';
+        echo '        <div id="avif-local-support-stats" style="display:flex;gap:24px;align-items:center;">';
+        echo '          <div><strong>' . esc_html__('JPEG files', 'avif-local-support') . ':</strong> <span id="avif-local-support-total-jpegs">' . (int) ($initial_stats['total_jpegs'] ?? 0) . '</span></div>';
+        echo '          <div><strong>' . esc_html__('AVIF files', 'avif-local-support') . ':</strong> <span id="avif-local-support-existing-avifs">' . (int) ($initial_stats['existing_avifs'] ?? 0) . '</span></div>';
+        echo '          <div><strong>' . esc_html__('Missing AVIFs', 'avif-local-support') . ':</strong> <span id="avif-local-support-missing-avifs">' . (int) ($initial_stats['missing_avifs'] ?? 0) . '</span></div>';
+        echo '          <div><button type="button" class="button" id="avif-local-support-rescan">' . esc_html__('Rescan', 'avif-local-support') . '</button></div>';
+        echo '        </div>';
+        echo '      </div>';
+        echo '    </div>';
+        echo '    <div class="postbox">';
+        echo '      <h2 class="avif-header"><span>' . esc_html__('Convert missing AVIFs', 'avif-local-support') . '</span></h2>';
         echo '      <div class="inside">';
         echo '        <p class="description">' . esc_html__('Scan the Media Library and convert JPEGs that are missing AVIFs.', 'avif-local-support') . '</p>';
         echo '        <div style="display:flex;align-items:center;gap:8px;">';
@@ -356,7 +460,7 @@ final class Plugin
         echo '      </div>';
         echo '    </div>';
         echo '    <div class="postbox">';
-        echo '      <h2 class="hndle"><span>' . esc_html__('Test conversion', 'avif-local-support') . '</span></h2>';
+        echo '      <h2 class="avif-header"><span>' . esc_html__('Test conversion', 'avif-local-support') . '</span></h2>';
         echo '      <div class="inside">';
         echo '        <p class="description">' . esc_html__('Upload a JPEG to preview resized images and the AVIFs generated by your current settings. The file is added to the Media Library.', 'avif-local-support') . '</p>';
         echo '        <form action="' . esc_url(admin_url('admin-post.php')) . '" method="post" enctype="multipart/form-data" style="display:flex;flex-direction:column;align-items:flex-start;gap:8px">';
@@ -421,7 +525,7 @@ final class Plugin
 
         // Delete all AVIFs
         echo '    <div class="postbox">';
-        echo '      <h2 class="hndle"><span>' . esc_html__('Delete all AVIF files', 'avif-local-support') . '</span></h2>';
+        echo '      <h2 class="avif-header"><span>' . esc_html__('Delete all AVIF files', 'avif-local-support') . '</span></h2>';
         echo '      <div class="inside">';
         echo '        <p class="description">' . esc_html__('Remove all .avif files from the uploads directory. Originals (JPEG/PNG) are not touched.', 'avif-local-support') . '</p>';
         echo '        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">';
@@ -432,30 +536,9 @@ final class Plugin
         echo '      </div>';
         echo '    </div>';
 
-        echo '  </div>';
-        echo '</div>';
-
-        // Tab: Status
-        // Stats UI
-        $initial_stats = $this->compute_missing_counts();
-        echo '<div id="avif-local-support-tab-status" class="avif-local-support-tab">';
-        echo '  <div class="metabox-holder">';
+        // Append server support beneath coverage
         echo '    <div class="postbox">';
-        echo '      <h2 class="hndle"><span>' . esc_html__('Library AVIF coverage', 'avif-local-support') . '</span></h2>';
-        echo '      <div class="inside">';
-        echo '        <p>' . esc_html__('Overview of JPEGs with and without AVIFs.', 'avif-local-support') . '</p>';
-        echo '        <div id="avif-local-support-stats" style="display:flex;gap:24px;align-items:center;">';
-        echo '          <div><strong>' . esc_html__('JPEG files', 'avif-local-support') . ':</strong> <span id="avif-local-support-total-jpegs">' . (int) ($initial_stats['total_jpegs'] ?? 0) . '</span></div>';
-        echo '          <div><strong>' . esc_html__('AVIF files', 'avif-local-support') . ':</strong> <span id="avif-local-support-existing-avifs">' . (int) ($initial_stats['existing_avifs'] ?? 0) . '</span></div>';
-        echo '          <div><strong>' . esc_html__('Missing AVIFs', 'avif-local-support') . ':</strong> <span id="avif-local-support-missing-avifs">' . (int) ($initial_stats['missing_avifs'] ?? 0) . '</span></div>';
-        echo '          <div><button type="button" class="button" id="avif-local-support-rescan">' . esc_html__('Rescan', 'avif-local-support') . '</button></div>';
-        echo '        </div>';
-        echo '      </div>';
-        echo '    </div>';
-
-        // System Status card
-        echo '    <div class="postbox">';
-        echo '      <h2 class="hndle"><span>' . esc_html__('Server support', 'avif-local-support') . '</span></h2>';
+        echo '      <h2 class="avif-header"><span>' . esc_html__('Server support', 'avif-local-support') . '</span></h2>';
         echo '      <div class="inside">';
         echo '        <p class="description">' . esc_html__('Server capabilities for AVIF conversion.', 'avif-local-support') . '</p>';
         echo '        <table class="widefat striped" style="max-width:720px">';
@@ -466,6 +549,9 @@ final class Plugin
         echo '            <tr><td><strong>' . esc_html__('GD AVIF Support', 'avif-local-support') . '</strong></td><td>' . (!empty($system_status['gd_avif_support']) ? esc_html__('Available', 'avif-local-support') : esc_html__('Not available', 'avif-local-support')) . '</td></tr>';
         echo '            <tr><td><strong>' . esc_html__('ImageMagick (Imagick)', 'avif-local-support') . '</strong></td><td>' . (!empty($system_status['imagick_available']) ? esc_html__('Available', 'avif-local-support') : esc_html__('Not available', 'avif-local-support')) . '</td></tr>';
         echo '            <tr><td><strong>' . esc_html__('ImageMagick AVIF Support', 'avif-local-support') . '</strong></td><td>' . (!empty($system_status['imagick_avif_support']) ? esc_html__('Available', 'avif-local-support') : esc_html__('Not available', 'avif-local-support')) . '</td></tr>';
+        echo '            <tr><td><strong>' . esc_html__('Selected engine', 'avif-local-support') . '</strong></td><td>' . esc_html((string) get_option('aviflosu_engine_mode', 'auto')) . '</td></tr>';
+        $selCli = (string) get_option('aviflosu_cli_path', '');
+        echo '            <tr><td><strong>' . esc_html__('CLI path', 'avif-local-support') . '</strong></td><td>' . ($selCli !== '' ? esc_html($selCli) : '-') . '</td></tr>';
         echo '            <tr><td><strong>' . esc_html__('Preferred method', 'avif-local-support') . '</strong></td><td>' . esc_html($system_status['preferred_method']) . '</td></tr>';
         echo '            <tr><td><strong>' . esc_html__('AVIF supported', 'avif-local-support') . '</strong></td><td>' . (!empty($system_status['avif_support']) ? esc_html__('Yes', 'avif-local-support') : esc_html__('No', 'avif-local-support')) . '</td></tr>';
         echo '          </tbody></table>';
@@ -474,14 +560,17 @@ final class Plugin
         }
         echo '      </div>';
         echo '    </div>';
-        echo '  </div>'; // .metabox-holder
-        echo '</div>'; // #status tab
+
+        echo '  </div>';
+        echo '</div>';
+
+        // Status content is combined into the Tools tab above
 
         // Tab: About
         echo '<div id="avif-local-support-tab-about" class="avif-local-support-tab">';
         echo '  <div class="metabox-holder">';
         echo '    <div class="postbox">';
-        echo '      <h2 class="hndle"><span>' . esc_html__('About', 'avif-local-support') . '</span></h2>';
+        echo '      <h2 class="avif-header"><span>' . esc_html__('About', 'avif-local-support') . '</span></h2>';
         echo '      <div class="inside">';
         $readme_path = \AVIFLOSU_PLUGIN_DIR . 'readme.txt';
         if (file_exists($readme_path) && is_readable($readme_path)) {
@@ -586,6 +675,28 @@ final class Plugin
             'avif-local-support-upload-id' => (string) $attachment_id,
             '_wpnonce' => $view_nonce,
         ], \admin_url('options-general.php?page=avif-local-support#tools')));
+        exit;
+    }
+
+    public function handle_reset_defaults(): void
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html__('You do not have permission to do this.', 'avif-local-support'));
+        }
+        check_admin_referer('aviflosu_reset_defaults');
+        // Reset options to defaults
+        update_option('aviflosu_enable_support', true);
+        update_option('aviflosu_convert_on_upload', true);
+        update_option('aviflosu_convert_via_schedule', true);
+        update_option('aviflosu_schedule_time', '01:00');
+        update_option('aviflosu_quality', 85);
+        update_option('aviflosu_speed', 1);
+        update_option('aviflosu_subsampling', '420');
+        update_option('aviflosu_bit_depth', '8');
+        update_option('aviflosu_cache_duration', 3600);
+        update_option('aviflosu_engine_mode', 'auto');
+        update_option('aviflosu_cli_path', '');
+        \wp_safe_redirect(\admin_url('options-general.php?page=avif-local-support#settings'));
         exit;
     }
 
@@ -743,5 +854,73 @@ final class Plugin
         $status['avif_support'] = $status['gd_avif_support'] || $status['imagick_avif_support'];
 
         return $status;
+    }
+
+    /**
+     * Detect ImageMagick CLI binaries and AVIF support.
+     * @return array<int, array{path:string,version:string,avif:bool}>
+     */
+    private function detect_cli_binaries(): array
+    {
+        $candidates = [];
+        // Common names
+        foreach (['magick', 'convert', 'convert-im6', 'convert-im7'] as $name) {
+            $p = $this->which($name);
+            if ($p) { $candidates[$p] = true; }
+        }
+        // Common locations
+        foreach (['/usr/bin/magick','/usr/local/bin/magick','/opt/homebrew/bin/magick','/opt/local/bin/magick','/usr/bin/convert','/usr/local/bin/convert','/opt/homebrew/bin/convert','/opt/local/bin/convert'] as $p) {
+            if (@is_executable($p)) { $candidates[$p] = true; }
+        }
+        $out = [];
+        foreach (array_keys($candidates) as $path) {
+            $version = $this->im_version($path);
+            if ($version === '') { continue; }
+            $avif = $this->im_supports_avif($path);
+            $out[] = ['path' => $path, 'version' => $version, 'avif' => $avif];
+        }
+        return $out;
+    }
+
+    private function which(string $bin): string
+    {
+        $cmd = 'command -v ' . escapeshellarg($bin) . ' 2>/dev/null';
+        $res = @shell_exec($cmd);
+        $p = is_string($res) ? trim($res) : '';
+        return ($p !== '' && @is_executable($p)) ? $p : '';
+    }
+
+    private function im_version(string $path): string
+    {
+        $cmd = escapeshellarg($path) . ' -version 2>&1';
+        @exec($cmd, $out, $code);
+        if ($code !== 0 || empty($out)) { return ''; }
+        // First line like: Version: ImageMagick 7.1.1-34 Q16-HDRI ...
+        $line = $out[0] ?? '';
+        return is_string($line) ? trim($line) : '';
+    }
+
+    private function im_supports_avif(string $path): bool
+    {
+        $base = strtolower(basename($path));
+        // For IM7 'magick' use 'magick identify -list format'; for IM6 'convert' use 'convert -list format'
+        $cmd = ($base === 'magick')
+            ? (escapeshellarg($path) . ' identify -list format 2>/dev/null')
+            : (escapeshellarg($path) . ' -list format 2>/dev/null');
+        @exec($cmd, $out, $code);
+        if ($code !== 0 || empty($out)) { return false; }
+        foreach ($out as $line) {
+            if (!preg_match('/^\s*AVIF\b/i', $line)) { continue; }
+            // Lines can be like:
+            //   AVIF* rw-   ...
+            //   AVIF  HEIC  rw+   ...
+            if (preg_match('/^\s*AVIF\S*\s+(?:[A-Za-z0-9_-]+\s+)?([rw\+\-]{2,3})\s/i', $line, $m)) {
+                $mode = strtolower($m[1]);
+                return (strpos($mode, 'w') !== false);
+            }
+            // Fallback: if AVIF line exists, assume supported (conservative yes)
+            return true;
+        }
+        return false;
     }
 }

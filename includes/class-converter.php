@@ -156,6 +156,16 @@ final class Converter
             \wp_mkdir_p($dir);
         }
 
+        // Engine selection: CLI or Auto (Imagick/GD)
+        $engineMode = (string) get_option('aviflosu_engine_mode', 'auto');
+
+        // If CLI selected, try CLI first
+        if ($engineMode === 'cli') {
+            $ok = $this->convertViaCli($sourcePath, $avifPath, $targetDimensions, $quality, $speedSetting, $subsampling, $bitDepth);
+            if ($ok) { return; }
+            // fall back to auto if CLI fails
+        }
+
         // Prefer Imagick for proper EXIF orientation and LANCZOS resizing
         if (extension_loaded('imagick')) {
             try {
@@ -306,6 +316,66 @@ final class Converter
             }
         }
         imagedestroy($gd);
+    }
+
+    private function convertViaCli(string $sourcePath, string $avifPath, ?array $targetDimensions, int $quality, int $speedSetting, string $subsampling, string $bitDepth): bool
+    {
+        $bin = (string) get_option('aviflosu_cli_path', '');
+        if ($bin === '' || !@is_executable($bin)) {
+            return false;
+        }
+
+        $args = [];
+        // Auto-orient and crop/resize to exact target size
+        $resizeArgs = [];
+        if ($targetDimensions && isset($targetDimensions['width'], $targetDimensions['height'])) {
+            $tW = max(1, (int) $targetDimensions['width']);
+            $tH = max(1, (int) $targetDimensions['height']);
+            $resizeArgs = ['-auto-orient', '-thumbnail', $tW . 'x' . $tH . '^', '-gravity', 'center', '-extent', $tW . 'x' . $tH];
+        } else {
+            $resizeArgs = ['-auto-orient'];
+        }
+
+        $defines = [];
+        // Quality and speed
+        $defines[] = '-quality';
+        $defines[] = (string) $quality;
+        $defines[] = '-define';
+        $defines[] = 'avif:speed=' . (string) min(8, $speedSetting);
+        $defines[] = '-define';
+        $defines[] = 'heic:speed=' . (string) min(8, $speedSetting);
+        // Chroma subsampling
+        $chromaLabel = $subsampling === '444' ? '4:4:4' : ($subsampling === '422' ? '4:2:2' : '4:2:0');
+        $defines[] = '-define';
+        $defines[] = 'avif:chroma-subsample=' . $chromaLabel;
+        $defines[] = '-define';
+        $defines[] = 'heic:chroma-subsample=' . $chromaLabel;
+        // Bit depth
+        $defines[] = '-depth';
+        $defines[] = (string) (int) $bitDepth;
+        $defines[] = '-define';
+        $defines[] = 'avif:bit-depth=' . (string) $bitDepth;
+        $defines[] = '-define';
+        $defines[] = 'heic:bit-depth=' . (string) $bitDepth;
+
+        // Colorspace handling when no ICC is present: attempt to ensure sRGB
+        // We cannot cheaply inspect ICC here; applying sRGB transform safely for JPEGs
+        $colorArgs = ['-colorspace', 'sRGB'];
+
+        $cmd = [];
+        $cmd[] = escapeshellarg($bin);
+        // For IM7, canonical is `magick input ... output`. For IM6, `convert input ... output` also works.
+        $cmd[] = escapeshellarg($sourcePath);
+        foreach (array_merge($resizeArgs, $defines, $colorArgs) as $a) { $cmd[] = escapeshellarg($a); }
+        $cmd[] = escapeshellarg($avifPath);
+        $full = implode(' ', $cmd) . ' 2>&1';
+        $output = [];
+        $code = 0;
+        @exec($full, $output, $code);
+        if ($code !== 0) {
+            return false;
+        }
+        return @file_exists($avifPath);
     }
 
     private function resizeGdMaintainCrop(\GdImage $source, int $sourceWidth, int $sourceHeight, int $targetWidth, int $targetHeight): ?\GdImage

@@ -3,6 +3,16 @@
 .avif-local-support-tab:not(.active) { display: none; }
 .postbox .inside { display: block; }
 
+/* Non-draggable header style to match WP metabox header visuals */
+body.settings_page_avif-local-support .postbox h2.avif-header {
+  font-size: 14px;
+  line-height: 1.4;
+  margin: 0;
+  padding: 8px 12px;
+  border-bottom: 1px solid #c3c4c7;
+  background: #f6f7f7;
+}
+
 /* Align labels and inputs a bit nicer in Settings API tables */
 .form-table th { width: 260px; }
 /* Increase spacing between inline radio options */

@@ -5,7 +5,7 @@
   function $all(selector) { return Array.prototype.slice.call(document.querySelectorAll(selector)); }
 
   function activateTab(id) {
-    var tabs = ['settings', 'tools', 'status', 'about'];
+    var tabs = ['settings', 'tools', 'about'];
     tabs.forEach(function (t) {
       var link = $('#avif-local-support-tab-link-' + t);
       var panel = $('#avif-local-support-tab-' + t);
@@ -13,11 +13,9 @@
       if (t === id) {
         link.classList.add('nav-tab-active');
         panel.classList.add('active');
-        panel.style.display = '';
       } else {
         link.classList.remove('nav-tab-active');
         panel.classList.remove('active');
-        panel.style.display = 'none';
       }
     });
   }
@@ -34,9 +32,11 @@
     });
     window.addEventListener('hashchange', function () {
       var id = (location.hash || '#settings').replace('#', '');
+      if (['settings', 'tools', 'about'].indexOf(id) === -1) id = 'settings';
       activateTab(id);
     });
     var initial = (location.hash || '#settings').replace('#', '');
+    if (['settings', 'tools', 'about'].indexOf(initial) === -1) initial = 'settings';
     activateTab(initial);
   }
 

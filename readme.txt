@@ -4,7 +4,7 @@ Plugin URI: https://github.com/ddegner/avif-local-support
 Tags: images, avif, performance, conversion, media
 Requires at least: 6.5
 Tested up to: 6.8
-Stable tag: 0.1.8
+Stable tag: 0.2.0
 Requires PHP: 8.0
 License: GPL v2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -93,6 +93,14 @@ No. The plugin does not track users or send data to external services.
 
 
 == Changelog ==
+= 0.2.0 =
+- Engine: Add ImageMagick CLI support as alternative to Imagick extension with auto-detection of available binaries.
+- Engine: New engine selection settings with automatic detection of ImageMagick CLI installations.
+- Admin: Improved header styling to match WordPress metabox design patterns.
+- Admin: Enhanced tab navigation with better CSS handling and removal of Status tab.
+- Admin: Added reset defaults functionality for settings management.
+- UI: Better spacing and visual consistency in admin interface.
+
 = 0.1.8 =
 - Performance: Optimize Imagick conversion by using single instance for both processing and metadata extraction, reducing memory usage and file I/O operations.
 
@@ -143,6 +151,9 @@ No. The plugin does not track users or send data to external services.
 Initial release.
 
 == Upgrade Notice ==
+= 0.2.0 =
+Major update: Adds ImageMagick CLI support with auto-detection, improved admin interface, and enhanced engine selection options. Recommended update.
+
 = 0.1.8 =
 Performance optimization for Imagick-based conversions: reduces memory usage and I/O operations while maintaining all quality features. Recommended update.
 

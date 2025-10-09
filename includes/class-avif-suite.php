@@ -16,6 +16,7 @@ final class Plugin
     {
         $this->support = new Support();
         $this->converter = new Converter();
+        $this->converter->set_plugin($this);
     }
 
     public function init(): void
@@ -30,6 +31,9 @@ final class Plugin
         add_action('wp_ajax_aviflosu_scan_missing', [$this, 'ajax_scan_missing']);
         add_action('wp_ajax_aviflosu_convert_now', [$this, 'ajax_convert_now']);
         add_action('wp_ajax_aviflosu_delete_all_avifs', [$this, 'ajax_delete_all_avifs']);
+        add_action('wp_ajax_aviflosu_get_logs', [$this, 'ajax_get_logs']);
+        add_action('wp_ajax_aviflosu_clear_logs', [$this, 'ajax_clear_logs']);
+        add_action('wp_ajax_aviflosu_run_magick_test', [$this, 'ajax_run_magick_test']);
 
         // Features
         if ((bool) get_option('aviflosu_enable_support', true)) {
@@ -59,6 +63,8 @@ final class Plugin
             'scanNonce' => wp_create_nonce('aviflosu_scan_missing'),
             'convertNonce' => wp_create_nonce('aviflosu_convert_now'),
             'deleteNonce' => wp_create_nonce('aviflosu_delete_all_avifs'),
+            'logsNonce' => wp_create_nonce('aviflosu_logs'),
+            'diagNonce' => wp_create_nonce('aviflosu_diag'),
         ]);
     }
 
@@ -222,14 +228,14 @@ final class Plugin
             [ 'label_for' => 'aviflosu_quality' ]
         );
 
-        // New: Speed slider (0-10)
+        // New: Speed slider (0-8)
         add_settings_field(
             'avif_local_support_speed',
-            __('Speed (0–10)', 'avif-local-support'),
+            __('Speed (0–8)', 'avif-local-support'),
             function (): void {
                 $value = (int) get_option('aviflosu_speed', 1);
-                $value = max(0, min(10, $value));
-                echo '<input id="aviflosu_speed" type="range" name="aviflosu_speed" min="0" max="10" value="' . \esc_attr((string) $value) . '" oninput="this.nextElementSibling.innerText=this.value" /> ';
+                $value = max(0, min(8, $value));
+                echo '<input id="aviflosu_speed" type="range" name="aviflosu_speed" min="0" max="8" value="' . \esc_attr((string) $value) . '" oninput="this.nextElementSibling.innerText=this.value" /> ';
                 echo '<span>' . \esc_html((string) $value) . '</span>';
                 echo '<p class="description">' . esc_html__('Lower = smaller files (slower). Higher = faster (larger files).', 'avif-local-support') . '</p>';
             },
@@ -335,7 +341,7 @@ final class Plugin
     {
         $n = (int) $value;
         if ($n < 0) { $n = 0; }
-        if ($n > 10) { $n = 10; }
+        if ($n > 8) { $n = 8; }
         return $n;
     }
 
@@ -536,6 +542,24 @@ final class Plugin
         echo '      </div>';
         echo '    </div>';
 
+        // Logs section
+        echo '    <div class="postbox">';
+        echo '      <h2 class="avif-header"><span>' . esc_html__('Logs', 'avif-local-support') . '</span></h2>';
+        echo '      <div class="inside">';
+        echo '        <p class="description">' . esc_html__('View recent conversion logs including errors, settings used, and performance metrics.', 'avif-local-support') . '</p>';
+        echo '        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">';
+        echo '          <button type="button" class="button" id="avif-local-support-refresh-logs">' . esc_html__('Refresh logs', 'avif-local-support') . '</button>';
+        echo '          <button type="button" class="button" id="avif-local-support-clear-logs">' . esc_html__('Clear logs', 'avif-local-support') . '</button>';
+        echo '          <span class="spinner" id="avif-local-support-logs-spinner" style="float:none;margin:0 6px;"></span>';
+        echo '        </div>';
+        echo '        <div id="avif-local-support-logs-container">';
+        echo '          <div id="avif-local-support-logs-content">';
+        $this->render_logs_content();
+        echo '          </div>';
+        echo '        </div>';
+        echo '      </div>';
+        echo '    </div>';
+
         // Append server support beneath coverage
         echo '    <div class="postbox">';
         echo '      <h2 class="avif-header"><span>' . esc_html__('Server support', 'avif-local-support') . '</span></h2>';
@@ -544,17 +568,53 @@ final class Plugin
         echo '        <table class="widefat striped" style="max-width:720px">';
         echo '          <tbody>';
         echo '            <tr><td><strong>' . esc_html__('PHP Version', 'avif-local-support') . '</strong></td><td>' . esc_html(PHP_VERSION) . '</td></tr>';
+        echo '            <tr><td><strong>' . esc_html__('PHP SAPI', 'avif-local-support') . '</strong></td><td>' . esc_html($system_status['php_sapi'] ?? PHP_SAPI) . '</td></tr>';
+        $currentUser = (string) ($system_status['current_user'] ?? @get_current_user());
+        echo '            <tr><td><strong>' . esc_html__('Current user', 'avif-local-support') . '</strong></td><td>' . esc_html($currentUser !== '' ? $currentUser : '-') . '</td></tr>';
+        $ob = (string) ($system_status['open_basedir'] ?? ini_get('open_basedir'));
+        echo '            <tr><td><strong>' . esc_html__('open_basedir', 'avif-local-support') . '</strong></td><td>' . esc_html($ob !== '' ? $ob : '-') . '</td></tr>';
+        $df = (string) ($system_status['disable_functions'] ?? ini_get('disable_functions'));
+        echo '            <tr><td><strong>' . esc_html__('disable_functions', 'avif-local-support') . '</strong></td><td><code style="white-space:pre-wrap;word-break:break-word;display:inline-block;max-width:560px;overflow:auto;">' . esc_html($df !== '' ? $df : '-') . '</code></td></tr>';
         echo '            <tr><td><strong>' . esc_html__('WordPress Version', 'avif-local-support') . '</strong></td><td>' . esc_html(get_bloginfo('version')) . '</td></tr>';
         echo '            <tr><td><strong>' . esc_html__('GD Extension', 'avif-local-support') . '</strong></td><td>' . (!empty($system_status['gd_available']) ? esc_html__('Available', 'avif-local-support') : esc_html__('Not available', 'avif-local-support')) . '</td></tr>';
         echo '            <tr><td><strong>' . esc_html__('GD AVIF Support', 'avif-local-support') . '</strong></td><td>' . (!empty($system_status['gd_avif_support']) ? esc_html__('Available', 'avif-local-support') : esc_html__('Not available', 'avif-local-support')) . '</td></tr>';
         echo '            <tr><td><strong>' . esc_html__('ImageMagick (Imagick)', 'avif-local-support') . '</strong></td><td>' . (!empty($system_status['imagick_available']) ? esc_html__('Available', 'avif-local-support') : esc_html__('Not available', 'avif-local-support')) . '</td></tr>';
+        if (!empty($system_status['imagick_version'])) {
+            echo '            <tr><td><strong>' . esc_html__('ImageMagick Version', 'avif-local-support') . '</strong></td><td>' . esc_html($system_status['imagick_version']) . '</td></tr>';
+        }
         echo '            <tr><td><strong>' . esc_html__('ImageMagick AVIF Support', 'avif-local-support') . '</strong></td><td>' . (!empty($system_status['imagick_avif_support']) ? esc_html__('Available', 'avif-local-support') : esc_html__('Not available', 'avif-local-support')) . '</td></tr>';
+        $formats = isset($system_status['imagick_formats']) && is_array($system_status['imagick_formats']) ? $system_status['imagick_formats'] : [];
+        if (!empty($formats)) {
+            $fmtStr = implode(', ', array_map('strval', $formats));
+            echo '            <tr><td><strong>' . esc_html__('Imagick formats (sample)', 'avif-local-support') . '</strong></td><td><code style="white-space:pre-wrap;word-break:break-word;display:inline-block;max-width:560px;overflow:auto;">' . esc_html($fmtStr) . '</code></td></tr>';
+        }
+        // CLI binaries found
+        $cliDetected = isset($system_status['cli_detected']) && is_array($system_status['cli_detected']) ? $system_status['cli_detected'] : [];
+        if (!empty($cliDetected)) {
+            echo '            <tr><td><strong>' . esc_html__('ImageMagick CLI detected', 'avif-local-support') . '</strong></td><td>';
+            echo '<ul style="margin:0;padding-left:18px;">';
+            foreach ($cliDetected as $bin) {
+                $path = isset($bin['path']) ? (string) $bin['path'] : '';
+                $ver = isset($bin['version']) ? (string) $bin['version'] : '';
+                $avif = !empty($bin['avif']) ? 'AVIF: yes' : 'AVIF: no';
+                echo '<li><code>' . esc_html($path) . '</code> — ' . esc_html($ver) . ' — ' . esc_html($avif) . '</li>';
+            }
+            echo '</ul>';
+            echo '</td></tr>';
+        }
         echo '            <tr><td><strong>' . esc_html__('Selected engine', 'avif-local-support') . '</strong></td><td>' . esc_html((string) get_option('aviflosu_engine_mode', 'auto')) . '</td></tr>';
         $selCli = (string) get_option('aviflosu_cli_path', '');
         echo '            <tr><td><strong>' . esc_html__('CLI path', 'avif-local-support') . '</strong></td><td>' . ($selCli !== '' ? esc_html($selCli) : '-') . '</td></tr>';
         echo '            <tr><td><strong>' . esc_html__('Preferred method', 'avif-local-support') . '</strong></td><td>' . esc_html($system_status['preferred_method']) . '</td></tr>';
         echo '            <tr><td><strong>' . esc_html__('AVIF supported', 'avif-local-support') . '</strong></td><td>' . (!empty($system_status['avif_support']) ? esc_html__('Yes', 'avif-local-support') : esc_html__('No', 'avif-local-support')) . '</td></tr>';
         echo '          </tbody></table>';
+        // Run test button
+        echo '        <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">';
+        echo '          <button type="button" class="button" id="avif-local-support-run-magick-test">' . esc_html__('Run ImageMagick test', 'avif-local-support') . '</button>';
+        echo '          <span class="spinner" id="avif-local-support-magick-test-spinner" style="float:none;margin:0 6px;"></span>';
+        echo '          <span id="avif-local-support-magick-test-status" class="description"></span>';
+        echo '        </div>';
+        echo '        <pre id="avif-local-support-magick-test-output" style="display:none;max-width:960px;white-space:pre-wrap;background:#f6f7f7;padding:10px;border:1px solid #ccd0d4;margin-top:8px;"></pre>';
         if (!empty($system_status['preferred_method']) && $system_status['preferred_method'] === 'gd') {
             echo '<p class="description" style="margin-top:8px;"><strong>' . esc_html__('Color management note:', 'avif-local-support') . '</strong> ' . esc_html__('GD does not perform color management; non‑sRGB JPEGs (Adobe RGB, Display P3) may appear desaturated. For accurate color and metadata preservation, enable Imagick with AVIF support.', 'avif-local-support') . '</p>';
         }
@@ -817,20 +877,38 @@ final class Plugin
         $status = [
             'php_version' => PHP_VERSION,
             'wordpress_version' => get_bloginfo('version'),
+            'php_sapi' => PHP_SAPI,
+            'current_user' => function_exists('posix_geteuid') ? (string) @get_current_user() . ' (uid ' . (int) @posix_geteuid() . ')' : (string) @get_current_user(),
+            'open_basedir' => (string) ini_get('open_basedir'),
+            'disable_functions' => (string) ini_get('disable_functions'),
             'gd_available' => extension_loaded('gd'),
             'gd_avif_support' => false,
             'imagick_available' => extension_loaded('imagick'),
             'imagick_avif_support' => false,
+            'imagick_version' => '',
+            'imagick_formats' => [],
+            'cli_detected' => [],
             'preferred_method' => 'none',
             'avif_support' => false,
         ];
 
-        // ImageMagick AVIF support
+        // ImageMagick AVIF support and version detection
         if ($status['imagick_available']) {
             try {
                 $imagick = new \Imagick();
+                $version = $imagick->getVersion();
+                $status['imagick_version'] = $version['versionString'] ?? '';
+                
                 $formats = $imagick->queryFormats('AVIF');
                 $status['imagick_avif_support'] = !empty($formats);
+                // Capture a short list of formats to display
+                $allFormats = $imagick->queryFormats();
+                if (is_array($allFormats)) {
+                    // Show a compact comma list limited to common ones if too long
+                    $subset = array_slice($allFormats, 0, 20);
+                    $status['imagick_formats'] = $subset;
+                }
+                
                 $imagick->destroy();
             } catch (\Exception $e) {
                 $status['imagick_avif_support'] = false;
@@ -853,8 +931,12 @@ final class Plugin
 
         $status['avif_support'] = $status['gd_avif_support'] || $status['imagick_avif_support'];
 
+        // Detect CLI binaries for display
+        $status['cli_detected'] = $this->detect_cli_binaries();
+
         return $status;
     }
+
 
     /**
      * Detect ImageMagick CLI binaries and AVIF support.
@@ -863,17 +945,36 @@ final class Plugin
     private function detect_cli_binaries(): array
     {
         $candidates = [];
-        // Common names
-        foreach (['magick', 'convert', 'convert-im6', 'convert-im7'] as $name) {
-            $p = $this->which($name);
-            if ($p) { $candidates[$p] = true; }
+        
+        // Check if shell functions are available
+        if (in_array('shell_exec', explode(',', ini_get('disable_functions')), true)) {
+            // shell_exec is disabled, only check hardcoded paths
+            foreach (['/usr/bin/magick','/usr/local/bin/magick','/opt/homebrew/bin/magick','/opt/local/bin/magick','/usr/bin/convert','/usr/local/bin/convert','/opt/homebrew/bin/convert','/opt/local/bin/convert'] as $p) {
+                if (@file_exists($p) && @is_executable($p)) { 
+                    $candidates[$p] = true; 
+                }
+            }
+        } else {
+            // Common names using which/command -v
+            foreach (['magick', 'convert', 'convert-im6', 'convert-im7'] as $name) {
+                $p = $this->which($name);
+                if ($p) { $candidates[$p] = true; }
+            }
+            // Common locations
+            foreach (['/usr/bin/magick','/usr/local/bin/magick','/opt/homebrew/bin/magick','/opt/local/bin/magick','/usr/bin/convert','/usr/local/bin/convert','/opt/homebrew/bin/convert','/opt/local/bin/convert'] as $p) {
+                if (@file_exists($p) && @is_executable($p)) { 
+                    $candidates[$p] = true; 
+                }
+            }
         }
-        // Common locations
-        foreach (['/usr/bin/magick','/usr/local/bin/magick','/opt/homebrew/bin/magick','/opt/local/bin/magick','/usr/bin/convert','/usr/local/bin/convert','/opt/homebrew/bin/convert','/opt/local/bin/convert'] as $p) {
-            if (@is_executable($p)) { $candidates[$p] = true; }
-        }
+        
         $out = [];
         foreach (array_keys($candidates) as $path) {
+            // Ensure the path exists and is executable
+            if (!@file_exists($path) || !@is_executable($path)) {
+                continue;
+            }
+            
             $version = $this->im_version($path);
             if ($version === '') { continue; }
             $avif = $this->im_supports_avif($path);
@@ -884,14 +985,30 @@ final class Plugin
 
     private function which(string $bin): string
     {
+        // Check if shell functions are disabled
+        if (in_array('shell_exec', explode(',', ini_get('disable_functions')), true)) {
+            return '';
+        }
+        
         $cmd = 'command -v ' . escapeshellarg($bin) . ' 2>/dev/null';
         $res = @shell_exec($cmd);
         $p = is_string($res) ? trim($res) : '';
-        return ($p !== '' && @is_executable($p)) ? $p : '';
+        
+        // Verify the result exists and is executable
+        if ($p !== '' && @file_exists($p) && @is_executable($p)) {
+            return $p;
+        }
+        
+        return '';
     }
 
     private function im_version(string $path): string
     {
+        // Check if exec is disabled
+        if (in_array('exec', explode(',', ini_get('disable_functions')), true)) {
+            return '';
+        }
+        
         $cmd = escapeshellarg($path) . ' -version 2>&1';
         @exec($cmd, $out, $code);
         if ($code !== 0 || empty($out)) { return ''; }
@@ -902,6 +1019,11 @@ final class Plugin
 
     private function im_supports_avif(string $path): bool
     {
+        // Check if exec is disabled
+        if (in_array('exec', explode(',', ini_get('disable_functions')), true)) {
+            return false;
+        }
+        
         $base = strtolower(basename($path));
         // For IM7 'magick' use 'magick identify -list format'; for IM6 'convert' use 'convert -list format'
         $cmd = ($base === 'magick')
@@ -922,5 +1044,169 @@ final class Plugin
             return true;
         }
         return false;
+    }
+
+    /**
+     * Render logs content for the admin interface
+     */
+    private function render_logs_content(): void
+    {
+        $logs = $this->get_logs();
+        if (empty($logs)) {
+            echo '<p class="description">' . esc_html__('No logs available.', 'avif-local-support') . '</p>';
+            return;
+        }
+
+        echo '<div style="max-height:400px;overflow-y:auto;border:1px solid #ddd;background:#f9f9f9;padding:10px;">';
+        foreach ($logs as $log) {
+            $timestamp = isset($log['timestamp']) ? (int) $log['timestamp'] : 0;
+            $status = isset($log['status']) ? (string) $log['status'] : 'info';
+            $message = isset($log['message']) ? (string) $log['message'] : '';
+            $details = isset($log['details']) ? (array) $log['details'] : [];
+
+            $time_display = $timestamp > 0 ? wp_date('Y-m-d H:i:s', $timestamp) : '-';
+            $status_class = $status === 'error' ? 'color:red;' : ($status === 'warning' ? 'color:orange;' : 'color:green;');
+
+            echo '<div style="margin-bottom:8px;padding:8px;background:white;border-left:3px solid ' . ($status === 'error' ? '#dc3232' : ($status === 'warning' ? '#ffb900' : '#46b450')) . ';">';
+            echo '<div style="font-weight:bold;margin-bottom:4px;"><span style="' . esc_attr($status_class) . '">' . esc_html(strtoupper($status)) . '</span> - ' . esc_html($time_display) . '</div>';
+            echo '<div style="margin-bottom:4px;">' . esc_html($message) . '</div>';
+            
+            if (!empty($details)) {
+                echo '<div style="font-size:11px;color:#666;font-family:monospace;">';
+                foreach ($details as $key => $value) {
+                    if (is_scalar($value)) {
+                        echo '<div><strong>' . esc_html($key) . ':</strong> ' . esc_html((string) $value) . '</div>';
+                    }
+                }
+                echo '</div>';
+            }
+            echo '</div>';
+        }
+        echo '</div>';
+    }
+
+    /**
+     * Get logs from WordPress transients
+     */
+    private function get_logs(): array
+    {
+        $logs = get_transient('aviflosu_logs');
+        return is_array($logs) ? $logs : [];
+    }
+
+    /**
+     * Add a log entry
+     */
+    public function add_log(string $status, string $message, array $details = []): void
+    {
+        $logs = $this->get_logs();
+        
+        // Add new log entry
+        $log_entry = [
+            'timestamp' => time(),
+            'status' => $status,
+            'message' => $message,
+            'details' => $details
+        ];
+        
+        // Prepend to show newest first
+        array_unshift($logs, $log_entry);
+        
+        // Keep only last 50 entries to prevent unlimited growth
+        $logs = array_slice($logs, 0, 50);
+        
+        // Store for 24 hours (temporary logs)
+        set_transient('aviflosu_logs', $logs, DAY_IN_SECONDS);
+    }
+
+    /**
+     * Clear all logs
+     */
+    private function clear_logs(): void
+    {
+        delete_transient('aviflosu_logs');
+    }
+
+    /**
+     * AJAX handler to get logs
+     */
+    public function ajax_get_logs(): void
+    {
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => 'forbidden'], 403);
+        }
+        check_ajax_referer('aviflosu_logs', '_wpnonce');
+        
+        ob_start();
+        $this->render_logs_content();
+        $content = ob_get_clean();
+        
+        wp_send_json_success(['content' => $content]);
+    }
+
+    /**
+     * AJAX handler to clear logs
+     */
+    public function ajax_clear_logs(): void
+    {
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => 'forbidden'], 403);
+        }
+        check_ajax_referer('aviflosu_logs', '_wpnonce');
+        
+        $this->clear_logs();
+        wp_send_json_success(['message' => 'Logs cleared']);
+    }
+
+    /**
+     * AJAX: Run `magick -version` (or selected CLI) via proc_open and return output
+     */
+    public function ajax_run_magick_test(): void
+    {
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => 'forbidden'], 403);
+        }
+        check_ajax_referer('aviflosu_diag', '_wpnonce');
+
+        $path = (string) get_option('aviflosu_cli_path', '');
+        $detected = $this->detect_cli_binaries();
+        if ($path === '' && !empty($detected)) {
+            $path = (string) ($detected[0]['path'] ?? '');
+        }
+
+        $disableFunctions = array_map('trim', explode(',', (string) ini_get('disable_functions')));
+        $procAvailable = !in_array('proc_open', $disableFunctions, true);
+        if (!$procAvailable) {
+            wp_send_json_error(['message' => 'proc_open disabled by PHP disable_functions.'], 400);
+        }
+        if ($path === '' || !@file_exists($path)) {
+            wp_send_json_error(['message' => 'No ImageMagick CLI path found. Set a custom path under Engine Selection.'], 400);
+        }
+
+        $cmd = escapeshellarg($path) . ' -version';
+        $descriptors = [
+            0 => ['pipe', 'r'],
+            1 => ['pipe', 'w'],
+            2 => ['pipe', 'w'],
+        ];
+        $pipes = [];
+        $output = '';
+        $errors = '';
+        $proc = @proc_open($cmd, $descriptors, $pipes, null, null, ['bypass_shell' => true]);
+        if (!\is_resource($proc)) {
+            wp_send_json_error(['message' => 'Failed to start process.'], 500);
+        }
+        // Close STDIN
+        if (isset($pipes[0]) && \is_resource($pipes[0])) { fclose($pipes[0]); }
+        if (isset($pipes[1]) && \is_resource($pipes[1])) { $output = stream_get_contents($pipes[1]) ?: ''; fclose($pipes[1]); }
+        if (isset($pipes[2]) && \is_resource($pipes[2])) { $errors = stream_get_contents($pipes[2]) ?: ''; fclose($pipes[2]); }
+        $status = proc_close($proc);
+
+        $out = trim($output . (\strlen($errors) ? ("\n" . $errors) : ''));
+        if ($out === '') {
+            $hint = 'No output. If using ImageMagick 7, ensure the path points to `magick`.';
+            wp_send_json_success(['code' => $status, 'output' => $out, 'hint' => $hint]);
+        }
+        wp_send_json_success(['code' => $status, 'output' => $out]);
     }
 }

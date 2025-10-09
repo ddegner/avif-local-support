@@ -33,3 +33,59 @@ body.settings_page_avif-local-support .postbox h2.avif-header {
   width: 0%;
 }
 
+/* Logs styling */
+.avif-logs-container {
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  background: #f9f9f9;
+  padding: 10px;
+  border-radius: 4px;
+}
+
+.avif-log-entry {
+  margin-bottom: 8px;
+  padding: 8px;
+  background: white;
+  border-radius: 3px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.avif-log-entry.error {
+  border-left: 3px solid #dc3232;
+}
+
+.avif-log-entry.warning {
+  border-left: 3px solid #ffb900;
+}
+
+.avif-log-entry.success,
+.avif-log-entry.info {
+  border-left: 3px solid #46b450;
+}
+
+.avif-log-header {
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.avif-log-status.error {
+  color: #dc3232;
+}
+
+.avif-log-status.warning {
+  color: #ffb900;
+}
+
+.avif-log-status.success,
+.avif-log-status.info {
+  color: #46b450;
+}
+
+.avif-log-details {
+  font-size: 11px;
+  color: #666;
+  font-family: Consolas, Monaco, monospace;
+  line-height: 1.4;
+}
+

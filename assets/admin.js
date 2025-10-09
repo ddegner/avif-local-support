@@ -226,6 +226,121 @@
         });
       });
     }
+
+    // Logs functionality
+    var refreshLogsBtn = document.querySelector('#avif-local-support-refresh-logs');
+    var clearLogsBtn = document.querySelector('#avif-local-support-clear-logs');
+    var logsSpinner = document.querySelector('#avif-local-support-logs-spinner');
+    var logsContent = document.querySelector('#avif-local-support-logs-content');
+
+    if (refreshLogsBtn && typeof AVIFLocalSupportData !== 'undefined') {
+      refreshLogsBtn.addEventListener('click', function () {
+        var ajaxUrl = AVIFLocalSupportData.ajaxUrl;
+        var nonce = AVIFLocalSupportData.logsNonce;
+        if (logsSpinner) logsSpinner.classList.add('is-active');
+        
+        var form = new URLSearchParams();
+        form.append('action', 'aviflosu_get_logs');
+        form.append('_wpnonce', nonce);
+        
+        fetch(ajaxUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+          body: form.toString()
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (json) {
+          if (json && json.success && json.data && json.data.content && logsContent) {
+            logsContent.innerHTML = json.data.content;
+          }
+        })
+        .catch(function () {
+          // Handle error silently
+        })
+        .finally(function () {
+          if (logsSpinner) logsSpinner.classList.remove('is-active');
+        });
+      });
+    }
+
+    if (clearLogsBtn && typeof AVIFLocalSupportData !== 'undefined') {
+      clearLogsBtn.addEventListener('click', function () {
+        if (!confirm('Clear all logs? This cannot be undone.')) {
+          return;
+        }
+        
+        var ajaxUrl = AVIFLocalSupportData.ajaxUrl;
+        var nonce = AVIFLocalSupportData.logsNonce;
+        if (logsSpinner) logsSpinner.classList.add('is-active');
+        
+        var form = new URLSearchParams();
+        form.append('action', 'aviflosu_clear_logs');
+        form.append('_wpnonce', nonce);
+        
+        fetch(ajaxUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+          body: form.toString()
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (json) {
+          if (json && json.success && logsContent) {
+            logsContent.innerHTML = '<p class="description">No logs available.</p>';
+          }
+        })
+        .catch(function () {
+          // Handle error silently
+        })
+        .finally(function () {
+          if (logsSpinner) logsSpinner.classList.remove('is-active');
+        });
+      });
+    }
+
+    // Run ImageMagick test
+    var runTestBtn = document.querySelector('#avif-local-support-run-magick-test');
+    var runTestSpinner = document.querySelector('#avif-local-support-magick-test-spinner');
+    var runTestStatus = document.querySelector('#avif-local-support-magick-test-status');
+    var runTestOutput = document.querySelector('#avif-local-support-magick-test-output');
+    if (runTestBtn && typeof AVIFLocalSupportData !== 'undefined') {
+      runTestBtn.addEventListener('click', function () {
+        var ajaxUrl = AVIFLocalSupportData.ajaxUrl;
+        var nonce = AVIFLocalSupportData.diagNonce;
+        runTestBtn.disabled = true;
+        if (runTestSpinner) runTestSpinner.classList.add('is-active');
+        if (runTestStatus) runTestStatus.textContent = 'Running…';
+        if (runTestOutput) { runTestOutput.style.display = 'none'; runTestOutput.textContent = ''; }
+        var form = new URLSearchParams();
+        form.append('action', 'aviflosu_run_magick_test');
+        form.append('_wpnonce', nonce);
+        fetch(ajaxUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+          body: form.toString()
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (json) {
+          if (!json) return;
+          if (json.success && json.data) {
+            if (runTestStatus) runTestStatus.textContent = 'Exit code ' + String(json.data.code);
+            var text = String(json.data.output || '');
+            if (json.data.hint) { text += '\n\nHint: ' + String(json.data.hint); }
+            if (runTestOutput) { runTestOutput.textContent = text; runTestOutput.style.display = ''; }
+          } else if (json.data && json.data.message) {
+            if (runTestStatus) runTestStatus.textContent = String(json.data.message);
+          } else {
+            if (runTestStatus) runTestStatus.textContent = 'Failed';
+          }
+        })
+        .catch(function () {
+          if (runTestStatus) runTestStatus.textContent = 'Failed';
+        })
+        .finally(function () {
+          if (runTestSpinner) runTestSpinner.classList.remove('is-active');
+          runTestBtn.disabled = false;
+        });
+      });
+    }
   }
 
   if (document.readyState === 'loading') {

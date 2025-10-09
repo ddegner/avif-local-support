@@ -91,8 +91,19 @@ Imagick is recommended for the best results and for preserving metadata and colo
 = Does it track users or send data externally? =
 No. The plugin does not track users or send data to external services.
 
+= ImageMagick CLI not detected on LiteSpeed/CyberPanel due to open_basedir? =
+On LiteSpeed/CyberPanel, the vhost sets a restrictive `open_basedir` (e.g., `/tmp:/home/<site>`). PHP’s `is_executable('/usr/local/bin/magick')` returns false under that restriction even when the binary exists and works from the shell. The plugin currently relies on `is_executable` and bails out instead of offering a fallback or a guided fix.
 
 == Changelog ==
+= 0.2.1 =
+- Admin: Add Logs panel to Tools with refresh/clear and detailed entries (status, engine, duration, sizes, settings, errors).
+- Admin: Add “Run ImageMagick test” diagnostic action with inline CLI output and exit code.
+- Tools: Show inline progress with a progress bar and faster polling during Convert now.
+- Scheduling: Respect site timezone and selected time; reschedule daily task if time changes.
+- Engine/CLI: Improve binary validation, set env paths for Homebrew modules, retry transient delegate/read errors, and add helpful AVIF support hint when no output.
+- Uploads: Allow `.avif` uploads via WordPress mime filter.
+- Docs: Add FAQ for LiteSpeed/CyberPanel `open_basedir` causing `is_executable` to return false.
+
 = 0.2.0 =
 - Engine: Add ImageMagick CLI support as alternative to Imagick extension with auto-detection of available binaries.
 - Engine: New engine selection settings with automatic detection of ImageMagick CLI installations.

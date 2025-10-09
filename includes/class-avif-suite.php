@@ -1175,38 +1175,24 @@ final class Plugin
         }
 
         $disableFunctions = array_map('trim', explode(',', (string) ini_get('disable_functions')));
-        $procAvailable = !in_array('proc_open', $disableFunctions, true);
-        if (!$procAvailable) {
-            wp_send_json_error(['message' => 'proc_open disabled by PHP disable_functions.'], 400);
+        $execAvailable = !in_array('exec', $disableFunctions, true);
+        if (!$execAvailable) {
+            wp_send_json_error(['message' => 'exec disabled by PHP disable_functions.'], 400);
         }
         if ($path === '' || !@file_exists($path)) {
             wp_send_json_error(['message' => 'No ImageMagick CLI path found. Set a custom path under Engine Selection.'], 400);
         }
 
-        $cmd = escapeshellarg($path) . ' -version';
-        $descriptors = [
-            0 => ['pipe', 'r'],
-            1 => ['pipe', 'w'],
-            2 => ['pipe', 'w'],
-        ];
-        $pipes = [];
-        $output = '';
-        $errors = '';
-        $proc = @proc_open($cmd, $descriptors, $pipes, null, null, ['bypass_shell' => true]);
-        if (!\is_resource($proc)) {
-            wp_send_json_error(['message' => 'Failed to start process.'], 500);
-        }
-        // Close STDIN
-        if (isset($pipes[0]) && \is_resource($pipes[0])) { fclose($pipes[0]); }
-        if (isset($pipes[1]) && \is_resource($pipes[1])) { $output = stream_get_contents($pipes[1]) ?: ''; fclose($pipes[1]); }
-        if (isset($pipes[2]) && \is_resource($pipes[2])) { $errors = stream_get_contents($pipes[2]) ?: ''; fclose($pipes[2]); }
-        $status = proc_close($proc);
+        $cmd = escapeshellarg($path) . ' -version 2>&1';
+        $outLines = [];
+        $exitCode = 0;
+        @exec($cmd, $outLines, $exitCode);
+        $output = trim(implode("\n", array_map('strval', $outLines)));
 
-        $out = trim($output . (\strlen($errors) ? ("\n" . $errors) : ''));
-        if ($out === '') {
+        if ($output === '') {
             $hint = 'No output. If using ImageMagick 7, ensure the path points to `magick`.';
-            wp_send_json_success(['code' => $status, 'output' => $out, 'hint' => $hint]);
+            wp_send_json_success(['code' => $exitCode, 'output' => $output, 'hint' => $hint]);
         }
-        wp_send_json_success(['code' => $status, 'output' => $out]);
+        wp_send_json_success(['code' => $exitCode, 'output' => $output]);
     }
 }

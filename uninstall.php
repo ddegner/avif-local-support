@@ -20,6 +20,8 @@ $options = [
 	'aviflosu_preserve_color_profile',
 	'aviflosu_wordpress_logic',
 	'aviflosu_cache_duration',
+	'aviflosu_engine_mode',
+	'aviflosu_cli_path',
 ];
 
 foreach ($options as $option) {

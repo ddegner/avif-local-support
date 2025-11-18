@@ -4,7 +4,7 @@ Plugin URI: https://github.com/ddegner/avif-local-support
 Tags: images, avif, performance, conversion, media
 Requires at least: 6.5
 Tested up to: 6.8
-Stable tag: 0.2.0
+Stable tag: 0.2.1
 Requires PHP: 8.0
 License: GPL v2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -102,6 +102,7 @@ On LiteSpeed/CyberPanel, the vhost sets a restrictive `open_basedir` (e.g., `/tm
 - Scheduling: Respect site timezone and selected time; reschedule daily task if time changes.
 - Engine/CLI: Improve binary validation, set env paths for Homebrew modules, retry transient delegate/read errors, and add helpful AVIF support hint when no output.
 - Uploads: Allow `.avif` uploads via WordPress mime filter.
+- Output: Remove stray XML declaration from HTML output when using picture tag replacement.
 - Docs: Add FAQ for LiteSpeed/CyberPanel `open_basedir` causing `is_executable` to return false.
 
 = 0.2.0 =
@@ -162,6 +163,9 @@ On LiteSpeed/CyberPanel, the vhost sets a restrictive `open_basedir` (e.g., `/tm
 Initial release.
 
 == Upgrade Notice ==
+= 0.2.1 =
+New Logs panel, diagnostic tools, improved scheduling, and fixes for HTML output. Recommended update.
+
 = 0.2.0 =
 Major update: Adds ImageMagick CLI support with auto-detection, improved admin interface, and enhanced engine selection options. Recommended update.
 

@@ -199,6 +199,11 @@ final class Support
             $this->wrapImgNodeToPicture($dom, $img, $avifSrcset, $sizes);
         }
 
+        // Cleanup: Remove the XML declaration node we added to force UTF-8
+        while ($dom->firstChild instanceof \DOMProcessingInstruction && $dom->firstChild->nodeName === 'xml') {
+            $dom->removeChild($dom->firstChild);
+        }
+
         $out = $dom->saveHTML();
         return \is_string($out) && $out !== '' ? $out : $htmlInput;
     }

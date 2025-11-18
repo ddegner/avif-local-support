@@ -13,19 +13,17 @@ AVIF support for converting and serving high quality photos. Built by a photogra
 
 == Description ==
 
-AVIF Local Support adds modern AVIF image support to WordPress while keeping compatibility with existing JPEG media.  Built by a [Boston photographer](https://www.daviddegner.com) who just wanted their website to look as good as possible.
+AVIF Local Support adds modern AVIF image support to WordPress while keeping compatibility with existing JPEG media.  Built by a [Boston photographer](https://www.daviddegner.com) who needs it for their own portfolio website.
 
 **GitHub Repository:** [https://github.com/ddegner/avif-local-support](https://github.com/ddegner/avif-local-support)
 
-- Local-first: all processing happens on your own server (works great on local environments like Local, MAMP, Docker) — no external calls.
-- Image quality first: uses Imagick when available for high-quality resizing (LANCZOS), corrects EXIF orientation, and preserves ICC color profiles and EXIF/XMP/IPTC metadata when possible.
-- Tunable quality and speed: set AVIF quality (0–100) and encoder speed (0–10) to balance fidelity and performance.
-
+- Local-first: all processing happens on your own server — no external calls.  Works well for me on a shared CPU with 2GB of RAM on Linode.
+- Image quality first: uses Imagick PHP and CLI when available for high-quality resizing (LANCZOS), corrects EXIF orientation, and preserves ICC color profiles and EXIF/XMP/IPTC metadata when possible.
+- Tunable quality and speed: set AVIF quality (0–100) and encoder speed (0–10) to balance fidelity and performance.  You can even adjust choose chroma subsampling (4:2:0, 4:2:2, 4:4:4) and bit depth (8/10/12-bit). Defaults: 4:2:0 and 8-bit if your server supports it and you want higher quality images.
 - Wraps existing `<img>` tags in `<picture>` with an AVIF `<source>` when an `.avif` version is present.
 - Converts JPEG originals and generated sizes to AVIF on upload, or via a daily/background scan.
 - Preserves EXIF/XMP/IPTC metadata and ICC color profiles by default (when using ImageMagick/Imagick).
 - WordPress-aware resizing logic enabled by default to avoid double-resizing when generating AVIF sizes from originals.
- - New encoder controls: choose chroma subsampling (4:2:0, 4:2:2, 4:4:4) and bit depth (8/10/12-bit). Defaults: 4:2:0 and 8-bit.
  - Tools include: convert missing AVIFs, upload a test JPEG, and delete all AVIF files in uploads.
 
 = How it works =
@@ -93,6 +91,9 @@ No. The plugin does not track users or send data to external services.
 
 = ImageMagick CLI not detected on LiteSpeed/CyberPanel due to open_basedir? =
 On LiteSpeed/CyberPanel, the vhost sets a restrictive `open_basedir` (e.g., `/tmp:/home/<site>`). PHP’s `is_executable('/usr/local/bin/magick')` returns false under that restriction even when the binary exists and works from the shell. The plugin currently relies on `is_executable` and bails out instead of offering a fallback or a guided fix.
+
+= Why do I see a "High risk of memory exhaustion" error in the logs? =
+The plugin now estimates memory usage before processing to prevent fatal errors (crashes) on servers with limited RAM. If you see this, try switching to the "ImageMagick CLI" engine or increasing your PHP `memory_limit`. As a last resort, you can check "Disable memory check" in the settings to bypass this safety measure.
 
 == Changelog ==
 = 0.2.2 =

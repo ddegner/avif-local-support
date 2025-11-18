@@ -6,7 +6,7 @@ if (!defined('WP_UNINSTALL_PLUGIN')) {
 	exit;
 }
 
-$options = [
+$aviflosu_options = [
 	'aviflosu_enable_support',
 	'aviflosu_convert_on_upload',
 	'aviflosu_convert_via_schedule',
@@ -15,6 +15,7 @@ $options = [
 	'aviflosu_speed',
 	'aviflosu_subsampling',
 	'aviflosu_bit_depth',
+	'aviflosu_disable_memory_check',
 	// legacy options left behind in older versions
 	'aviflosu_preserve_metadata',
 	'aviflosu_preserve_color_profile',
@@ -24,9 +25,9 @@ $options = [
 	'aviflosu_cli_path',
 ];
 
-foreach ($options as $option) {
-	if (get_option($option) !== false) {
-		delete_option($option);
+foreach ($aviflosu_options as $aviflosu_option) {
+	if (get_option($aviflosu_option) !== false) {
+		delete_option($aviflosu_option);
 	}
 }
 

@@ -193,6 +193,20 @@ final class Support
             $src = (string) $img->getAttribute('src');
             $avifUrl = $this->avifUrlFor($src);
             if (!$avifUrl) { continue; }
+
+            // Check if the image is wrapped in a link to a JPEG that also has an AVIF version
+            $parent = $img->parentNode;
+            if ($parent instanceof \DOMElement && strtolower($parent->nodeName) === 'a') {
+                $href = (string) $parent->getAttribute('href');
+                // Only process if href looks like a JPEG
+                if (preg_match('/\.(jpe?g)$/i', $href)) {
+                    $avifHref = $this->avifUrlFor($href);
+                    if ($avifHref) {
+                        $parent->setAttribute('href', $avifHref);
+                    }
+                }
+            }
+
             $srcset = (string) $img->getAttribute('srcset');
             $sizes = (string) $img->getAttribute('sizes');
             $avifSrcset = $srcset !== '' ? $this->convertSrcsetToAvif($srcset) : $avifUrl;

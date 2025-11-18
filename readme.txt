@@ -4,7 +4,7 @@ Plugin URI: https://github.com/ddegner/avif-local-support
 Tags: images, avif, performance, conversion, media
 Requires at least: 6.5
 Tested up to: 6.8
-Stable tag: 0.2.2
+Stable tag: 0.2.3
 Requires PHP: 8.0
 License: GPL v2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -96,6 +96,9 @@ On LiteSpeed/CyberPanel, the vhost sets a restrictive `open_basedir` (e.g., `/tm
 The plugin now estimates memory usage before processing to prevent fatal errors (crashes) on servers with limited RAM. If you see this, try switching to the "ImageMagick CLI" engine or increasing your PHP `memory_limit`. As a last resort, you can check "Disable memory check" in the settings to bypass this safety measure.
 
 == Changelog ==
+= 0.2.3 =
+- Support: Automatically rewrite parent anchor links to point to AVIFs (improves compatibility with lightboxes like SimpleLightbox).
+
 = 0.2.2 =
 - Reliability: Added pre-conversion memory check to prevent fatal errors on low-RAM servers.
 - Settings: Added "Disable memory check" option for advanced users who want to bypass safety limits.
@@ -170,6 +173,9 @@ The plugin now estimates memory usage before processing to prevent fatal errors 
 Initial release.
 
 == Upgrade Notice ==
+= 0.2.3 =
+Improves compatibility with lightboxes (SimpleLightbox) by linking to AVIFs automatically. Recommended update.
+
 = 0.2.2 =
 Improved stability on low-RAM servers with pre-conversion memory checks and better error logging suggestions. Recommended update.
 

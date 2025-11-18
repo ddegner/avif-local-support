@@ -176,6 +176,7 @@ final class Converter
             'cli_path' => (string) get_option('aviflosu_cli_path', ''),
             'convert_on_upload' => (bool) get_option('aviflosu_convert_on_upload', true),
             'convert_via_schedule' => (bool) get_option('aviflosu_convert_via_schedule', true),
+            'disable_memory_check' => (bool) get_option('aviflosu_disable_memory_check', false),
             'lossless' => $lossless,
         ];
 
@@ -183,6 +184,18 @@ final class Converter
         $dir = \dirname($avifPath);
         if (!is_dir($dir)) {
             \wp_mkdir_p($dir);
+        }
+
+        // Pre-check memory usage to avoid fatal errors on low-memory environments
+        // Skip if disabled via settings
+        $disableMemoryCheck = (bool) get_option('aviflosu_disable_memory_check', false);
+        if (!$disableMemoryCheck) {
+            $memoryWarning = $this->check_memory_safe($sourcePath);
+            if ($memoryWarning) {
+                $actualSettings['error_suggestion'] = 'Increase PHP memory_limit, switch to CLI engine, or disable memory check in settings.';
+                $this->log_conversion('error', $sourcePath, $avifPath, $engine_used, $start_time, $memoryWarning, $actualSettings);
+                return;
+            }
         }
 
         // Engine selection: CLI or Auto (Imagick/GD)
@@ -202,6 +215,19 @@ final class Converter
                 . ' (exit ' . $this->lastCliExitCode . ')'
                 . ($this->lastCliCommand !== '' ? ' cmd: ' . $this->lastCliCommand : '')
                 . ($snippet !== '' ? ' output: ' . $snippet : '');
+            
+            // Analyze CLI error for suggestions
+            $suggestion = 'Check if the binary path is correct and executable.';
+            $outLower = strtolower($this->lastCliOutput);
+            if ($this->lastCliExitCode === 127) {
+                $suggestion = 'Binary not found or not executable. Verify path in settings.';
+            } elseif (str_contains($outLower, 'delegate') || str_contains($outLower, 'no decode delegate')) {
+                $suggestion = 'ImageMagick is missing a delegate (libjpeg/libavif). Install required libraries.';
+            } elseif (str_contains($outLower, 'memory') || str_contains($outLower, 'resource limit')) {
+                $suggestion = 'Server ran out of memory/resources. Increase RAM or swap.';
+            }
+            $actualSettings['error_suggestion'] = $suggestion;
+
             $this->log_conversion('error', $sourcePath, $avifPath, $engine_used, $start_time, $err, $actualSettings);
             return;
         }
@@ -337,9 +363,18 @@ final class Converter
                     return;
                 }
                 $error_message = 'Imagick produced an invalid AVIF (missing delegate or placeholder output)';
+                $actualSettings['error_suggestion'] = 'Your ImageMagick build seems to lack proper AVIF write support, or the file is empty.';
                 // Fall through to GD
             } catch (\Exception $e) {
                 $error_message = 'Imagick conversion failed: ' . $e->getMessage();
+                $msg = strtolower($e->getMessage());
+                if (str_contains($msg, 'unable to load module')) {
+                    $actualSettings['error_suggestion'] = 'Imagick PHP module configuration is broken. Reinstall Imagick.';
+                } elseif (str_contains($msg, 'no decode delegate')) {
+                    $actualSettings['error_suggestion'] = 'Imagick cannot read this file format.';
+                } else {
+                    $actualSettings['error_suggestion'] = 'Check PHP error logs for detailed Imagick crashes.';
+                }
                 // fall through to GD
             }
         }
@@ -353,6 +388,7 @@ final class Converter
         }
         $gd = @imagecreatefromjpeg($sourcePath);
         if (!$gd) {
+            $actualSettings['error_suggestion'] = 'Input file may be corrupt or PHP memory limit is too low.';
             $this->log_conversion('error', $sourcePath, $avifPath, $engine_used, $start_time, 'Failed to create GD resource from JPEG', $actualSettings);
             return;
         }
@@ -379,12 +415,76 @@ final class Converter
             if ($success && file_exists($avifPath)) {
                 $this->log_conversion('success', $sourcePath, $avifPath, $engine_used, $start_time, null, $actualSettings);
             } else {
+                $actualSettings['error_suggestion'] = 'GD failed to write AVIF. Check directory permissions or GD version.';
                 $this->log_conversion('error', $sourcePath, $avifPath, $engine_used, $start_time, 'GD imageavif function failed or file not created', $actualSettings);
             }
         } else {
+            $actualSettings['error_suggestion'] = 'Upgrade to PHP 8.1+ or compile GD with AVIF support.';
             $this->log_conversion('error', $sourcePath, $avifPath, $engine_used, $start_time, 'imageavif function not available in GD', $actualSettings);
         }
         imagedestroy($gd);
+    }
+
+    /**
+     * Safely check if we have enough memory to process this image via PHP (GD/Imagick).
+     * Returns a warning string if memory is dangerously low, null if it seems okay.
+     */
+    private function check_memory_safe(string $path): ?string
+    {
+        $limit = ini_get('memory_limit');
+        // No limit
+        if ($limit === '-1') {
+            return null;
+        }
+
+        $limitBytes = $this->parse_memory_limit((string) $limit);
+        if ($limitBytes <= 0) {
+            return null; // Could not parse or zero, assume fine
+        }
+
+        // Get current usage
+        $currentUsage = memory_get_usage(true);
+
+        // Estimate image memory usage:
+        // (width * height * channels * bits_per_channel) + overhead
+        // Approximating RGBA (4 channels) at 1 byte per channel (8-bit) * 1.8 overhead for GD/Imagick structures
+        $info = @getimagesize($path);
+        if (!$info) {
+            // Can't read info, so can't estimate. Proceed cautiously.
+            return null;
+        }
+
+        $width = isset($info[0]) ? (int) $info[0] : 0;
+        $height = isset($info[1]) ? (int) $info[1] : 0;
+        $channels = isset($info['channels']) ? (int) $info['channels'] : 4;
+        if ($channels <= 0) { $channels = 4; }
+        
+        // Rough estimation: width * height * 4 (RGBA) * 1.7 (overhead factor)
+        $estimatedNeed = (int) ($width * $height * 4 * 1.7);
+        
+        // Add buffer (10MB) for other script overhead
+        $buffer = 10 * 1024 * 1024;
+
+        if (($currentUsage + $estimatedNeed + $buffer) > $limitBytes) {
+            $fmtLimit = size_format($limitBytes);
+            $fmtNeed = size_format($estimatedNeed);
+            return "High risk of memory exhaustion. Memory limit: $fmtLimit. Estimated need: $fmtNeed. Current usage: " . size_format($currentUsage) . ".";
+        }
+
+        return null;
+    }
+
+    private function parse_memory_limit(string $val): int
+    {
+        $val = trim($val);
+        $last = strtolower($val[strlen($val) - 1]);
+        $n = (int) $val;
+        switch ($last) {
+            case 'g': $n *= 1024 * 1024 * 1024; break;
+            case 'm': $n *= 1024 * 1024; break;
+            case 'k': $n *= 1024; break;
+        }
+        return $n;
     }
 
     /**
@@ -401,6 +501,7 @@ final class Converter
             'cli_path' => (string) get_option('aviflosu_cli_path', ''),
             'convert_on_upload' => (bool) get_option('aviflosu_convert_on_upload', true),
             'convert_via_schedule' => (bool) get_option('aviflosu_convert_via_schedule', true),
+            'disable_memory_check' => (bool) get_option('aviflosu_disable_memory_check', false),
         ];
     }
 

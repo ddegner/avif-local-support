@@ -4,7 +4,7 @@ Plugin URI: https://github.com/ddegner/avif-local-support
 Tags: images, avif, performance, conversion, media
 Requires at least: 6.5
 Tested up to: 6.8
-Stable tag: 0.2.1
+Stable tag: 0.2.2
 Requires PHP: 8.0
 License: GPL v2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -95,6 +95,12 @@ No. The plugin does not track users or send data to external services.
 On LiteSpeed/CyberPanel, the vhost sets a restrictive `open_basedir` (e.g., `/tmp:/home/<site>`). PHP’s `is_executable('/usr/local/bin/magick')` returns false under that restriction even when the binary exists and works from the shell. The plugin currently relies on `is_executable` and bails out instead of offering a fallback or a guided fix.
 
 == Changelog ==
+= 0.2.2 =
+- Reliability: Added pre-conversion memory check to prevent fatal errors on low-RAM servers.
+- Settings: Added "Disable memory check" option for advanced users who want to bypass safety limits.
+- Logs: Improved error reporting with actionable suggestions (highlighted) for memory limits, missing delegates, and configuration issues.
+- Logs: Include memory check status in conversion log details.
+
 = 0.2.1 =
 - Admin: Add Logs panel to Tools with refresh/clear and detailed entries (status, engine, duration, sizes, settings, errors).
 - Admin: Add “Run ImageMagick test” diagnostic action with inline CLI output and exit code.
@@ -163,6 +169,9 @@ On LiteSpeed/CyberPanel, the vhost sets a restrictive `open_basedir` (e.g., `/tm
 Initial release.
 
 == Upgrade Notice ==
+= 0.2.2 =
+Improved stability on low-RAM servers with pre-conversion memory checks and better error logging suggestions. Recommended update.
+
 = 0.2.1 =
 New Logs panel, diagnostic tools, improved scheduling, and fixes for HTML output. Recommended update.
 

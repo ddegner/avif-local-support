@@ -138,6 +138,12 @@ final class Plugin
             'sanitize_callback' => 'absint',
             'show_in_rest' => true,
         ]);
+        register_setting('aviflosu_settings', 'aviflosu_disable_memory_check', [
+            'type' => 'boolean',
+            'default' => false,
+            'sanitize_callback' => 'rest_sanitize_boolean',
+            'show_in_rest' => true,
+        ]);
 
         // Engine selection
         register_setting('aviflosu_settings', 'aviflosu_engine_mode', [
@@ -286,6 +292,22 @@ final class Plugin
             'avif-local-support',
             'aviflosu_conversion',
             [ 'label_for' => 'aviflosu_bit_depth' ]
+        );
+
+        add_settings_field(
+            'avif_local_support_disable_memory_check',
+            __('Disable memory check', 'avif-local-support'),
+            function (): void {
+                $value = (bool) get_option('aviflosu_disable_memory_check', false);
+                echo '<label for="aviflosu_disable_memory_check">'
+                    . '<input id="aviflosu_disable_memory_check" type="checkbox" name="aviflosu_disable_memory_check" value="1" ' . checked(true, $value, false) . ' /> '
+                    . esc_html__('Skip pre-conversion memory availability check (not recommended)', 'avif-local-support')
+                    . '</label>';
+                echo '<p class="description">' . esc_html__('Useful if the memory estimator is too conservative, but may cause fatal errors on large images.', 'avif-local-support') . '</p>';
+            },
+            'avif-local-support',
+            'aviflosu_conversion',
+            [ 'label_for' => 'aviflosu_disable_memory_check' ]
         );
 
         // Engine selection section
@@ -754,6 +776,7 @@ final class Plugin
         update_option('aviflosu_subsampling', '420');
         update_option('aviflosu_bit_depth', '8');
         update_option('aviflosu_cache_duration', 3600);
+        update_option('aviflosu_disable_memory_check', false);
         update_option('aviflosu_engine_mode', 'auto');
         update_option('aviflosu_cli_path', '');
         \wp_safe_redirect(\admin_url('options-general.php?page=avif-local-support#settings'));
@@ -1072,6 +1095,14 @@ final class Plugin
             echo '<div style="margin-bottom:4px;">' . esc_html($message) . '</div>';
             
             if (!empty($details)) {
+                // Highlight suggestion if present
+                if (isset($details['error_suggestion'])) {
+                    echo '<div style="margin:4px 0;padding:4px;background:#fff4f4;border-left:3px solid #d63638;color:#d63638;font-weight:bold;font-size:12px;">';
+                    echo '💡 ' . esc_html((string)$details['error_suggestion']);
+                    echo '</div>';
+                    unset($details['error_suggestion']);
+                }
+
                 echo '<div style="font-size:11px;color:#666;font-family:monospace;">';
                 foreach ($details as $key => $value) {
                     if (is_scalar($value)) {

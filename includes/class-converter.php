@@ -238,6 +238,10 @@ final class Converter
             return;
         }
 
+        // If "Auto" mode, prefer Imagick -> GD
+        // But if a specific engine was requested (e.g. via filter or future setting), respect it.
+        // For now, 'auto' means: Try Imagick, then try GD.
+        
         // Prefer Imagick when it actually supports AVIF (as in 0.1.7), otherwise fall back to GD
         $supportsAvif = false;
         if (extension_loaded('imagick')) {
@@ -250,6 +254,7 @@ final class Converter
                 $supportsAvif = false;
             }
         }
+        
         if ($supportsAvif) {
             $engine_used = 'imagick';
             try {
@@ -374,7 +379,9 @@ final class Converter
                 
                 $error_message = 'Imagick produced an invalid AVIF (too small/empty)';
                 $actualSettings['error_suggestion'] = 'Your ImageMagick build seems to lack proper AVIF write support (file created but empty).';
-                // Fall through to GD
+                
+                $this->log_conversion('error', $sourcePath, $avifPath, $engine_used, $start_time, $error_message, $actualSettings);
+                return;
             } catch (\Exception $e) {
                 $error_message = 'Imagick conversion failed: ' . $e->getMessage();
                 $msg = strtolower($e->getMessage());
@@ -385,8 +392,25 @@ final class Converter
                 } else {
                     $actualSettings['error_suggestion'] = 'Check PHP error logs for detailed Imagick crashes.';
                 }
-                // fall through to GD
+                
+                $this->log_conversion('error', $sourcePath, $avifPath, $engine_used, $start_time, $error_message, $actualSettings);
+                return;
             }
+        }
+
+        // Only use GD if specifically requested or if auto mode allows (but currently Auto prefers Imagick and stops there if Imagick is available/fails).
+        // Actually, original requirement was: "Never fall back to GD if it isn't selected in the settings."
+        // "Auto" means "Imagick if available, else GD".
+        // If "Auto" is selected and Imagick IS available but fails, we previously fell through to GD.
+        // The user's request implies: "If I chose CLI, don't use GD. If I chose Auto and Imagick is available, stick to Imagick (don't fallback on error)."
+        
+        // If we reached here:
+        // 1. CLI mode: returned already (success or error).
+        // 2. Auto mode + Imagick available: returned success or error.
+        // 3. Auto mode + Imagick NOT available: proceed to GD.
+        
+        if ($engineMode === 'imagick') { // Future-proofing if specific 'imagick' option is added
+             return; 
         }
 
         // GD fallback with EXIF orientation handling

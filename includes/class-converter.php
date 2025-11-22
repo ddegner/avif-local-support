@@ -138,8 +138,9 @@ final class Converter
             return;
         }
         $avifPath = (string) preg_replace('/\.(jpe?g)$/i', '.avif', $path);
-        if ($avifPath !== '' && file_exists($avifPath)) {
-            return; // already converted
+        // Check existence AND minimum size (avoid 0-byte or error-text files)
+        if ($avifPath !== '' && file_exists($avifPath) && filesize($avifPath) > 512) {
+            return; // already converted and looks valid
         }
 
         // Determine better source based on WordPress logic (if enabled)

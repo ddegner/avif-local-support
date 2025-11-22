@@ -860,7 +860,8 @@ final class Plugin
                     $seenJpegs[$real] = true;
                     $total++;
                     $avif = (string) preg_replace('/\.(jpe?g)$/i', '.avif', $real);
-                    if ($avif && file_exists($avif)) { $existing++; } else { $missing++; }
+                    // Validate size > 512 bytes
+                    if ($avif && file_exists($avif) && filesize($avif) > 512) { $existing++; } else { $missing++; }
                 }
             }
             // Sizes via metadata
@@ -879,7 +880,8 @@ final class Plugin
                         $seenJpegs[$realP] = true;
                         $total++;
                         $avif = (string) preg_replace('/\.(jpe?g)$/i', '.avif', $realP);
-                        if ($avif && file_exists($avif)) { $existing++; } else { $missing++; }
+                        // Validate size > 512 bytes
+                        if ($avif && file_exists($avif) && filesize($avif) > 512) { $existing++; } else { $missing++; }
                     }
                 }
             }

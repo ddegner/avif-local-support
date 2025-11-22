@@ -229,9 +229,49 @@
 
     // Logs functionality
     var refreshLogsBtn = document.querySelector('#avif-local-support-refresh-logs');
+    var copyLogsBtn = document.querySelector('#avif-local-support-copy-logs');
     var clearLogsBtn = document.querySelector('#avif-local-support-clear-logs');
     var logsSpinner = document.querySelector('#avif-local-support-logs-spinner');
     var logsContent = document.querySelector('#avif-local-support-logs-content');
+    var copyStatus = document.querySelector('#avif-local-support-copy-status');
+
+    if (copyLogsBtn && logsContent) {
+      copyLogsBtn.addEventListener('click', function () {
+        var text = logsContent.innerText;
+        if (navigator.clipboard && window.isSecureContext) {
+          navigator.clipboard.writeText(text).then(function () {
+            showCopyStatus();
+          }, function () {
+            fallbackCopy(text);
+          });
+        } else {
+          fallbackCopy(text);
+        }
+      });
+    }
+
+    function fallbackCopy(text) {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      try {
+        document.execCommand('copy');
+        showCopyStatus();
+      } catch (e) {}
+      document.body.removeChild(ta);
+    }
+
+    function showCopyStatus() {
+      if (!copyStatus) return;
+      copyStatus.style.display = 'inline';
+      setTimeout(function () {
+        copyStatus.style.display = 'none';
+      }, 2000);
+    }
 
     if (refreshLogsBtn && typeof AVIFLocalSupportData !== 'undefined') {
       refreshLogsBtn.addEventListener('click', function () {

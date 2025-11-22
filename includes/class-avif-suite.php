@@ -571,8 +571,10 @@ final class Plugin
         echo '        <p class="description">' . esc_html__('View recent conversion logs including errors, settings used, and performance metrics.', 'avif-local-support') . '</p>';
         echo '        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">';
         echo '          <button type="button" class="button" id="avif-local-support-refresh-logs">' . esc_html__('Refresh logs', 'avif-local-support') . '</button>';
+        echo '          <button type="button" class="button" id="avif-local-support-copy-logs">' . esc_html__('Copy logs', 'avif-local-support') . '</button>';
         echo '          <button type="button" class="button" id="avif-local-support-clear-logs">' . esc_html__('Clear logs', 'avif-local-support') . '</button>';
         echo '          <span class="spinner" id="avif-local-support-logs-spinner" style="float:none;margin:0 6px;"></span>';
+        echo '          <span id="avif-local-support-copy-status" class="description" style="color:#00a32a;display:none;">' . esc_html__('Copied!', 'avif-local-support') . '</span>';
         echo '        </div>';
         echo '        <div id="avif-local-support-logs-container">';
         echo '          <div id="avif-local-support-logs-content">';

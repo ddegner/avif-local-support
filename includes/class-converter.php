@@ -714,6 +714,11 @@ final class Converter
             $this->lastCliOutput = trim($this->lastCliOutput . "\n")
                 . 'No output file created or file too small (size: ' . $fSize . ' bytes' . $contentPreview . '); AVIF may not be supported by this ImageMagick build. '
                 . 'Try: "' . escapeshellarg($bin) . ' -list format | grep -i AVIF"';
+            
+            // Cleanup the invalid/empty file so it isn't served
+            if (@file_exists($avifPath)) {
+                @unlink($avifPath);
+            }
             return false;
         }
         return true;

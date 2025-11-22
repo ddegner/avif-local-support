@@ -217,6 +217,11 @@ final class Converter
                 . ($this->lastCliCommand !== '' ? ' cmd: ' . $this->lastCliCommand : '')
                 . ($snippet !== '' ? ' output: ' . $snippet : '');
             
+            // If no specific error message but failed, add a generic one to ensure log visibility
+            if ($err === 'CLI conversion failed (exit 0)') {
+                 $err .= '. Resulting file missing or empty.';
+            }
+            
             // Analyze CLI error for suggestions
             $suggestion = 'Check if the binary path is correct and executable.';
             $outLower = strtolower($this->lastCliOutput);

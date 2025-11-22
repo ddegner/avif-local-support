@@ -643,23 +643,27 @@ final class Converter
         $cmd[] = escapeshellarg($outputArg);
         // Build environment injection for module/config discovery under PHP
         $envParts = [];
-        $binReal = is_string(@realpath($bin)) ? (string) @realpath($bin) : $bin;
-        $cellarDir = dirname(dirname($binReal)); // .../Cellar/imagemagick/<ver>
-        $coderCandidates = [
-            $cellarDir . '/lib/ImageMagick/modules-Q16HDRI/coders',
-            $cellarDir . '/lib/ImageMagick/modules-Q16/coders',
-        ];
-        $existingCoders = array_values(array_filter($coderCandidates, static function ($p) { return is_dir($p); }));
-        if (!empty($existingCoders)) {
-            $envParts['MAGICK_CODER_MODULE_PATH'] = implode(':', $existingCoders);
-        }
-        $configPath = $cellarDir . '/etc/ImageMagick-7';
-        if (is_dir($configPath)) {
-            $envParts['MAGICK_CONFIGURE_PATH'] = $configPath;
-        }
-        // Help dynamic libs resolve when launched by PHP
-        if (is_dir('/opt/homebrew/lib')) {
-            $envParts['DYLD_FALLBACK_LIBRARY_PATH'] = '/opt/homebrew/lib';
+
+        // Only apply Homebrew/Cellar heuristics on macOS
+        if (defined('PHP_OS_FAMILY') && PHP_OS_FAMILY === 'Darwin') {
+            $binReal = is_string(@realpath($bin)) ? (string) @realpath($bin) : $bin;
+            $cellarDir = dirname(dirname($binReal)); // .../Cellar/imagemagick/<ver>
+            $coderCandidates = [
+                $cellarDir . '/lib/ImageMagick/modules-Q16HDRI/coders',
+                $cellarDir . '/lib/ImageMagick/modules-Q16/coders',
+            ];
+            $existingCoders = array_values(array_filter($coderCandidates, static function ($p) { return is_dir($p); }));
+            if (!empty($existingCoders)) {
+                $envParts['MAGICK_CODER_MODULE_PATH'] = implode(':', $existingCoders);
+            }
+            $configPath = $cellarDir . '/etc/ImageMagick-7';
+            if (is_dir($configPath)) {
+                $envParts['MAGICK_CONFIGURE_PATH'] = $configPath;
+            }
+            // Help dynamic libs resolve when launched by PHP
+            if (is_dir('/opt/homebrew/lib')) {
+                $envParts['DYLD_FALLBACK_LIBRARY_PATH'] = '/opt/homebrew/lib';
+            }
         }
         $envPrefix = '';
         foreach ($envParts as $k => $v) {
@@ -702,8 +706,13 @@ final class Converter
         }
         // Success exit code but no/invalid output file: treat as failure and provide a helpful hint
         if (!@file_exists($avifPath) || @filesize($avifPath) <= 512) {
+            $fSize = @file_exists($avifPath) ? (int) @filesize($avifPath) : 0;
+            $contentPreview = '';
+            if ($fSize > 0 && $fSize < 512) {
+                $contentPreview = ' Content: ' . substr(file_get_contents($avifPath), 0, 100);
+            }
             $this->lastCliOutput = trim($this->lastCliOutput . "\n")
-                . 'No output file created or file too small; AVIF may not be supported by this ImageMagick build. '
+                . 'No output file created or file too small (size: ' . $fSize . ' bytes' . $contentPreview . '); AVIF may not be supported by this ImageMagick build. '
                 . 'Try: "' . escapeshellarg($bin) . ' -list format | grep -i AVIF"';
             return false;
         }

@@ -368,8 +368,12 @@ final class Converter
                     $this->log_conversion('success', $sourcePath, $avifPath, $engine_used, $start_time, null, $actualSettings);
                     return;
                 }
-                $error_message = 'Imagick produced an invalid AVIF (missing delegate or placeholder output)';
-                $actualSettings['error_suggestion'] = 'Your ImageMagick build seems to lack proper AVIF write support, or the file is empty.';
+                
+                // Validation failed: cleanup and fall through
+                if (@file_exists($avifPath)) { @unlink($avifPath); }
+                
+                $error_message = 'Imagick produced an invalid AVIF (too small/empty)';
+                $actualSettings['error_suggestion'] = 'Your ImageMagick build seems to lack proper AVIF write support (file created but empty).';
                 // Fall through to GD
             } catch (\Exception $e) {
                 $error_message = 'Imagick conversion failed: ' . $e->getMessage();

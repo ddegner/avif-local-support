@@ -235,9 +235,13 @@
     var logsContent = document.querySelector('#avif-local-support-logs-content');
     var copyStatus = document.querySelector('#avif-local-support-copy-status');
 
-    if (copyLogsBtn && logsContent) {
+    if (copyLogsBtn) {
       copyLogsBtn.addEventListener('click', function () {
-        var text = logsContent.innerText;
+        // Re-query to ensure we have the current content state
+        var contentEl = document.querySelector('#avif-local-support-logs-content');
+        var text = contentEl ? contentEl.innerText : '';
+        if (!text) return;
+        
         if (navigator.clipboard && window.isSecureContext) {
           navigator.clipboard.writeText(text).then(function () {
             showCopyStatus();

@@ -685,9 +685,18 @@ final class Converter
         do {
             $output = [];
             $code = 0;
-            @exec($full, $output, $code);
+            // Execute with 2>&1 to capture stderr, but also log it explicitly if empty
+            $execResult = exec($full, $output, $code);
+            
             $this->lastCliExitCode = (int) $code;
             $this->lastCliOutput = is_array($output) ? implode("\n", $output) : '';
+            
+            // If output is empty but code is 0, it might be a silent crash.
+            // Try to debug by checking file existence immediately
+            if ($code === 0 && (!file_exists($avifPath) || filesize($avifPath) == 0)) {
+                 $this->lastCliOutput .= " [Debug] Command finished with exit 0 but output file is missing/empty. Full cmd: $full";
+            }
+
             if ($code === 0) {
                 break;
             }

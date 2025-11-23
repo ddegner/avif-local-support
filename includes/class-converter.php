@@ -213,9 +213,14 @@ final class Converter
             // Do not fall back when user explicitly selects CLI; make failure visible in logs
             $snippet = $this->lastCliOutput !== '' ? substr($this->lastCliOutput, 0, 800) : '';
             $err = 'CLI conversion failed'
-                . ' (exit ' . $this->lastCliExitCode . ')'
-                . ($this->lastCliCommand !== '' ? ' cmd: ' . $this->lastCliCommand : '')
-                . ($snippet !== '' ? ' output: ' . $snippet : '');
+                . ' (exit ' . $this->lastCliExitCode . ')';
+            
+            if ($this->lastCliCommand !== '') {
+                $err .= ' cmd: ' . $this->lastCliCommand;
+            }
+            if ($snippet !== '') {
+                $err .= ' output: ' . $snippet;
+            }
             
             // If no specific error message but failed, add a generic one to ensure log visibility
             if ($err === 'CLI conversion failed (exit 0)') {
@@ -233,6 +238,11 @@ final class Converter
                 $suggestion = 'Server ran out of memory/resources. Increase RAM or swap.';
             }
             $actualSettings['error_suggestion'] = $suggestion;
+            
+            // Explicitly add CLI debug info to settings so it appears in details list
+            $actualSettings['cli_exit_code'] = $this->lastCliExitCode;
+            // Sanitize output to avoid JSON/rendering issues
+            $actualSettings['cli_output'] = mb_convert_encoding($snippet, 'UTF-8', 'UTF-8');
 
             $this->log_conversion('error', $sourcePath, $avifPath, $engine_used, $start_time, $err, $actualSettings);
             return;

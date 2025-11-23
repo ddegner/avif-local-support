@@ -4,7 +4,7 @@ Plugin URI: https://github.com/ddegner/avif-local-support
 Tags: images, avif, performance, conversion, media
 Requires at least: 6.5
 Tested up to: 6.8
-Stable tag: 0.2.7
+Stable tag: 0.2.8
 Requires PHP: 8.0
 License: GPL v2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -96,6 +96,10 @@ On LiteSpeed/CyberPanel, the vhost sets a restrictive `open_basedir` (e.g., `/tm
 The plugin now estimates memory usage before processing to prevent fatal errors (crashes) on servers with limited RAM. If you see this, try switching to the "ImageMagick CLI" engine or increasing your PHP `memory_limit`. As a last resort, you can check "Disable memory check" in the settings to bypass this safety measure.
 
 == Changelog ==
+= 0.2.8 =
+- Change: Downgrade memory limit exhaustion error to a warning and continue conversion attempt.
+- Logs: Added warning log type when memory limit is exceeded but conversion continues.
+
 = 0.2.7 =
 - Change: Prevent fallback to GD if Imagick is available but fails conversion in "Auto" mode. Ensures expected engine is used.
 
@@ -187,6 +191,9 @@ The plugin now estimates memory usage before processing to prevent fatal errors 
 Initial release.
 
 == Upgrade Notice ==
+= 0.2.8 =
+Downgrades strict memory checks to warnings, allowing conversion to proceed on systems with complex memory limit reporting. Recommended update.
+
 = 0.2.7 =
 Strict engine selection: prevents silent fallback to GD if Imagick encounters an error. Recommended update.
 

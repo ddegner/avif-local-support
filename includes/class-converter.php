@@ -194,8 +194,8 @@ final class Converter
             $memoryWarning = $this->check_memory_safe($sourcePath);
             if ($memoryWarning) {
                 $actualSettings['error_suggestion'] = 'Increase PHP memory_limit, switch to CLI engine, or disable memory check in settings.';
-                $this->log_conversion('error', $sourcePath, $avifPath, $engine_used, $start_time, $memoryWarning, $actualSettings);
-                return;
+                // Warning only - continuing as requested
+                $this->log_conversion('warning', $sourcePath, $avifPath, $engine_used, $start_time, $memoryWarning . ' Proceeding despite warning.', $actualSettings);
             }
         }
 

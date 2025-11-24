@@ -27,7 +27,7 @@
         var id = (this.getAttribute('href') || '').replace('#', '');
         if (!id) return;
         activateTab(id);
-        try { history.replaceState(null, '', '#' + id); } catch (e2) {}
+        try { history.replaceState(null, '', '#' + id); } catch (e2) { }
       });
     });
     window.addEventListener('hashchange', function () {
@@ -63,24 +63,24 @@
         headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
         body: form.toString()
       })
-      .then(function (r) { return r.json(); })
-      .then(function (json) {
-        var data = (json && json.success && json.data) ? json.data : {};
-        var totalEl = $('#avif-local-support-total-jpegs');
-        var avifsEl = $('#avif-local-support-existing-avifs');
-        var missingEl = $('#avif-local-support-missing-avifs');
-        if (!totalEl || !avifsEl || !missingEl) return;
-        totalEl.textContent = String(data.total_jpegs || 0);
-        avifsEl.textContent = String(data.existing_avifs || 0);
-        missingEl.textContent = String(data.missing_avifs || 0);
-      })
-      .catch(function () {
-        var totalEl = $('#avif-local-support-total-jpegs');
-        var avifsEl = $('#avif-local-support-existing-avifs');
-        var missingEl = $('#avif-local-support-missing-avifs');
-        if (!totalEl || !avifsEl || !missingEl) return;
-        totalEl.textContent = avifsEl.textContent = missingEl.textContent = '-';
-      });
+        .then(function (r) { return r.json(); })
+        .then(function (json) {
+          var data = (json && json.success && json.data) ? json.data : {};
+          var totalEl = $('#avif-local-support-total-jpegs');
+          var avifsEl = $('#avif-local-support-existing-avifs');
+          var missingEl = $('#avif-local-support-missing-avifs');
+          if (!totalEl || !avifsEl || !missingEl) return;
+          totalEl.textContent = String(data.total_jpegs || 0);
+          avifsEl.textContent = String(data.existing_avifs || 0);
+          missingEl.textContent = String(data.missing_avifs || 0);
+        })
+        .catch(function () {
+          var totalEl = $('#avif-local-support-total-jpegs');
+          var avifsEl = $('#avif-local-support-existing-avifs');
+          var missingEl = $('#avif-local-support-missing-avifs');
+          if (!totalEl || !avifsEl || !missingEl) return;
+          totalEl.textContent = avifsEl.textContent = missingEl.textContent = '-';
+        });
     }
     btn.addEventListener('click', scan);
 
@@ -116,75 +116,75 @@
           headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
           body: form.toString()
         })
-        .then(function (r) { return r.json(); })
-        .then(function (json) {
-          if (!(json && json.success)) {
-            if (statusEl) statusEl.textContent = 'Failed';
-            return;
-          }
-          // Show inline progress on this tab
-          if (json && json.success) {
-            if (toolsProgress) toolsProgress.style.display = '';
-            // start local polling of counts and animate progress bar
-            var prevMissing = null;
-            var unchangedTicks = 0;
-            var startTime = Date.now();
-            var MAX_UNCHANGED_TICKS = 3; // stop if not changing
-            var MAX_DURATION_MS = 5 * 60 * 1000; // 5 minutes safety
-            function updateLocal() {
-              var sform = new URLSearchParams();
-              sform.append('action', 'aviflosu_scan_missing');
-              sform.append('_wpnonce', AVIFLocalSupportData.scanNonce);
-              fetch(ajaxUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
-                body: sform.toString()
-              })
-              .then(function (r) { return r.json(); })
-              .then(function (json2) {
-                var data = (json2 && json2.success && json2.data) ? json2.data : {};
-                var total = data.total_jpegs || 0;
-                var avifs = data.existing_avifs || 0;
-                var missing = data.missing_avifs || 0;
-                if (toolsTotal) toolsTotal.textContent = String(total);
-                if (toolsAvifs) toolsAvifs.textContent = String(avifs);
-                if (toolsMissing) toolsMissing.textContent = String(missing);
-                if (toolsFill) {
-                  var pct = total > 0 ? Math.round((avifs / total) * 100) : 0;
-                  toolsFill.style.width = pct + '%';
-                }
-                // Stop conditions: finished, stalled, or too long
-                if (missing === 0) {
-                  if (statusEl) statusEl.textContent = 'Completed';
-                  if (pollingTimerLocal) { window.clearInterval(pollingTimerLocal); pollingTimerLocal = null; }
-                } else {
-                  if (prevMissing !== null && missing === prevMissing) {
-                    unchangedTicks++;
-                  } else {
-                    unchangedTicks = 0;
-                  }
-                  prevMissing = missing;
-                  if (unchangedTicks >= MAX_UNCHANGED_TICKS || (Date.now() - startTime) > MAX_DURATION_MS) {
-                    if (statusEl) statusEl.textContent = 'In progress…';
-                    if (pollingTimerLocal) { window.clearInterval(pollingTimerLocal); pollingTimerLocal = null; }
-                  }
-                }
-              })
-              .catch(function () {});
+          .then(function (r) { return r.json(); })
+          .then(function (json) {
+            if (!(json && json.success)) {
+              if (statusEl) statusEl.textContent = 'Failed';
+              return;
             }
-            if (pollingTimerLocal) window.clearInterval(pollingTimerLocal);
-            // Poll more frequently for a snappier progress display
-            pollingTimerLocal = window.setInterval(updateLocal, 1500);
-            updateLocal();
-          }
-        })
-        .catch(function () {
-          if (statusEl) statusEl.textContent = 'Failed';
-        })
-        .finally(function () {
-          if (spinner) spinner.classList.remove('is-active');
-          convertBtn.disabled = false;
-        });
+            // Show inline progress on this tab
+            if (json && json.success) {
+              if (toolsProgress) toolsProgress.style.display = '';
+              // start local polling of counts and animate progress bar
+              var prevMissing = null;
+              var unchangedTicks = 0;
+              var startTime = Date.now();
+              var MAX_UNCHANGED_TICKS = 3; // stop if not changing
+              var MAX_DURATION_MS = 5 * 60 * 1000; // 5 minutes safety
+              function updateLocal() {
+                var sform = new URLSearchParams();
+                sform.append('action', 'aviflosu_scan_missing');
+                sform.append('_wpnonce', AVIFLocalSupportData.scanNonce);
+                fetch(ajaxUrl, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+                  body: sform.toString()
+                })
+                  .then(function (r) { return r.json(); })
+                  .then(function (json2) {
+                    var data = (json2 && json2.success && json2.data) ? json2.data : {};
+                    var total = data.total_jpegs || 0;
+                    var avifs = data.existing_avifs || 0;
+                    var missing = data.missing_avifs || 0;
+                    if (toolsTotal) toolsTotal.textContent = String(total);
+                    if (toolsAvifs) toolsAvifs.textContent = String(avifs);
+                    if (toolsMissing) toolsMissing.textContent = String(missing);
+                    if (toolsFill) {
+                      var pct = total > 0 ? Math.round((avifs / total) * 100) : 0;
+                      toolsFill.style.width = pct + '%';
+                    }
+                    // Stop conditions: finished, stalled, or too long
+                    if (missing === 0) {
+                      if (statusEl) statusEl.textContent = 'Completed';
+                      if (pollingTimerLocal) { window.clearInterval(pollingTimerLocal); pollingTimerLocal = null; }
+                    } else {
+                      if (prevMissing !== null && missing === prevMissing) {
+                        unchangedTicks++;
+                      } else {
+                        unchangedTicks = 0;
+                      }
+                      prevMissing = missing;
+                      if (unchangedTicks >= MAX_UNCHANGED_TICKS || (Date.now() - startTime) > MAX_DURATION_MS) {
+                        if (statusEl) statusEl.textContent = 'In progress…';
+                        if (pollingTimerLocal) { window.clearInterval(pollingTimerLocal); pollingTimerLocal = null; }
+                      }
+                    }
+                  })
+                  .catch(function () { });
+              }
+              if (pollingTimerLocal) window.clearInterval(pollingTimerLocal);
+              // Poll more frequently for a snappier progress display
+              pollingTimerLocal = window.setInterval(updateLocal, 1500);
+              updateLocal();
+            }
+          })
+          .catch(function () {
+            if (statusEl) statusEl.textContent = 'Failed';
+          })
+          .finally(function () {
+            if (spinner) spinner.classList.remove('is-active');
+            convertBtn.disabled = false;
+          });
       });
     }
 
@@ -210,20 +210,20 @@
           headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
           body: form.toString()
         })
-        .then(function (r) { return r.json(); })
-        .then(function (json) {
-          if (json && json.success && json.data) {
-            var d = json.data;
-            if (deleteStatus) deleteStatus.textContent = 'Deleted ' + String(d.deleted || 0) + (d.failed ? (', failed ' + String(d.failed)) : '');
-          } else {
-            if (deleteStatus) deleteStatus.textContent = 'Failed';
-          }
-        })
-        .catch(function () { if (deleteStatus) deleteStatus.textContent = 'Failed'; })
-        .finally(function () {
-          if (deleteSpinner) deleteSpinner.classList.remove('is-active');
-          deleteBtn.disabled = false;
-        });
+          .then(function (r) { return r.json(); })
+          .then(function (json) {
+            if (json && json.success && json.data) {
+              var d = json.data;
+              if (deleteStatus) deleteStatus.textContent = 'Deleted ' + String(d.deleted || 0) + (d.failed ? (', failed ' + String(d.failed)) : '');
+            } else {
+              if (deleteStatus) deleteStatus.textContent = 'Failed';
+            }
+          })
+          .catch(function () { if (deleteStatus) deleteStatus.textContent = 'Failed'; })
+          .finally(function () {
+            if (deleteSpinner) deleteSpinner.classList.remove('is-active');
+            deleteBtn.disabled = false;
+          });
       });
     }
 
@@ -241,7 +241,7 @@
         var contentEl = document.querySelector('#avif-local-support-logs-content');
         var text = contentEl ? contentEl.innerText : '';
         if (!text) return;
-        
+
         if (navigator.clipboard && window.isSecureContext) {
           navigator.clipboard.writeText(text).then(function () {
             showCopyStatus();
@@ -265,7 +265,7 @@
       try {
         document.execCommand('copy');
         showCopyStatus();
-      } catch (e) {}
+      } catch (e) { }
       document.body.removeChild(ta);
     }
 
@@ -282,28 +282,28 @@
         var ajaxUrl = AVIFLocalSupportData.ajaxUrl;
         var nonce = AVIFLocalSupportData.logsNonce;
         if (logsSpinner) logsSpinner.classList.add('is-active');
-        
+
         var form = new URLSearchParams();
         form.append('action', 'aviflosu_get_logs');
         form.append('_wpnonce', nonce);
-        
+
         fetch(ajaxUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
           body: form.toString()
         })
-        .then(function (r) { return r.json(); })
-        .then(function (json) {
-          if (json && json.success && json.data && json.data.content && logsContent) {
-            logsContent.innerHTML = json.data.content;
-          }
-        })
-        .catch(function () {
-          // Handle error silently
-        })
-        .finally(function () {
-          if (logsSpinner) logsSpinner.classList.remove('is-active');
-        });
+          .then(function (r) { return r.json(); })
+          .then(function (json) {
+            if (json && json.success && json.data && json.data.content && logsContent) {
+              logsContent.innerHTML = json.data.content;
+            }
+          })
+          .catch(function () {
+            // Handle error silently
+          })
+          .finally(function () {
+            if (logsSpinner) logsSpinner.classList.remove('is-active');
+          });
       });
     }
 
@@ -312,32 +312,32 @@
         if (!confirm('Clear all logs? This cannot be undone.')) {
           return;
         }
-        
+
         var ajaxUrl = AVIFLocalSupportData.ajaxUrl;
         var nonce = AVIFLocalSupportData.logsNonce;
         if (logsSpinner) logsSpinner.classList.add('is-active');
-        
+
         var form = new URLSearchParams();
         form.append('action', 'aviflosu_clear_logs');
         form.append('_wpnonce', nonce);
-        
+
         fetch(ajaxUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
           body: form.toString()
         })
-        .then(function (r) { return r.json(); })
-        .then(function (json) {
-          if (json && json.success && logsContent) {
-            logsContent.innerHTML = '<p class="description">No logs available.</p>';
-          }
-        })
-        .catch(function () {
-          // Handle error silently
-        })
-        .finally(function () {
-          if (logsSpinner) logsSpinner.classList.remove('is-active');
-        });
+          .then(function (r) { return r.json(); })
+          .then(function (json) {
+            if (json && json.success && logsContent) {
+              logsContent.innerHTML = '<p class="description">No logs available.</p>';
+            }
+          })
+          .catch(function () {
+            // Handle error silently
+          })
+          .finally(function () {
+            if (logsSpinner) logsSpinner.classList.remove('is-active');
+          });
       });
     }
 
@@ -362,27 +362,83 @@
           headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
           body: form.toString()
         })
-        .then(function (r) { return r.json(); })
-        .then(function (json) {
-          if (!json) return;
-          if (json.success && json.data) {
-            if (runTestStatus) runTestStatus.textContent = 'Exit code ' + String(json.data.code);
-            var text = String(json.data.output || '');
-            if (json.data.hint) { text += '\n\nHint: ' + String(json.data.hint); }
-            if (runTestOutput) { runTestOutput.textContent = text; runTestOutput.style.display = ''; }
-          } else if (json.data && json.data.message) {
-            if (runTestStatus) runTestStatus.textContent = String(json.data.message);
-          } else {
+          .then(function (r) { return r.json(); })
+          .then(function (json) {
+            if (!json) return;
+            if (json.success && json.data) {
+              if (runTestStatus) runTestStatus.textContent = 'Exit code ' + String(json.data.code);
+              var text = String(json.data.output || '');
+              if (json.data.hint) { text += '\n\nHint: ' + String(json.data.hint); }
+              if (runTestOutput) { runTestOutput.textContent = text; runTestOutput.style.display = ''; }
+            } else if (json.data && json.data.message) {
+              if (runTestStatus) runTestStatus.textContent = String(json.data.message);
+            } else {
+              if (runTestStatus) runTestStatus.textContent = 'Failed';
+            }
+          })
+          .catch(function () {
             if (runTestStatus) runTestStatus.textContent = 'Failed';
-          }
+          })
+          .finally(function () {
+            if (runTestSpinner) runTestSpinner.classList.remove('is-active');
+            runTestBtn.disabled = false;
+          });
+      });
+    }
+
+    // Test Conversion (AJAX)
+    var testForm = document.querySelector('#avif-local-support-test-form');
+    var testFile = document.querySelector('#avif-local-support-test-file');
+    var testSubmit = document.querySelector('#avif-local-support-test-submit');
+    var testSpinner = document.querySelector('#avif-local-support-test-spinner');
+    var testStatus = document.querySelector('#avif-local-support-test-status');
+    var testResults = document.querySelector('#avif-local-support-test-results');
+
+    if (testForm && testFile && testSubmit && typeof AVIFLocalSupportData !== 'undefined') {
+      testForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var file = testFile.files[0];
+        if (!file) return;
+
+        var ajaxUrl = AVIFLocalSupportData.ajaxUrl;
+        var nonce = AVIFLocalSupportData.uploadTestNonce;
+
+        testSubmit.disabled = true;
+        if (testSpinner) testSpinner.classList.add('is-active');
+        if (testStatus) testStatus.textContent = 'Uploading & converting…';
+        if (testResults) testResults.innerHTML = '';
+
+        var formData = new FormData();
+        formData.append('action', 'aviflosu_upload_test_ajax');
+        formData.append('_wpnonce', nonce);
+        formData.append('avif_local_support_test_file', file);
+
+        fetch(ajaxUrl, {
+          method: 'POST',
+          body: formData
         })
-        .catch(function () {
-          if (runTestStatus) runTestStatus.textContent = 'Failed';
-        })
-        .finally(function () {
-          if (runTestSpinner) runTestSpinner.classList.remove('is-active');
-          runTestBtn.disabled = false;
-        });
+          .then(function (r) { return r.json(); })
+          .then(function (json) {
+            if (json && json.success && json.data) {
+              if (testStatus) testStatus.textContent = 'Done';
+              if (testResults && json.data.html) {
+                testResults.innerHTML = json.data.html;
+              }
+            } else {
+              var msg = (json && json.data && json.data.message) ? json.data.message : 'Failed';
+              if (testStatus) testStatus.textContent = msg;
+            }
+          })
+          .catch(function () {
+            if (testStatus) testStatus.textContent = 'Error';
+          })
+          .finally(function () {
+            if (testSpinner) testSpinner.classList.remove('is-active');
+            testSubmit.disabled = false;
+            // Clear file input so same file can be selected again if needed, 
+            // though usually we want to see the filename. 
+            // Let's keep it populated.
+          });
       });
     }
   }

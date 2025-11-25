@@ -4,7 +4,7 @@ Plugin URI: https://github.com/ddegner/avif-local-support
 Tags: images, avif, performance, conversion, media
 Requires at least: 6.5
 Tested up to: 6.8
-Stable tag: 0.3.0
+Stable tag: 0.3.2
 Requires PHP: 8.0
 License: GPL v2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -90,12 +90,56 @@ Imagick is recommended for the best results and for preserving metadata and colo
 No. The plugin does not track users or send data to external services.
 
 = ImageMagick CLI not detected on LiteSpeed/CyberPanel due to open_basedir? =
-On LiteSpeed/CyberPanel, the vhost sets a restrictive `open_basedir` (e.g., `/tmp:/home/<site>`). PHP’s `is_executable('/usr/local/bin/magick')` returns false under that restriction even when the binary exists and works from the shell. The plugin currently relies on `is_executable` and bails out instead of offering a fallback or a guided fix.
+On LiteSpeed/CyberPanel, the vhost sets a restrictive `open_basedir` (e.g., `/tmp:/home/<site>`). PHP's `is_executable('/usr/local/bin/magick')` returns false under that restriction even when the binary exists and works from the shell. The plugin currently relies on `is_executable` and bails out instead of offering a fallback or a guided fix.
+
+= AVIF conversions produce empty/corrupt files on LiteSpeed (252 bytes, "No compressed data")? =
+This is caused by **libheif 1.12.0** (the AVIF encoder library) crashing silently under LiteSpeed's restricted process environment. The fix is to upgrade libheif to version 1.15 or newer.
+
+**Symptoms:**
+- AVIF files are created but only ~252 bytes (empty container, no image data)
+- ImageMagick reports "Item has no data" or "No compressed data"
+- WebP conversions work fine, only AVIF fails
+- CLI conversions work, but web-triggered conversions fail
+
+**Solution: Upgrade libheif from source**
+
+`# Install build dependencies
+sudo apt install cmake git build-essential pkg-config libde265-dev libaom-dev
+
+# Build and install latest libheif
+cd /tmp
+git clone --depth 1 https://github.com/strukturag/libheif.git
+cd libheif && mkdir build && cd build
+cmake -DCMAKE_INSTALL_PREFIX=/usr/local -DWITH_AOM_ENCODER=ON ..
+make -j$(nproc)
+sudo make install
+sudo ldconfig
+
+# Rebuild ImageMagick to use new libheif
+cd /tmp
+wget https://imagemagick.org/archive/ImageMagick.tar.gz
+tar xzf ImageMagick.tar.gz && cd ImageMagick-*
+export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH
+./configure --with-heic=yes --prefix=/usr/local
+make -j$(nproc)
+sudo make install
+sudo ldconfig
+
+# Verify: should show version 1.15+ 
+/usr/local/bin/magick -list format | grep -i avif`
 
 = Why do I see a "High risk of memory exhaustion" error in the logs? =
 The plugin now estimates memory usage before processing to prevent fatal errors (crashes) on servers with limited RAM. If you see this, try switching to the "ImageMagick CLI" engine or increasing your PHP `memory_limit`. As a last resort, you can check "Disable memory check" in the settings to bypass this safety measure.
 
 == Changelog ==
+= 0.3.2 =
+- Docs: Added FAQ and troubleshooting guide for LiteSpeed/libheif compatibility issue (empty AVIF files).
+- Fix: Added environment variable injection (LD_LIBRARY_PATH, HOME, PATH) for restricted PHP environments.
+
+= 0.3.1 =
+- Fix: Ensure original image source is used for conversions instead of scaled versions.
+- Fix: Switch CLI command to use `-resize` to prevent malformed files on large images.
+
 = 0.3.0 =
 - Feature: Engine priority update: CLI > Imagick > GD.
 - UI: Updated engine selection UI to reflect new priority and show CLI path.
@@ -201,6 +245,12 @@ The plugin now estimates memory usage before processing to prevent fatal errors 
 Initial release.
 
 == Upgrade Notice ==
+= 0.3.2 =
+Documents fix for LiteSpeed/libheif AVIF encoding issues. If you see empty 252-byte AVIF files on LiteSpeed, see the FAQ for the libheif upgrade solution.
+
+= 0.3.1 =
+Fixes source file selection and large file conversion issues. Recommended update.
+
 = 0.3.0 =
 Major update: Improved engine priority (CLI first), UI updates, and fixes for server diagnosis. Recommended update.
 

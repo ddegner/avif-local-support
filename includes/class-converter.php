@@ -23,9 +23,10 @@ final class Converter
     public function init(): void
     {
         // Convert on upload (toggle)
-        add_filter('wp_generate_attachment_metadata', [$this, 'convertGeneratedOnUpload'], 20, 2);
+        add_filter('wp_generate_attachment_metadata', [$this, 'convertGeneratedSizes'], 20, 2);
         // Also catch edits/regenerations that update metadata outside of generation
-        add_filter('wp_update_attachment_metadata', [$this, 'convertGeneratedOnUpload'], 20, 2);
+        add_filter('wp_update_attachment_metadata', [$this, 'convertGeneratedSizes'], 20, 2);
+        add_filter('wp_handle_upload', [$this, 'convertOriginalOnUpload'], 20);
 
         // Scheduling
         add_action('init', [$this, 'maybe_schedule_daily']);
@@ -89,7 +90,7 @@ final class Converter
         $this->convertAllJpegsIfMissingAvif();
     }
 
-    public function convertGeneratedOnUpload(array $metadata, int $attachmentId): array
+    public function convertGeneratedSizes(array $metadata, int $attachmentId): array
     {
         $convertOnUpload = (bool) get_option('aviflosu_convert_on_upload', true);
         if (!$convertOnUpload) {
@@ -110,7 +111,25 @@ final class Converter
         return $metadata;
     }
 
-    private function checkMissingAvif(string $path, string $sourcePath, ?array $targetDimensions = null): void
+    public function convertOriginalOnUpload(array $file): array
+    {
+        $convertOnUpload = (bool) get_option('aviflosu_convert_on_upload', true);
+        if (!$convertOnUpload) {
+            return $file;
+        }
+        $type = isset($file['type']) && \is_string($file['type']) ? strtolower($file['type']) : '';
+        $path = isset($file['file']) && \is_string($file['file']) ? $file['file'] : '';
+        $allowedMimes = ['image/jpeg', 'image/jpg', 'image/pjpeg'];
+        $hasAllowedMime = \in_array($type, $allowedMimes, true);
+        $hasJpegExt = $path !== '' && \preg_match('/\.(jpe?g)$/i', $path) === 1;
+        if (!$hasAllowedMime && !$hasJpegExt) {
+            return $file;
+        }
+        $this->checkMissingAvif($path);
+        return $file;
+    }
+
+    private function checkMissingAvif(string $path): void
     {
         if ($path === '' || !file_exists($path)) {
             return;
@@ -119,12 +138,12 @@ final class Converter
             return;
         }
         $avifPath = (string) preg_replace('/\.(jpe?g)$/i', '.avif', $path);
-        // Check existence AND minimum size (avoid 0-byte or error-text files)
-        if ($avifPath !== '' && file_exists($avifPath) && filesize($avifPath) > 512) {
-            return; // already converted and looks valid
+        if ($avifPath !== '' && file_exists($avifPath)) {
+            return; // already converted
         }
 
-        // Use provided source
+        // Determine better source based on WordPress logic (if enabled)
+        [$sourcePath, $targetDimensions] = $this->getConversionData($path);
         $this->convertToAvif($sourcePath, $avifPath, $targetDimensions);
     }
 
@@ -137,8 +156,8 @@ final class Converter
         $quality = max(0, min(100, (int) get_option('aviflosu_quality', 85)));
         $speedSetting = max(0, min(10, (int) get_option('aviflosu_speed', 1)));
         $lossless = ($quality >= 100);
-        // Preserve metadata by default now
-        $preserveMeta = true;
+        // Preserve only ICC by default; strip other metadata to let quality dominate file size
+        $preserveMeta = false;
         $preserveICC = true;
 
         // New options: chroma subsampling and bit depth (Imagick only)
@@ -171,282 +190,257 @@ final class Converter
             \wp_mkdir_p($dir);
         }
 
+        // Pre-check memory usage to avoid fatal errors on low-memory environments
+        // Skip if disabled via settings
+        $disableMemoryCheck = (bool) get_option('aviflosu_disable_memory_check', false);
+        if (!$disableMemoryCheck) {
+            $memoryWarning = $this->check_memory_safe($sourcePath);
+            if ($memoryWarning) {
+                $actualSettings['error_suggestion'] = 'Increase PHP memory_limit, switch to CLI engine, or disable memory check in settings.';
+                $this->log_conversion('error', $sourcePath, $avifPath, $engine_used, $start_time, $memoryWarning, $actualSettings);
+                return;
+            }
+        }
+
         // Engine selection: CLI or Auto (Imagick/GD)
         $engineMode = (string) get_option('aviflosu_engine_mode', 'auto');
 
-        // 1. CLI Attempt
-        // Run if mode is 'cli' OR ('auto' and path is set)
-        $cliPath = (string) get_option('aviflosu_cli_path', '');
-        $shouldTryCli = ($engineMode === 'cli') || ($engineMode === 'auto' && $cliPath !== '');
-
-        if ($shouldTryCli) {
+        // If CLI selected, try CLI first
+        if ($engineMode === 'cli') {
             $engine_used = 'cli';
             $ok = $this->convertViaCli($sourcePath, $avifPath, $targetDimensions, $quality, $speedSetting, $subsampling, $bitDepth, $lossless);
             if ($ok) {
                 $this->log_conversion('success', $sourcePath, $avifPath, $engine_used, $start_time, null, $actualSettings);
                 return;
             }
+            // Do not fall back when user explicitly selects CLI; make failure visible in logs
+            $snippet = $this->lastCliOutput !== '' ? substr($this->lastCliOutput, 0, 800) : '';
+            $err = 'CLI conversion failed'
+                . ' (exit ' . $this->lastCliExitCode . ')'
+                . ($this->lastCliCommand !== '' ? ' cmd: ' . $this->lastCliCommand : '')
+                . ($snippet !== '' ? ' output: ' . $snippet : '');
 
-            // If forced CLI, fail here
-            if ($engineMode === 'cli') {
-                // Do not fall back when user explicitly selects CLI; make failure visible in logs
-                $snippet = $this->lastCliOutput !== '' ? substr($this->lastCliOutput, 0, 800) : '';
-                $err = 'CLI conversion failed'
-                    . ' (exit ' . $this->lastCliExitCode . ')';
-
-                if ($this->lastCliCommand !== '') {
-                    $err .= ' cmd: ' . $this->lastCliCommand;
-                }
-                if ($snippet !== '') {
-                    $err .= ' output: ' . $snippet;
-                }
-
-                // If no specific error message but failed, add a generic one to ensure log visibility
-                if ($err === 'CLI conversion failed (exit 0)') {
-                    $err .= '. Resulting file missing or empty.';
-                }
-
-                // Analyze CLI error for suggestions
-                $suggestion = 'Check if the binary path is correct and executable.';
-                $outLower = strtolower($this->lastCliOutput);
-                if ($this->lastCliExitCode === 127) {
-                    $suggestion = 'Binary not found or not executable. Verify path in settings.';
-                } elseif (str_contains($outLower, 'delegate') || str_contains($outLower, 'no decode delegate')) {
-                    $suggestion = 'ImageMagick is missing a delegate (libjpeg/libavif). Install required libraries.';
-                } elseif (str_contains($outLower, 'memory') || str_contains($outLower, 'resource limit')) {
-                    $suggestion = 'Server ran out of memory/resources. Increase RAM or swap.';
-                }
-                $actualSettings['error_suggestion'] = $suggestion;
-
-                // Explicitly add CLI debug info to settings so it appears in details list
-                $actualSettings['cli_exit_code'] = $this->lastCliExitCode;
-                // Sanitize output to avoid JSON/rendering issues
-                $actualSettings['cli_output'] = mb_convert_encoding($snippet, 'UTF-8', 'UTF-8');
-
-                $this->log_conversion('error', $sourcePath, $avifPath, $engine_used, $start_time, $err, $actualSettings);
-                return;
+            // Analyze CLI error for suggestions
+            $suggestion = 'Check if the binary path is correct and executable.';
+            $outLower = strtolower($this->lastCliOutput);
+            if ($this->lastCliExitCode === 127) {
+                $suggestion = 'Binary not found or not executable. Verify path in settings.';
+            } elseif (str_contains($outLower, 'delegate') || str_contains($outLower, 'no decode delegate')) {
+                $suggestion = 'ImageMagick is missing a delegate (libjpeg/libavif). Install required libraries.';
+            } elseif (str_contains($outLower, 'memory') || str_contains($outLower, 'resource limit')) {
+                $suggestion = 'Server ran out of memory/resources. Increase RAM or swap.';
             }
+            $actualSettings['error_suggestion'] = $suggestion;
 
-            // If Auto, log failure but continue to Imagick
-            // We won't log a full 'error' entry to avoid cluttering logs if fallback succeeds,
-            // but we might want to note it if debugging. For now, let's just proceed.
-            // Optionally, we could log a 'warning' here.
+            $this->log_conversion('error', $sourcePath, $avifPath, $engine_used, $start_time, $err, $actualSettings);
+            return;
         }
 
-        // 2. Imagick Attempt
-        // Run if 'auto' (and CLI didn't return) OR if we add an explicit 'imagick' mode later
-        // "Auto" mode: Prefer Imagick -> GD
+        // Try Imagick
+        $engine_used = 'imagick';
+        $imagickResult = $this->convertViaImagick($sourcePath, $avifPath, $targetDimensions, $quality, $speedSetting, $subsampling, $bitDepth, $lossless, $preserveMeta, $preserveICC);
 
-        // Prefer Imagick when it actually supports AVIF (as in 0.1.7), otherwise fall back to GD
-        $supportsAvif = false;
-        if (extension_loaded('imagick')) {
-            // Ensure this Imagick build actually supports AVIF; otherwise we'll fall through to GD
+        if ($imagickResult['success']) {
+            $this->log_conversion('success', $sourcePath, $avifPath, $engine_used, $start_time, null, $actualSettings);
+            return;
+        }
+
+        // If Imagick failed but was the ONLY selected engine (unlikely with current 'auto'/'cli' logic, but good for future), stop.
+        // Current logic: 'auto' means Imagick -> GD.
+        // If Imagick was attempted and failed, we check if we should fall back.
+        // The previous logic fell back to GD if Imagick failed OR wasn't available.
+
+        // If Imagick failed with a specific error, we might want to log it if we don't fall back, 
+        // OR if we do fall back, we might want to note it.
+        // For now, let's stick to the original behavior: Fallback to GD if Imagick fails or is missing.
+
+        // GD Fallback
+        $engine_used = 'gd';
+        $gdResult = $this->convertViaGd($sourcePath, $avifPath, $targetDimensions, $quality, $speedSetting);
+
+        if ($gdResult['success']) {
+            $this->log_conversion('success', $sourcePath, $avifPath, $engine_used, $start_time, null, $actualSettings);
+        } else {
+            // If GD also failed, or was the only option and failed
+            $errorMsg = $gdResult['error'] ?? 'GD conversion failed';
+            $actualSettings['error_suggestion'] = $gdResult['suggestion'] ?? '';
+
+            // If we previously tried Imagick and it failed, maybe mention that too? 
+            // The original code just logged the last error.
+
+            $this->log_conversion('error', $sourcePath, $avifPath, $engine_used, $start_time, $errorMsg, $actualSettings);
+        }
+    }
+
+    private function convertViaImagick(string $sourcePath, string $avifPath, ?array $targetDimensions, int $quality, int $speedSetting, string $subsampling, string $bitDepth, bool $lossless, bool $preserveMeta, bool $preserveICC): array
+    {
+        if (!extension_loaded('imagick')) {
+            return ['success' => false, 'error' => 'Imagick extension not loaded'];
+        }
+
+        try {
+            // Quick check for AVIF support
             try {
                 $tmpImagick = new \Imagick();
                 $supportsAvif = (bool) $tmpImagick->queryFormats('AVIF');
                 $tmpImagick->destroy();
+                if (!$supportsAvif) {
+                    return ['success' => false, 'error' => 'Imagick installed but AVIF format not supported'];
+                }
             } catch (\Throwable $e) {
-                $supportsAvif = false;
+                return ['success' => false, 'error' => 'Imagick check failed: ' . $e->getMessage()];
             }
-        }
 
-        if ($supportsAvif) {
-            $engine_used = 'imagick';
+            $im = new \Imagick($sourcePath);
+
+            // Capture ICC/metadata profiles
+            $originalIcc = '';
+            $hadIcc = false;
             try {
-                $im = new \Imagick($sourcePath);
-                // Capture ICC/metadata profiles from the same instance BEFORE any transforms
-                $originalIcc = '';
-                $hadIcc = false;
-                $profileBlobs = ['exif' => '', 'xmp' => '', 'iptc' => ''];
-                try {
-                    $originalIcc = $im->getImageProfile('icc');
-                    $hadIcc = !empty($originalIcc);
-                } catch (\Exception $e) {
-                    $hadIcc = false;
-                }
-                foreach (array_keys($profileBlobs) as $pName) {
-                    try {
-                        $profileBlobs[$pName] = $im->getImageProfile($pName);
-                    } catch (\Exception $e) {
-                        $profileBlobs[$pName] = '';
-                    }
-                }
-                // Normalize orientation before any cropping/resizing
-                if (method_exists($im, 'autoOrientImage')) {
-                    $im->autoOrientImage();
-                    // Reset orientation flag to top-left
-                    if (defined('Imagick::ORIENTATION_TOPLEFT')) {
-                        $im->setImageOrientation(\Imagick::ORIENTATION_TOPLEFT);
-                    }
-                }
-
-                if ($targetDimensions && isset($targetDimensions['width'], $targetDimensions['height'])) {
-                    $srcW = $im->getImageWidth();
-                    $srcH = $im->getImageHeight();
-                    $tW = max(1, (int) $targetDimensions['width']);
-                    $tH = max(1, (int) $targetDimensions['height']);
-                    $srcAspect = $srcW / max(1, $srcH);
-                    $tAspect = $tW / max(1, $tH);
-                    if ($srcAspect > $tAspect) {
-                        $cropH = $srcH;
-                        $cropW = (int) ($srcH * $tAspect);
-                        $cropX = (int) (($srcW - $cropW) / 2);
-                        $cropY = 0;
-                    } else {
-                        $cropW = $srcW;
-                        $cropH = (int) ($srcW / $tAspect);
-                        $cropX = 0;
-                        $cropY = (int) (($srcH - $cropH) / 2);
-                    }
-                    $im->cropImage($cropW, $cropH, $cropX, $cropY);
-                    $im->resizeImage($tW, $tH, \Imagick::FILTER_LANCZOS, 1.0);
-                }
-
-                $im->setImageFormat('AVIF');
-                // Simple, effective controls: quality and speed
-                // Prefer format-specific quality define; keep compression quality as fallback for older builds
-                @$im->setOption('avif:quality', (string) $quality);
-                $im->setImageCompressionQuality($quality);
-                // Clamp speed to avoid libheif invalid parameter errors
-                @$im->setOption('avif:speed', (string) min(8, $speedSetting));
-                if ($lossless) {
-                    @$im->setOption('avif:lossless', 'true');
-                }
-                // Strip all metadata; we'll reattach ICC only if present and requested
-                // (User requested to NOT strip metadata, so we remove the stripImage call)
-
-                // If original had no ICC, ensure output is in sRGB to avoid desaturation across viewers
-                $transformedToSrgb = false;
-                if (!$hadIcc) {
-                    $originalColorspace = method_exists($im, 'getImageColorspace') ? (int) $im->getImageColorspace() : null;
-                    if (method_exists($im, 'transformImageColorspace')) {
-                        $im->transformImageColorspace(\Imagick::COLORSPACE_SRGB);
-                    } elseif (method_exists($im, 'setImageColorspace')) {
-                        $im->setImageColorspace(\Imagick::COLORSPACE_SRGB);
-                    }
-                    if ($originalColorspace !== null && method_exists($im, 'getImageColorspace')) {
-                        $transformedToSrgb = ($originalColorspace !== \Imagick::COLORSPACE_SRGB) && ((int) $im->getImageColorspace() === \Imagick::COLORSPACE_SRGB);
-                    }
-                }
-
-                // Apply chroma subsampling and bit depth only if non-default
-                // Default is 4:2:0 and 8-bit. Passing explicit flags for these can sometimes trigger
-                // issues in specific ImageMagick versions or delegates.
-                if ($subsampling !== '420' || $lossless) {
-                    $chromaLabel = $subsampling === '444' ? '4:4:4' : ($subsampling === '422' ? '4:2:2' : '4:2:0');
-                    if ($lossless) {
-                        $chromaLabel = '4:4:4';
-                    }
-                    @$im->setOption('avif:chroma-subsample', $chromaLabel);
-                }
-
-                if ($bitDepth !== '8') {
-                    @$im->setOption('avif:bit-depth', $bitDepth);
-                    // Also set image depth as a fallback
-                    $im->setImageDepth((int) $bitDepth);
-                }
-
-                // Explicitly tag AVIF color information (nclx) only when the original had no ICC
-                if (!$hadIcc) {
-                    // sRGB: BT.709 primaries (1), sRGB transfer (13), BT.709 matrix (1), full range
-                    @$im->setOption('avif:color-primaries', '1');
-                    @$im->setOption('avif:transfer-characteristics', '13');
-                    @$im->setOption('avif:matrix-coefficients', '1');
-                    @$im->setOption('avif:range', 'full');
-                }
-
-                if ($preserveMeta || $preserveICC) {
-                    try {
-                        // Preserve ICC when present so color-managed viewers render accurately (e.g., AdobeRGB)
-                        if ($preserveICC && $hadIcc && !empty($originalIcc)) {
-                            $im->setImageProfile('icc', $originalIcc);
-                        }
-                        // Other metadata (EXIF/XMP/IPTC) intentionally not restored
-                    } catch (\Exception $e) {
-                        // ignore metadata errors
-                    }
-                }
-
-                // Normalize EXIF Orientation tag to top-left after auto-orienting
-                if (method_exists($im, 'setImageProperty')) {
-                    try {
-                        $im->setImageProperty('exif:Orientation', '1');
-                    } catch (\Exception $e) {
-                    }
-                }
-
-                // Do not strip ICC; rely on ICC when present, nclx when not
-
-                $im->writeImage($avifPath);
-                $im->destroy();
-                // Validate output: ensure file exists and is not an empty/placeholder stub
-                if (@file_exists($avifPath) && @filesize($avifPath) > 512) {
-                    $this->log_conversion('success', $sourcePath, $avifPath, $engine_used, $start_time, null, $actualSettings);
-                    return;
-                }
-
-                // Validation failed: cleanup and fall through
-                if (@file_exists($avifPath)) {
-                    @unlink($avifPath);
-                }
-
-                $error_message = 'Imagick produced an invalid AVIF (too small/empty)';
-                $actualSettings['error_suggestion'] = 'Your ImageMagick build seems to lack proper AVIF write support (file created but empty).';
-
-                $this->log_conversion('error', $sourcePath, $avifPath, $engine_used, $start_time, $error_message, $actualSettings);
-
-                // If Auto mode, do not return; fall through to GD
-                if ($engineMode !== 'auto') {
-                    return;
-                }
+                $originalIcc = $im->getImageProfile('icc');
+                $hadIcc = !empty($originalIcc);
             } catch (\Exception $e) {
-                $error_message = 'Imagick conversion failed: ' . $e->getMessage();
-                $msg = strtolower($e->getMessage());
-                if (str_contains($msg, 'unable to load module')) {
-                    $actualSettings['error_suggestion'] = 'Imagick PHP module configuration is broken. Reinstall Imagick.';
-                } elseif (str_contains($msg, 'no decode delegate')) {
-                    $actualSettings['error_suggestion'] = 'Imagick cannot read this file format.';
-                } else {
-                    $actualSettings['error_suggestion'] = 'Check PHP error logs for detailed Imagick crashes.';
-                }
+                $hadIcc = false;
+            }
 
-                $this->log_conversion('error', $sourcePath, $avifPath, $engine_used, $start_time, $error_message, $actualSettings);
-
-                // If Auto mode, do not return; fall through to GD
-                if ($engineMode !== 'auto') {
-                    return;
+            // Normalize orientation
+            if (method_exists($im, 'autoOrientImage')) {
+                $im->autoOrientImage();
+                if (defined('Imagick::ORIENTATION_TOPLEFT')) {
+                    $im->setImageOrientation(\Imagick::ORIENTATION_TOPLEFT);
                 }
             }
+
+            // Resize/Crop
+            if ($targetDimensions && isset($targetDimensions['width'], $targetDimensions['height'])) {
+                $srcW = $im->getImageWidth();
+                $srcH = $im->getImageHeight();
+                $tW = max(1, (int) $targetDimensions['width']);
+                $tH = max(1, (int) $targetDimensions['height']);
+                $srcAspect = $srcW / max(1, $srcH);
+                $tAspect = $tW / max(1, $tH);
+
+                if ($srcAspect > $tAspect) {
+                    $cropH = $srcH;
+                    $cropW = (int) ($srcH * $tAspect);
+                    $cropX = (int) (($srcW - $cropW) / 2);
+                    $cropY = 0;
+                } else {
+                    $cropW = $srcW;
+                    $cropH = (int) ($srcW / $tAspect);
+                    $cropX = 0;
+                    $cropY = (int) (($srcH - $cropH) / 2);
+                }
+                $im->cropImage($cropW, $cropH, $cropX, $cropY);
+                $im->resizeImage($tW, $tH, \Imagick::FILTER_LANCZOS, 1.0);
+            }
+
+            $im->setImageFormat('AVIF');
+
+            // Settings
+            @$im->setOption('avif:quality', (string) $quality);
+            $im->setImageCompressionQuality($quality);
+            @$im->setOption('avif:speed', (string) min(8, $speedSetting));
+            if ($lossless) {
+                @$im->setOption('avif:lossless', 'true');
+            }
+
+            // Metadata stripping (keep ICC if requested)
+            if (method_exists($im, 'stripImage')) {
+                $im->stripImage();
+            }
+
+            // Color space handling
+            if (!$hadIcc) {
+                $originalColorspace = method_exists($im, 'getImageColorspace') ? (int) $im->getImageColorspace() : null;
+                if (method_exists($im, 'transformImageColorspace')) {
+                    $im->transformImageColorspace(\Imagick::COLORSPACE_SRGB);
+                } elseif (method_exists($im, 'setImageColorspace')) {
+                    $im->setImageColorspace(\Imagick::COLORSPACE_SRGB);
+                }
+            }
+
+            // Subsampling and Bit Depth
+            $chromaLabel = $subsampling === '444' ? '4:4:4' : ($subsampling === '422' ? '4:2:2' : '4:2:0');
+            if ($lossless) {
+                $chromaLabel = '4:4:4';
+            }
+            @$im->setOption('avif:chroma-subsample', $chromaLabel);
+            @$im->setOption('avif:bit-depth', $bitDepth);
+            $im->setImageDepth((int) $bitDepth);
+
+            // NCLX for untagged images
+            if (!$hadIcc) {
+                @$im->setOption('avif:color-primaries', '1');
+                @$im->setOption('avif:transfer-characteristics', '13');
+                @$im->setOption('avif:matrix-coefficients', '1');
+                @$im->setOption('avif:range', 'full');
+            }
+
+            // Restore ICC if needed
+            if ($preserveMeta || $preserveICC) {
+                try {
+                    if ($preserveICC && $hadIcc && !empty($originalIcc)) {
+                        $im->setImageProfile('icc', $originalIcc);
+                    }
+                } catch (\Exception $e) {
+                }
+            }
+
+            // Fix EXIF Orientation tag
+            if (method_exists($im, 'setImageProperty')) {
+                try {
+                    $im->setImageProperty('exif:Orientation', '1');
+                } catch (\Exception $e) {
+                }
+            }
+
+            $im->writeImage($avifPath);
+            $im->destroy();
+
+            if (@file_exists($avifPath) && @filesize($avifPath) > 512) {
+                return ['success' => true];
+            }
+
+            return [
+                'success' => false,
+                'error' => 'Imagick produced an invalid AVIF (missing delegate or placeholder output)',
+                'suggestion' => 'Your ImageMagick build seems to lack proper AVIF write support, or the file is empty.'
+            ];
+
+        } catch (\Exception $e) {
+            $msg = strtolower($e->getMessage());
+            $suggestion = 'Check PHP error logs for detailed Imagick crashes.';
+            if (str_contains($msg, 'unable to load module')) {
+                $suggestion = 'Imagick PHP module configuration is broken. Reinstall Imagick.';
+            } elseif (str_contains($msg, 'no decode delegate')) {
+                $suggestion = 'Imagick cannot read this file format.';
+            }
+
+            return [
+                'success' => false,
+                'error' => 'Imagick conversion failed: ' . $e->getMessage(),
+                'suggestion' => $suggestion
+            ];
         }
+    }
 
-        // Only use GD if specifically requested or if auto mode allows (but currently Auto prefers Imagick and stops there if Imagick is available/fails).
-        // Actually, original requirement was: "Never fall back to GD if it isn't selected in the settings."
-        // "Auto" means "Imagick if available, else GD".
-        // If "Auto" is selected and Imagick IS available but fails, we previously fell through to GD.
-        // The user's request implies: "If I chose CLI, don't use GD. If I chose Auto and Imagick is available, stick to Imagick (don't fallback on error)."
-
-        // If we reached here:
-        // 1. CLI mode: returned already (success or error).
-        // 2. Auto mode + Imagick available: returned success or error.
-        // 3. Auto mode + Imagick NOT available: proceed to GD.
-
-        if ($engineMode === 'imagick') { // Future-proofing if specific 'imagick' option is added
-            return;
-        }
-
-        // GD fallback with EXIF orientation handling
-        $engine_used = 'gd';
+    private function convertViaGd(string $sourcePath, string $avifPath, ?array $targetDimensions, int $quality, int $speedSetting): array
+    {
         $imageInfo = @getimagesize($sourcePath);
         if (!$imageInfo || ($imageInfo[2] !== IMAGETYPE_JPEG)) {
-            $this->log_conversion('error', $sourcePath, $avifPath, $engine_used, $start_time, 'Invalid JPEG file or could not read image info', $actualSettings);
-            return;
+            return ['success' => false, 'error' => 'Invalid JPEG file or could not read image info'];
         }
+
         $gd = @imagecreatefromjpeg($sourcePath);
         if (!$gd) {
-            $actualSettings['error_suggestion'] = 'Input file may be corrupt or PHP memory limit is too low.';
-            $this->log_conversion('error', $sourcePath, $avifPath, $engine_used, $start_time, 'Failed to create GD resource from JPEG', $actualSettings);
-            return;
+            return [
+                'success' => false,
+                'error' => 'Failed to create GD resource from JPEG',
+                'suggestion' => 'Input file may be corrupt or PHP memory limit is too low.'
+            ];
         }
+
         if (function_exists('exif_read_data')) {
             $exif = @exif_read_data($sourcePath);
             if ($exif && isset($exif['Orientation'])) {
@@ -457,6 +451,7 @@ final class Converter
                 }
             }
         }
+
         if ($targetDimensions && isset($targetDimensions['width'], $targetDimensions['height'])) {
             $resized = $this->resizeGdMaintainCrop($gd, imagesx($gd), imagesy($gd), (int) $targetDimensions['width'], (int) $targetDimensions['height']);
             if ($resized) {
@@ -464,6 +459,7 @@ final class Converter
                 $gd = $resized;
             }
         }
+
         if (function_exists('imageavif')) {
             $speed = min(8, $speedSetting);
             $success = false;
@@ -473,17 +469,96 @@ final class Converter
                 $success = @imageavif($gd, $avifPath, $quality);
             }
 
+            imagedestroy($gd);
+
             if ($success && file_exists($avifPath)) {
-                $this->log_conversion('success', $sourcePath, $avifPath, $engine_used, $start_time, null, $actualSettings);
+                return ['success' => true];
             } else {
-                $actualSettings['error_suggestion'] = 'GD failed to write AVIF. Check directory permissions or GD version.';
-                $this->log_conversion('error', $sourcePath, $avifPath, $engine_used, $start_time, 'GD imageavif function failed or file not created', $actualSettings);
+                return [
+                    'success' => false,
+                    'error' => 'GD imageavif function failed or file not created',
+                    'suggestion' => 'GD failed to write AVIF. Check directory permissions or GD version.'
+                ];
             }
-        } else {
-            $actualSettings['error_suggestion'] = 'Upgrade to PHP 8.1+ or compile GD with AVIF support.';
-            $this->log_conversion('error', $sourcePath, $avifPath, $engine_used, $start_time, 'imageavif function not available in GD', $actualSettings);
         }
+
         imagedestroy($gd);
+        return [
+            'success' => false,
+            'error' => 'imageavif function not available in GD',
+            'suggestion' => 'Upgrade to PHP 8.1+ or compile GD with AVIF support.'
+        ];
+    }
+
+
+    /**
+     * Safely check if we have enough memory to process this image via PHP (GD/Imagick).
+     * Returns a warning string if memory is dangerously low, null if it seems okay.
+     */
+    private function check_memory_safe(string $path): ?string
+    {
+        $limit = ini_get('memory_limit');
+        // No limit
+        if ($limit === '-1') {
+            return null;
+        }
+
+        $limitBytes = $this->parse_memory_limit((string) $limit);
+        if ($limitBytes <= 0) {
+            return null; // Could not parse or zero, assume fine
+        }
+
+        // Get current usage
+        $currentUsage = memory_get_usage(true);
+
+        // Estimate image memory usage:
+        // (width * height * channels * bits_per_channel) + overhead
+        // Approximating RGBA (4 channels) at 1 byte per channel (8-bit) * 1.8 overhead for GD/Imagick structures
+        $info = @getimagesize($path);
+        if (!$info) {
+            // Can't read info, so can't estimate. Proceed cautiously.
+            return null;
+        }
+
+        $width = isset($info[0]) ? (int) $info[0] : 0;
+        $height = isset($info[1]) ? (int) $info[1] : 0;
+        $channels = isset($info['channels']) ? (int) $info['channels'] : 4;
+        if ($channels <= 0) {
+            $channels = 4;
+        }
+
+        // Rough estimation: width * height * 4 (RGBA) * 1.7 (overhead factor)
+        $estimatedNeed = (int) ($width * $height * 4 * 1.7);
+
+        // Add buffer (10MB) for other script overhead
+        $buffer = 10 * 1024 * 1024;
+
+        if (($currentUsage + $estimatedNeed + $buffer) > $limitBytes) {
+            $fmtLimit = size_format($limitBytes);
+            $fmtNeed = size_format($estimatedNeed);
+            return "High risk of memory exhaustion. Memory limit: $fmtLimit. Estimated need: $fmtNeed. Current usage: " . size_format($currentUsage) . ".";
+        }
+
+        return null;
+    }
+
+    private function parse_memory_limit(string $val): int
+    {
+        $val = trim($val);
+        $last = strtolower($val[strlen($val) - 1]);
+        $n = (int) $val;
+        switch ($last) {
+            case 'g':
+                $n *= 1024 * 1024 * 1024;
+                break;
+            case 'm':
+                $n *= 1024 * 1024;
+                break;
+            case 'k':
+                $n *= 1024;
+                break;
+        }
+        return $n;
     }
 
     /**
@@ -500,6 +575,7 @@ final class Converter
             'cli_path' => (string) get_option('aviflosu_cli_path', ''),
             'convert_on_upload' => (bool) get_option('aviflosu_convert_on_upload', true),
             'convert_via_schedule' => (bool) get_option('aviflosu_convert_via_schedule', true),
+            'disable_memory_check' => (bool) get_option('aviflosu_disable_memory_check', false),
         ];
     }
 
@@ -599,7 +675,7 @@ final class Converter
 
         $defines = [];
         // Keep CLI simple and consistent with Imagick path
-        // (User requested to NOT strip metadata, so we remove the -strip flag)
+        $defines[] = '-strip';
         $defines[] = '-quality';
         $defines[] = (string) $quality;
         // Clamp speed to <=8 for libheif stability
@@ -609,23 +685,18 @@ final class Converter
             $defines[] = '-define';
             $defines[] = 'avif:lossless=true';
         }
-        // Chroma subsampling - only if non-default
-        if ($subsampling !== '420' || $lossless) {
-            $chromaLabel = $subsampling === '444' ? '4:4:4' : ($subsampling === '422' ? '4:2:2' : '4:2:0');
-            if ($lossless) {
-                $chromaLabel = '4:4:4';
-            }
-            $defines[] = '-define';
-            $defines[] = 'avif:chroma-subsample=' . $chromaLabel;
+        // Chroma subsampling
+        $chromaLabel = $subsampling === '444' ? '4:4:4' : ($subsampling === '422' ? '4:2:2' : '4:2:0');
+        if ($lossless) {
+            $chromaLabel = '4:4:4';
         }
-
-        // Bit depth - only if non-default
-        if ($bitDepth !== '8') {
-            $defines[] = '-depth';
-            $defines[] = (string) (int) $bitDepth;
-            $defines[] = '-define';
-            $defines[] = 'avif:bit-depth=' . (string) $bitDepth;
-        }
+        $defines[] = '-define';
+        $defines[] = 'avif:chroma-subsample=' . $chromaLabel;
+        // Bit depth
+        $defines[] = '-depth';
+        $defines[] = (string) (int) $bitDepth;
+        $defines[] = '-define';
+        $defines[] = 'avif:bit-depth=' . (string) $bitDepth;
 
         // Colorspace handling when no ICC is present: attempt to ensure sRGB
         // We cannot cheaply inspect ICC here; applying sRGB transform safely for JPEGs
@@ -648,38 +719,8 @@ final class Converter
             $outputArg = 'avif:' . $outputArg;
         }
         $cmd[] = escapeshellarg($outputArg);
-        // Build environment injection for module/config discovery under PHP
-        $envParts = ['LC_ALL' => 'C'];
 
-        // Only apply Homebrew/Cellar heuristics on macOS
-        if (defined('PHP_OS_FAMILY') && PHP_OS_FAMILY === 'Darwin') {
-            $binReal = is_string(@realpath($bin)) ? (string) @realpath($bin) : $bin;
-            $cellarDir = dirname(dirname($binReal)); // .../Cellar/imagemagick/<ver>
-            $coderCandidates = [
-                $cellarDir . '/lib/ImageMagick/modules-Q16HDRI/coders',
-                $cellarDir . '/lib/ImageMagick/modules-Q16/coders',
-            ];
-            $existingCoders = array_values(array_filter($coderCandidates, static function ($p) {
-                return is_dir($p);
-            }));
-            if (!empty($existingCoders)) {
-                $envParts['MAGICK_CODER_MODULE_PATH'] = implode(':', $existingCoders);
-            }
-            $configPath = $cellarDir . '/etc/ImageMagick-7';
-            if (is_dir($configPath)) {
-                $envParts['MAGICK_CONFIGURE_PATH'] = $configPath;
-            }
-            // Help dynamic libs resolve when launched by PHP
-            if (is_dir('/opt/homebrew/lib')) {
-                $envParts['DYLD_FALLBACK_LIBRARY_PATH'] = '/opt/homebrew/lib';
-            }
-        }
-        $envPrefix = '';
-        foreach ($envParts as $k => $v) {
-            $envPrefix .= $k . '=' . escapeshellarg($v) . ' ';
-        }
-
-        $full = trim($envPrefix) . ' ' . implode(' ', $cmd) . ' 2>&1';
+        $full = implode(' ', $cmd) . ' 2>&1';
         $output = [];
         $code = 0;
         // Capture command, exit code, and output for debugging
@@ -693,18 +734,9 @@ final class Converter
         do {
             $output = [];
             $code = 0;
-            // Execute with 2>&1 to capture stderr, but also log it explicitly if empty
-            $execResult = exec($full, $output, $code);
-
+            @exec($full, $output, $code);
             $this->lastCliExitCode = (int) $code;
             $this->lastCliOutput = is_array($output) ? implode("\n", $output) : '';
-
-            // If output is empty but code is 0, it might be a silent crash.
-            // Try to debug by checking file existence immediately
-            if ($code === 0 && (!file_exists($avifPath) || filesize($avifPath) == 0)) {
-                $this->lastCliOutput .= " [Debug] Command finished with exit 0 but output file is missing/empty. Full cmd: $full";
-            }
-
             if ($code === 0) {
                 break;
             }
@@ -724,19 +756,9 @@ final class Converter
         }
         // Success exit code but no/invalid output file: treat as failure and provide a helpful hint
         if (!@file_exists($avifPath) || @filesize($avifPath) <= 512) {
-            $fSize = @file_exists($avifPath) ? (int) @filesize($avifPath) : 0;
-            $contentPreview = '';
-            if ($fSize > 0 && $fSize < 512) {
-                $contentPreview = ' Content: ' . substr(file_get_contents($avifPath), 0, 100);
-            }
             $this->lastCliOutput = trim($this->lastCliOutput . "\n")
-                . 'No output file created or file too small (size: ' . $fSize . ' bytes' . $contentPreview . '); AVIF may not be supported by this ImageMagick build. '
+                . 'No output file created or file too small; AVIF may not be supported by this ImageMagick build. '
                 . 'Try: "' . escapeshellarg($bin) . ' -list format | grep -i AVIF"';
-
-            // Cleanup the invalid/empty file so it isn't served
-            if (@file_exists($avifPath)) {
-                @unlink($avifPath);
-            }
             return false;
         }
         return true;
@@ -812,24 +834,49 @@ final class Converter
         }
     }
 
-
+    private function getConversionData(string $jpegPath): array
+    {
+        // Always use WordPress logic to avoid double-resizing
+        $useWpLogic = true;
+        $sourcePath = $jpegPath;
+        $target = null;
+        if ($useWpLogic) {
+            $filename = basename($jpegPath);
+            $directory = dirname($jpegPath);
+            if (preg_match('/^(.+)-(\d+)x(\d+)\.(jpe?g)$/i', $filename, $m)) {
+                $base = $m[1];
+                $w = (int) $m[2];
+                $h = (int) $m[3];
+                $ext = $m[4];
+                $candidates = [
+                    $directory . '/' . $base . '.' . $ext,
+                    $directory . '/' . $base . '-scaled.' . $ext,
+                ];
+                foreach ($candidates as $candidate) {
+                    if (file_exists($candidate)) {
+                        $srcReal = @realpath($candidate);
+                        $tgtReal = @realpath($jpegPath);
+                        if ($srcReal && $tgtReal && $srcReal !== $tgtReal) {
+                            $sourcePath = $candidate;
+                            $target = ['width' => $w, 'height' => $h];
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        return [$sourcePath, $target];
+    }
 
     /**
      * Shared: Convert original and generated size JPEGs found in attachment metadata.
      */
     private function convertFromMetadata(array $metadata, string $baseDir): void
     {
-        $originalPath = '';
         if (!empty($metadata['file']) && \is_string($metadata['file'])) {
             $originalPath = $baseDir . $metadata['file'];
-            $this->checkMissingAvif($originalPath, $originalPath);
+            $this->checkMissingAvif($originalPath);
         }
-
-        // If we don't have an original path, we can't reliably convert sizes based on it
-        if ($originalPath === '' || !file_exists($originalPath)) {
-            return;
-        }
-
         if (!empty($metadata['sizes']) && \is_array($metadata['sizes'])) {
             $relativeDir = pathinfo((string) ($metadata['file'] ?? ''), PATHINFO_DIRNAME);
             if ($relativeDir === '.' || $relativeDir === DIRECTORY_SEPARATOR) {
@@ -838,11 +885,7 @@ final class Converter
             foreach ($metadata['sizes'] as $sizeData) {
                 if (!empty($sizeData['file'])) {
                     $sizePath = $baseDir . \trailingslashit($relativeDir) . $sizeData['file'];
-                    $dims = null;
-                    if (isset($sizeData['width'], $sizeData['height'])) {
-                        $dims = ['width' => (int) $sizeData['width'], 'height' => (int) $sizeData['height']];
-                    }
-                    $this->checkMissingAvif($sizePath, $originalPath, $dims);
+                    $this->checkMissingAvif($sizePath);
                 }
             }
         }
@@ -870,7 +913,7 @@ final class Converter
             }
             $path = get_attached_file($attachmentId);
             if ($path) {
-                $this->checkMissingAvif($path, $path);
+                $this->checkMissingAvif($path);
             }
             $meta = wp_get_attachment_metadata($attachmentId);
             if ($meta) {
@@ -976,11 +1019,7 @@ final class Converter
 
         // Perform conversion for each row using the same pipeline
         foreach ($results['sizes'] as &$row) {
-            $dims = null;
-            if (isset($row['width'], $row['height'])) {
-                $dims = ['width' => (int) $row['width'], 'height' => (int) $row['height']];
-            }
-            $this->checkMissingAvif($row['jpeg_path'], $originalAbs, $dims);
+            $this->checkMissingAvif($row['jpeg_path']);
             $row['converted'] = file_exists($row['avif_path']);
             // Refresh sizes after conversion
             $row['jpeg_size'] = file_exists($row['jpeg_path']) ? (int) filesize($row['jpeg_path']) : 0;

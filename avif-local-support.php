@@ -6,7 +6,7 @@ declare(strict_types=1);
  * Plugin Name: AVIF Local Support
  * Plugin URI: https://github.com/ddegner/avif-local-support
  * Description: Unified AVIF support and conversion. Local-first processing with a strong focus on image quality when converting JPEGs.
- * Version: 0.3.0
+ * Version: 0.3.2
  * Author: David Degner
  * Author URI: https://www.DavidDegner.com
  * License: GPL v2 or later
@@ -21,7 +21,7 @@ declare(strict_types=1);
 \defined('ABSPATH') || exit;
 
 // Define constants
-\define('AVIFLOSU_VERSION', '0.3.0');
+\define('AVIFLOSU_VERSION', '0.3.2');
 \define('AVIFLOSU_PLUGIN_FILE', __FILE__);
 \define('AVIFLOSU_PLUGIN_DIR', plugin_dir_path(__FILE__));
 \define('AVIFLOSU_PLUGIN_URL', plugin_dir_url(__FILE__));

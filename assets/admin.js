@@ -87,9 +87,26 @@
     // No global polling controller needed; tools tab has its own progress/polling
   }
 
+  function initCliSuggestions() {
+    var buttons = document.querySelectorAll('.aviflosu-apply-suggestion');
+    if (!buttons.length) return;
+    buttons.forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        var targetId = this.getAttribute('data-target');
+        var value = this.getAttribute('data-value');
+        var target = document.getElementById(targetId);
+        if (target) {
+          target.value = value;
+        }
+      });
+    });
+  }
+
   function initAll() {
     initTabs();
     initStatus();
+    initCliSuggestions();
 
     // Convert-now button (AJAX queue + switch to Status with spinner + polling)
     var convertBtn = document.querySelector('#avif-local-support-convert-now');
@@ -107,7 +124,7 @@
         var nonce = AVIFLocalSupportData.convertNonce;
         convertBtn.disabled = true;
         if (spinner) spinner.classList.add('is-active');
-        if (statusEl) statusEl.textContent = 'Running…';
+        if (statusEl) statusEl.textContent = 'Converting Images...';
         var form = new URLSearchParams();
         form.append('action', 'aviflosu_convert_now');
         form.append('_wpnonce', nonce);
@@ -129,8 +146,8 @@
               var prevMissing = null;
               var unchangedTicks = 0;
               var startTime = Date.now();
-              var MAX_UNCHANGED_TICKS = 3; // stop if not changing
-              var MAX_DURATION_MS = 5 * 60 * 1000; // 5 minutes safety
+              var MAX_UNCHANGED_TICKS = 20; // stop if not changing (increased from 3)
+              var MAX_DURATION_MS = 10 * 60 * 1000; // 10 minutes safety (increased from 5)
               function updateLocal() {
                 var sform = new URLSearchParams();
                 sform.append('action', 'aviflosu_scan_missing');
@@ -165,7 +182,7 @@
                       }
                       prevMissing = missing;
                       if (unchangedTicks >= MAX_UNCHANGED_TICKS || (Date.now() - startTime) > MAX_DURATION_MS) {
-                        if (statusEl) statusEl.textContent = 'In progress…';
+                        if (statusEl) statusEl.textContent = 'Continuing in Background...';
                         if (pollingTimerLocal) { window.clearInterval(pollingTimerLocal); pollingTimerLocal = null; }
                       }
                     }
@@ -440,6 +457,62 @@
             // Let's keep it populated.
           });
       });
+    }
+
+    // Engine Selection Logic
+    var engineRadios = document.querySelectorAll('input[name="aviflosu_engine_mode"]');
+    // The CLI settings are now in a separate field, we need to find its container row.
+    // The field ID is 'aviflosu_cli_options' (the div wrapper) or we can look for the input 'aviflosu_cli_path'
+    var cliOptionsDiv = document.querySelector('#aviflosu_cli_options');
+    var subsamplingField = document.querySelector('#aviflosu_subsampling');
+    var bitDepthField = document.querySelector('#aviflosu_bit_depth');
+
+    // Helper to find parent row (tr) or container to hide
+    function getContainer(el) {
+      if (!el) return null;
+      // The settings API usually wraps fields in td, then tr. 
+      // We want to hide the whole tr.
+      var p = el.closest('tr');
+      return p ? p : el.parentElement;
+    }
+
+    function updateEngineVisibility() {
+      var mode = 'auto';
+      for (var i = 0; i < engineRadios.length; i++) {
+        if (engineRadios[i].checked) {
+          mode = engineRadios[i].value;
+          break;
+        }
+      }
+
+      // CLI Options: Show if Auto or CLI
+      // We need to hide the entire row containing the CLI options
+      var cliContainer = getContainer(cliOptionsDiv);
+      if (cliContainer) {
+        cliContainer.style.display = (mode === 'auto' || mode === 'cli') ? '' : 'none';
+      }
+
+      // Subsampling & Bit Depth: Show if Auto, CLI, or Imagick
+      // Hide if GD (GD encoder doesn't support these in this plugin yet)
+      var showAdvanced = (mode === 'auto' || mode === 'cli' || mode === 'imagick');
+
+      var subContainer = getContainer(subsamplingField);
+      if (subContainer) {
+        subContainer.style.display = showAdvanced ? '' : 'none';
+      }
+
+      var bitContainer = getContainer(bitDepthField);
+      if (bitContainer) {
+        bitContainer.style.display = showAdvanced ? '' : 'none';
+      }
+    }
+
+    if (engineRadios.length > 0) {
+      for (var i = 0; i < engineRadios.length; i++) {
+        engineRadios[i].addEventListener('change', updateEngineVisibility);
+      }
+      // Initial state
+      updateEngineVisibility();
     }
   }
 

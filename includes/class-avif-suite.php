@@ -160,6 +160,18 @@ final class Plugin
             'sanitize_callback' => 'sanitize_text_field',
             'show_in_rest' => true,
         ]);
+        register_setting('aviflosu_settings', 'aviflosu_cli_args', [
+            'type' => 'string',
+            'default' => '',
+            'sanitize_callback' => 'sanitize_text_field',
+            'show_in_rest' => true,
+        ]);
+        register_setting('aviflosu_settings', 'aviflosu_cli_env', [
+            'type' => 'string',
+            'default' => '', // Default handled in DTO/UI if empty
+            'sanitize_callback' => [$this, 'sanitize_cli_env'],
+            'show_in_rest' => true,
+        ]);
 
         add_settings_section(
             'aviflosu_main',
@@ -325,34 +337,67 @@ final class Plugin
             __('Engine selection', 'avif-local-support'),
             function (): void {
                 $mode = (string) get_option('aviflosu_engine_mode', 'auto');
-                $cliPath = (string) get_option('aviflosu_cli_path', '');
-                $detected = $this->detect_cli_binaries();
                 echo '<fieldset id="aviflosu_engine_mode">';
                 echo '<label style="display:block;margin-bottom:6px;"><input type="radio" name="aviflosu_engine_mode" value="auto" ' . checked('auto', $mode, false) . ' /> ' . esc_html__('Auto (CLI → Imagick → GD)', 'avif-local-support') . '</label>';
                 echo '<label style="display:block;margin-bottom:6px;"><input type="radio" name="aviflosu_engine_mode" value="cli" ' . checked('cli', $mode, false) . ' /> ' . esc_html__('Force ImageMagick CLI', 'avif-local-support') . '</label>';
-                // CLI binary list
-                echo '<div style="margin-left:20px;margin-top:6px;">';
-                if (!empty($detected)) {
-                    echo '<label for="aviflosu_cli_path_select" style="display:block;margin:6px 0 4px;">' . esc_html__('Detected binaries', 'avif-local-support') . '</label>';
-                    echo '<select id="aviflosu_cli_path_select" onchange="var v=this.value; if(v){ document.getElementById(\'aviflosu_cli_path\').value=v; }" style="min-width:360px;">';
-                    echo '<option value="">' . esc_html__('— Select detected binary —', 'avif-local-support') . '</option>';
-                    foreach ($detected as $bin) {
-                        $label = $bin['path'] . ' — ' . $bin['version'] . ' — ' . ($bin['avif'] ? 'AVIF: yes' : 'AVIF: no');
-                        echo '<option value="' . esc_attr($bin['path']) . '">' . esc_html($label) . '</option>';
-                    }
-                    echo '</select>';
-                } else {
-                    echo '<p class="description" style="margin:0 0 6px;">' . esc_html__('No ImageMagick CLI detected. You can still enter a custom path below.', 'avif-local-support') . '</p>';
-                }
-                echo '<label for="aviflosu_cli_path" style="display:block;margin-top:8px;">' . esc_html__('Custom path', 'avif-local-support') . '</label>';
-                echo '<input type="text" id="aviflosu_cli_path" name="aviflosu_cli_path" value="' . esc_attr($cliPath) . '" placeholder="/usr/local/bin/magick" style="min-width:360px;" />';
-                echo '<p class="description" style="margin-top:6px;">' . esc_html__('Provide full path to `magick` or `convert`. Used in Auto mode (if set) or Force CLI mode.', 'avif-local-support') . '</p>';
-                echo '</div>';
+
+                echo '<label style="display:block;margin-bottom:6px;"><input type="radio" name="aviflosu_engine_mode" value="imagick" ' . checked('imagick', $mode, false) . ' /> ' . esc_html__('Force ImageMagick (Imagick PHP)', 'avif-local-support') . '</label>';
+                echo '<label style="display:block;margin-bottom:6px;"><input type="radio" name="aviflosu_engine_mode" value="gd" ' . checked('gd', $mode, false) . ' /> ' . esc_html__('Force GD', 'avif-local-support') . '</label>';
+
                 echo '</fieldset>';
             },
             'avif-local-support',
             'aviflosu_engine',
             ['label_for' => 'aviflosu_engine_mode']
+        );
+
+        // New: CLI Settings (moved from Engine Selection)
+        add_settings_field(
+            'avif_local_support_cli_settings',
+            __('ImageMagick CLI', 'avif-local-support'),
+            function (): void { // Callback
+                $cliPath = (string) get_option('aviflosu_cli_path', '');
+                $cliArgs = (string) get_option('aviflosu_cli_args', '');
+                $cliEnv = (string) get_option('aviflosu_cli_env', $this->get_suggested_cli_env());
+                $detected = $this->detect_cli_binaries();
+
+                $suggestedArgs = $this->get_suggested_cli_args();
+                $suggestedEnv = $this->get_suggested_cli_env();
+
+                echo '<div id="aviflosu_cli_options">';
+                echo '<label for="aviflosu_cli_path" style="display:block;margin:0 0 4px;">' . esc_html__('CLI Path', 'avif-local-support') . '</label>';
+                echo '<input type="text" id="aviflosu_cli_path" name="aviflosu_cli_path" value="' . esc_attr($cliPath) . '" list="aviflosu_cli_path_datalist" placeholder="/usr/local/bin/magick" style="min-width:360px;" />';
+                echo '<datalist id="aviflosu_cli_path_datalist">';
+                foreach ($detected as $bin) {
+                    $path = isset($bin['path']) ? (string) $bin['path'] : '';
+                    if ($path !== '') {
+                        echo '<option value="' . esc_attr($path) . '">';
+                    }
+                }
+                echo '</datalist>';
+                echo '<p class="description">' . esc_html__('Select a detected binary or enter a custom path.', 'avif-local-support') . '</p>';
+
+
+                echo '<label for="aviflosu_cli_args" style="display:block;margin-top:12px;">' . esc_html__('Extra CLI Arguments', 'avif-local-support') . '</label>';
+                echo '<input type="text" id="aviflosu_cli_args" name="aviflosu_cli_args" value="' . esc_attr($cliArgs) . '" style="min-width:360px;width:100%;max-width:600px;" />';
+                if ($cliArgs !== $suggestedArgs && $suggestedArgs !== '') {
+                    echo '<br><small>' . sprintf(esc_html__('Suggested: %s', 'avif-local-support'), '<code>' . esc_html($suggestedArgs) . '</code>');
+                    echo ' <a href="#" class="aviflosu-apply-suggestion" data-target="aviflosu_cli_args" data-value="' . esc_attr($suggestedArgs) . '">[' . esc_html__('Apply', 'avif-local-support') . ']</a></small>';
+                }
+                echo '<p class="description" style="margin-top:6px;">' . esc_html__('Additional flags passed to ImageMagick (e.g. -define avif:my-flag=1).', 'avif-local-support') . '</p>';
+
+                echo '<label for="aviflosu_cli_env" style="display:block;margin-top:12px;">' . esc_html__('CLI Environment Variables', 'avif-local-support') . '</label>';
+                echo '<textarea id="aviflosu_cli_env" name="aviflosu_cli_env" rows="4" style="min-width:360px;width:100%;max-width:600px;font-family:monospace;">' . esc_textarea($cliEnv) . '</textarea>';
+                if ($cliEnv !== $suggestedEnv) {
+                    echo '<br><small>' . esc_html__('Suggested environment:', 'avif-local-support');
+                    echo ' <a href="#" class="aviflosu-apply-suggestion" data-target="aviflosu_cli_env" data-value="' . esc_attr($suggestedEnv) . '">[' . esc_html__('Apply', 'avif-local-support') . ']</a></small>';
+                }echo '<p class="description" style="margin-top:6px;">' . esc_html__('Environment variables for the CLI process (KEY=VALUE), one per line.', 'avif-local-support') . '</p>';
+
+                echo '</div>';
+            },
+            'avif-local-support',
+            'aviflosu_conversion',
+            ['label_for' => 'aviflosu_cli_path']
         );
     }
 
@@ -390,8 +435,14 @@ final class Plugin
     public function sanitize_engine_mode($value): string
     {
         $v = (string) $value;
-        $allowed = ['auto', 'cli'];
+        $allowed = ['auto', 'cli', 'imagick', 'gd'];
         return in_array($v, $allowed, true) ? $v : 'auto';
+    }
+
+    public function sanitize_cli_env($value): string
+    {
+        // Simple sanitization: keep newlines, strip tags
+        return trim(strip_tags((string) $value));
     }
 
     public function render_admin_page(): void
@@ -609,7 +660,7 @@ final class Plugin
         echo '    <div class="postbox">';
         echo '      <h2 class="avif-header"><span>' . esc_html__('Server support', 'avif-local-support') . '</span></h2>';
         echo '      <div class="inside">';
-        echo '        <p class="description">' . esc_html__('Server capabilities for AVIF conversion.', 'avif-local-support') . '</p>';
+
         echo '        <table class="widefat striped" style="max-width:720px">';
         echo '          <tbody>';
         echo '            <tr><td><strong>' . esc_html__('PHP Version', 'avif-local-support') . '</strong></td><td>' . esc_html(PHP_VERSION) . '</td></tr>';
@@ -631,7 +682,7 @@ final class Plugin
         $formats = isset($system_status['imagick_formats']) && is_array($system_status['imagick_formats']) ? $system_status['imagick_formats'] : [];
         if (!empty($formats)) {
             $fmtStr = implode(', ', array_map('strval', $formats));
-            echo '            <tr><td><strong>' . esc_html__('Imagick formats (sample)', 'avif-local-support') . '</strong></td><td><code style="white-space:pre-wrap;word-break:break-word;display:inline-block;max-width:560px;overflow:auto;">' . esc_html($fmtStr) . '</code></td></tr>';
+            echo '            <tr><td><strong>' . esc_html__('Imagick formats', 'avif-local-support') . '</strong></td><td><code style="white-space:pre-wrap;word-break:break-word;display:inline-block;max-width:560px;overflow:auto;">' . esc_html($fmtStr) . '</code></td></tr>';
         }
         // CLI binaries found
         $cliDetected = isset($system_status['cli_detected']) && is_array($system_status['cli_detected']) ? $system_status['cli_detected'] : [];
@@ -902,6 +953,8 @@ final class Plugin
         update_option('aviflosu_disable_memory_check', false);
         update_option('aviflosu_engine_mode', 'auto');
         update_option('aviflosu_cli_path', '');
+        update_option('aviflosu_cli_args', $this->get_suggested_cli_args());
+        update_option('aviflosu_cli_env', $this->get_suggested_cli_env());
         \wp_safe_redirect(\admin_url('options-general.php?page=avif-local-support#settings'));
         exit;
     }
@@ -1034,11 +1087,33 @@ final class Plugin
             }
         }
 
+
         return [
             'total_jpegs' => $total,
             'existing_avifs' => $existing,
             'missing_avifs' => $missing,
         ];
+    }
+
+    /**
+     * Get suggested CLI environment variables based on the system.
+     */
+    private function get_suggested_cli_env(): string
+    {
+        $path = '/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin';
+        // Add Homebrew path on macOS
+        if (PHP_OS_FAMILY === 'Darwin') {
+            $path .= ':/opt/homebrew/bin';
+        }
+        return "PATH=$path\nHOME=/tmp\nLC_ALL=C";
+    }
+
+    /**
+     * Get suggested CLI arguments.
+     */
+    private function get_suggested_cli_args(): string
+    {
+        return '';
     }
 
     /**
@@ -1076,9 +1151,8 @@ final class Plugin
                 // Capture a short list of formats to display
                 $allFormats = $imagick->queryFormats();
                 if (is_array($allFormats)) {
-                    // Show a compact comma list limited to common ones if too long
-                    $subset = array_slice($allFormats, 0, 20);
-                    $status['imagick_formats'] = $subset;
+                    // Show all formats
+                    $status['imagick_formats'] = $allFormats;
                 }
 
                 $imagick->destroy();
@@ -1210,19 +1284,11 @@ final class Plugin
             return false;
         }
         foreach ($out as $line) {
-            if (!preg_match('/^\s*AVIF\b/i', $line)) {
-                continue;
+            // Look for AVIF in the format list (case-insensitive)
+            if (stripos($line, 'AVIF') !== false) {
+                // Check if the line contains 'w' indicating write support
+                return (stripos($line, 'w') !== false);
             }
-            // Lines can be like:
-            //   AVIF* rw-   ...
-            //   AVIF  HEIC  rw+   ...
-            // Relaxed regex to allow end of line after mode
-            if (preg_match('/^\s*AVIF\S*\s+(?:[A-Za-z0-9_-]+\s+)?([rw\+\-]{2,3})(?:\s|$)/i', $line, $m)) {
-                $mode = strtolower($m[1]);
-                return (strpos($mode, 'w') !== false);
-            }
-            // Fallback: if AVIF line exists, assume supported (conservative yes)
-            return true;
         }
         return false;
     }

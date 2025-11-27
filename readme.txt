@@ -4,7 +4,7 @@ Plugin URI: https://github.com/ddegner/avif-local-support
 Tags: images, avif, performance, conversion, media
 Requires at least: 6.5
 Tested up to: 6.8
-Stable tag: 0.3.2
+Stable tag: 0.4.0
 Requires PHP: 8.0
 License: GPL v2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -132,6 +132,14 @@ sudo ldconfig
 The plugin now estimates memory usage before processing to prevent fatal errors (crashes) on servers with limited RAM. If you see this, try switching to the "ImageMagick CLI" engine or increasing your PHP `memory_limit`. As a last resort, you can check "Disable memory check" in the settings to bypass this safety measure.
 
 == Changelog ==
+
+= 0.4.0 =
+- Architecture: Major refactor to use strict types, DTOs, and dedicated Encoder classes.
+- Performance: Optimized frontend HTML parsing to reduce overhead.
+- Reliability: Improved CLI execution robustness and error handling.
+- Security: Enhanced XML entity protection in SVG/XML processing.
+- Dev: Added Composer support and improved code organization (PSR-4 ready).
+
 = 0.3.2 =
 - Docs: Added FAQ and troubleshooting guide for LiteSpeed/libheif compatibility issue (empty AVIF files).
 - Fix: Added environment variable injection (LD_LIBRARY_PATH, HOME, PATH) for restricted PHP environments.
@@ -245,6 +253,9 @@ The plugin now estimates memory usage before processing to prevent fatal errors 
 Initial release.
 
 == Upgrade Notice ==
+= 0.4.0 =
+Major refactor for improved performance, reliability, and security. Recommended update.
+
 = 0.3.2 =
 Documents fix for LiteSpeed/libheif AVIF encoding issues. If you see empty 252-byte AVIF files on LiteSpeed, see the FAQ for the libheif upgrade solution.
 

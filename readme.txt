@@ -3,8 +3,8 @@ Contributors: ddegner
 Plugin URI: https://github.com/ddegner/avif-local-support
 Tags: images, avif, performance, conversion, media
 Requires at least: 6.5
-Tested up to: 6.8
-Stable tag: 0.4.0
+Tested up to: 6.9
+Stable tag: 0.4.1
 Requires PHP: 8.0
 License: GPL v2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -133,6 +133,9 @@ The plugin now estimates memory usage before processing to prevent fatal errors 
 
 == Changelog ==
 
+= 0.4.1 =
+- Compatibility: Tested up to WordPress 6.9.
+
 = 0.4.0 =
 - Architecture: Major refactor to use strict types, DTOs, and dedicated Encoder classes.
 - Performance: Optimized frontend HTML parsing to reduce overhead.
@@ -253,6 +256,9 @@ The plugin now estimates memory usage before processing to prevent fatal errors 
 Initial release.
 
 == Upgrade Notice ==
+= 0.4.1 =
+Tested up to WordPress 6.9.
+
 = 0.4.0 =
 Major refactor for improved performance, reliability, and security. Recommended update.
 

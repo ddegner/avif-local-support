@@ -10,23 +10,49 @@ defined('ABSPATH') || exit;
 
 /**
  * Immutable settings object for AVIF conversion.
+ * Note: readonly keyword removed for WordPress.org SVN compatibility.
  */
-readonly class AvifSettings
+final class AvifSettings
 {
+    public int $quality;
+    public int $speed;
+    public string $subsampling;
+    public string $bitDepth;
+    public string $engineMode;
+    public string $cliPath;
+    public bool $disableMemoryCheck;
+    public bool $lossless;
+    public bool $convertOnUpload;
+    public bool $convertViaSchedule;
+    public string $cliArgs;
+    public string $cliEnv;
+
     public function __construct(
-        public int $quality = 85,
-        public int $speed = 1,
-        public string $subsampling = '420',
-        public string $bitDepth = '8',
-        public string $engineMode = 'auto',
-        public string $cliPath = '',
-        public bool $disableMemoryCheck = false,
-        public bool $lossless = false,
-        public bool $convertOnUpload = true,
-        public bool $convertViaSchedule = true,
-        public string $cliArgs = '',
-        public string $cliEnv = ''
+        int $quality = 85,
+        int $speed = 1,
+        string $subsampling = '420',
+        string $bitDepth = '8',
+        string $engineMode = 'auto',
+        string $cliPath = '',
+        bool $disableMemoryCheck = false,
+        bool $lossless = false,
+        bool $convertOnUpload = true,
+        bool $convertViaSchedule = true,
+        string $cliArgs = '',
+        string $cliEnv = ''
     ) {
+        $this->quality = $quality;
+        $this->speed = $speed;
+        $this->subsampling = $subsampling;
+        $this->bitDepth = $bitDepth;
+        $this->engineMode = $engineMode;
+        $this->cliPath = $cliPath;
+        $this->disableMemoryCheck = $disableMemoryCheck;
+        $this->lossless = $lossless;
+        $this->convertOnUpload = $convertOnUpload;
+        $this->convertViaSchedule = $convertViaSchedule;
+        $this->cliArgs = $cliArgs;
+        $this->cliEnv = $cliEnv;
     }
 
     public static function fromOptions(): self

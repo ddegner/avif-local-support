@@ -8,14 +8,22 @@ defined('ABSPATH') || exit;
 
 /**
  * Standardized result from an encoder.
+ * Note: readonly keyword removed for WordPress.org SVN compatibility.
  */
-readonly class ConversionResult
+final class ConversionResult
 {
+    public bool $success;
+    public ?string $error;
+    public ?string $suggestion;
+
     public function __construct(
-        public bool $success,
-        public ?string $error = null,
-        public ?string $suggestion = null
+        bool $success,
+        ?string $error = null,
+        ?string $suggestion = null
     ) {
+        $this->success = $success;
+        $this->error = $error;
+        $this->suggestion = $suggestion;
     }
 
     public static function success(): self

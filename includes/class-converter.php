@@ -407,6 +407,10 @@ final class Converter
             'post_status' => 'inherit',
             'posts_per_page' => -1,
             'fields' => 'ids',
+            'no_found_rows' => true,
+            'update_post_meta_cache' => false,
+            'update_post_term_cache' => false,
+            'cache_results' => false,
         ]);
         $count = 0;
         foreach ($query->posts as $attachmentId) {
@@ -626,7 +630,8 @@ final class Converter
         ];
 
         if ($details !== null) {
-            $logDetails = array_merge($logDetails, $details);
+            // Avoid logging overly noisy or sensitive details (env vars / secrets).
+            $logDetails = array_merge($logDetails, $this->sanitize_log_details($details));
         }
 
         // Add error message if provided
@@ -643,5 +648,47 @@ final class Converter
         }
 
         $this->plugin->add_log($status, $message, $logDetails);
+    }
+
+    /**
+     * Sanitize details before persisting them to logs.
+     */
+    private function sanitize_log_details(array $details): array
+    {
+        // If the CLI env is provided as a multiline string, only keep PATH (and cap length).
+        if (isset($details['cli_env']) && is_string($details['cli_env'])) {
+            $envLines = preg_split("/\r\n|\r|\n/", $details['cli_env']) ?: [];
+            $path = '';
+            foreach ($envLines as $line) {
+                $line = trim((string) $line);
+                if (stripos($line, 'PATH=') === 0) {
+                    $path = substr($line, 5);
+                    break;
+                }
+            }
+            if ($path !== '') {
+                if (strlen($path) > 500) {
+                    $path = substr($path, 0, 500) . '…';
+                }
+                $details['cli_env'] = 'PATH=' . $path;
+            } else {
+                // Still indicate it was set, but don't store the full blob.
+                $details['cli_env'] = '(set)';
+            }
+        }
+
+        // Light redaction for common secret-like patterns in CLI args/env.
+        foreach (['cli_args', 'cli_env'] as $k) {
+            if (!isset($details[$k]) || !is_string($details[$k])) {
+                continue;
+            }
+            $details[$k] = preg_replace(
+                '/\b(password|passwd|secret|token|api[_-]?key)\s*=\s*([^\s]+)/i',
+                '$1=REDACTED',
+                $details[$k]
+            ) ?? $details[$k];
+        }
+
+        return $details;
     }
 }

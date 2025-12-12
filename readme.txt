@@ -2,10 +2,10 @@
 Contributors: ddegner
 Plugin URI: https://github.com/ddegner/avif-local-support
 Tags: images, avif, performance, conversion, media
-Requires at least: 6.5
+Requires at least: 6.8
 Tested up to: 6.9
-Stable tag: 0.4.1
-Requires PHP: 8.0
+Stable tag: 0.4.2
+Requires PHP: 8.3
 License: GPL v2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -34,8 +34,8 @@ AVIF Local Support adds modern AVIF image support to WordPress while keeping com
 
 = Requirements =
 
-- PHP 8.0 or later (8.1+ recommended)
-- WordPress 6.5 or later
+- PHP 8.3 or later
+- WordPress 6.8 or later
 - Imagick PHP extension recommended for best quality and metadata/ICC preservation. GD fallback supported.
 
 == Installation ==
@@ -132,6 +132,18 @@ sudo ldconfig
 The plugin now estimates memory usage before processing to prevent fatal errors (crashes) on servers with limited RAM. If you see this, try switching to the "ImageMagick CLI" engine or increasing your PHP `memory_limit`. As a last resort, you can check "Disable memory check" in the settings to bypass this safety measure.
 
 == Changelog ==
+
+= 0.4.2 =
+- Enhancement: ImageMagick CLI auto-detection now works in "Auto" mode without manual path configuration.
+- Enhancement: Improved CLI encoder with smart -define namespace probing (heic/avif) for better compatibility across ImageMagick builds.
+- Enhancement: Added caching for ImageMagick CLI detection and capability probing to reduce overhead.
+- Enhancement: Admin UI now uses WordPress REST API instead of admin-ajax for better performance and reliability.
+- Enhancement: Improved progress polling during bulk conversions with better timeout handling.
+- Enhancement: Enhanced ImageMagick test output to show detected define strategy and capabilities.
+- Enhancement: Dynamic visibility of advanced settings (subsampling/bit depth) based on selected engine mode.
+- Fix: CLI environment variables now properly handle Darwin-specific paths only on macOS.
+- Fix: Improved error handling and user feedback throughout admin interface.
+- Compatibility: Tested up to WordPress 6.9.
 
 = 0.4.1 =
 - Compatibility: Tested up to WordPress 6.9.
@@ -256,6 +268,9 @@ The plugin now estimates memory usage before processing to prevent fatal errors 
 Initial release.
 
 == Upgrade Notice ==
+= 0.4.2 =
+Improved ImageMagick CLI auto-detection, better admin UI performance with REST API, and enhanced compatibility. Recommended update.
+
 = 0.4.1 =
 Tested up to WordPress 6.9.
 

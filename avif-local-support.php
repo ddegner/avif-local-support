@@ -6,13 +6,13 @@ declare(strict_types=1);
  * Plugin Name: AVIF Local Support
  * Plugin URI: https://github.com/ddegner/avif-local-support
  * Description: Unified AVIF support and conversion. Local-first processing with a strong focus on image quality when converting JPEGs.
- * Version: 0.4.1
+ * Version: 0.4.2
  * Author: David Degner
  * Author URI: https://www.DavidDegner.com
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
- * Requires at least: 6.5
- * Requires PHP: 8.0
+ * Requires at least: 6.8
+ * Requires PHP: 8.3
  * Text Domain: avif-local-support
  * Domain Path: /languages
  */
@@ -21,7 +21,7 @@ declare(strict_types=1);
 \defined('ABSPATH') || exit;
 
 // Define constants
-\define('AVIFLOSU_VERSION', '0.4.1');
+\define('AVIFLOSU_VERSION', '0.4.2');
 \define('AVIFLOSU_PLUGIN_FILE', __FILE__);
 \define('AVIFLOSU_PLUGIN_DIR', plugin_dir_path(__FILE__));
 \define('AVIFLOSU_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -31,6 +31,7 @@ declare(strict_types=1);
 require_once AVIFLOSU_INC_DIR . '/DTO/AvifSettings.php';
 require_once AVIFLOSU_INC_DIR . '/DTO/ConversionResult.php';
 require_once AVIFLOSU_INC_DIR . '/Contracts/AvifEncoderInterface.php';
+require_once AVIFLOSU_INC_DIR . '/ImageMagickCli.php';
 require_once AVIFLOSU_INC_DIR . '/Encoders/CliEncoder.php';
 require_once AVIFLOSU_INC_DIR . '/Encoders/ImagickEncoder.php';
 require_once AVIFLOSU_INC_DIR . '/Encoders/GdEncoder.php';

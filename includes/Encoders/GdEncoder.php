@@ -66,12 +66,8 @@ class GdEncoder implements AvifEncoderInterface
         $speed = min(8, $settings->speed);
         $success = false;
 
-        // PHP 8.1+ supports speed param
-        if (version_compare(PHP_VERSION, '8.1.0', '>=')) {
-            $success = @imageavif($gd, $destination, $settings->quality, $speed);
-        } else {
-            $success = @imageavif($gd, $destination, $settings->quality);
-        }
+        // PHP 8.1+ supports the $speed param. Plugin requires PHP 8.3+.
+        $success = @imageavif($gd, $destination, $settings->quality, $speed);
 
         imagedestroy($gd);
 

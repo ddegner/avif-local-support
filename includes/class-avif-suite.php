@@ -25,16 +25,10 @@ final class Plugin
         add_action('admin_menu', [$this, 'add_admin_menu']);
         add_action('admin_init', [$this, 'register_settings']);
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_assets']);
+        add_action('rest_api_init', [$this, 'register_rest_routes']);
         add_filter('plugin_action_links_' . plugin_basename(\AVIFLOSU_PLUGIN_FILE), [$this, 'add_settings_link']);
         add_action('admin_post_aviflosu_upload_test', [$this, 'handle_upload_test']);
         add_action('admin_post_aviflosu_reset_defaults', [$this, 'handle_reset_defaults']);
-        add_action('wp_ajax_aviflosu_scan_missing', [$this, 'ajax_scan_missing']);
-        add_action('wp_ajax_aviflosu_convert_now', [$this, 'ajax_convert_now']);
-        add_action('wp_ajax_aviflosu_delete_all_avifs', [$this, 'ajax_delete_all_avifs']);
-        add_action('wp_ajax_aviflosu_get_logs', [$this, 'ajax_get_logs']);
-        add_action('wp_ajax_aviflosu_clear_logs', [$this, 'ajax_clear_logs']);
-        add_action('wp_ajax_aviflosu_run_magick_test', [$this, 'ajax_run_magick_test']);
-        add_action('wp_ajax_aviflosu_upload_test_ajax', [$this, 'handle_upload_test_ajax']);
 
         // Features
         if ((bool) get_option('aviflosu_enable_support', true)) {
@@ -57,17 +51,288 @@ final class Plugin
             return;
         }
         $base = \AVIFLOSU_PLUGIN_URL;
-        wp_enqueue_style('avif-local-support-admin', $base . 'assets/admin.css', [], \AVIFLOSU_VERSION);
-        wp_enqueue_script('avif-local-support-admin', $base . 'assets/admin.js', [], \AVIFLOSU_VERSION, true);
-        wp_localize_script('avif-local-support-admin', 'AVIFLocalSupportData', [
-            'ajaxUrl' => admin_url('admin-ajax.php'),
-            'scanNonce' => wp_create_nonce('aviflosu_scan_missing'),
-            'convertNonce' => wp_create_nonce('aviflosu_convert_now'),
-            'deleteNonce' => wp_create_nonce('aviflosu_delete_all_avifs'),
-            'logsNonce' => wp_create_nonce('aviflosu_logs'),
-            'diagNonce' => wp_create_nonce('aviflosu_diag'),
-            'uploadTestNonce' => wp_create_nonce('aviflosu_upload_test_ajax'),
+
+        $cssFile = \AVIFLOSU_PLUGIN_DIR . 'assets/admin.css';
+        $jsFile = \AVIFLOSU_PLUGIN_DIR . 'assets/admin.js';
+        $cssVer = file_exists($cssFile) ? (string) filemtime($cssFile) : \AVIFLOSU_VERSION;
+        $jsVer = file_exists($jsFile) ? (string) filemtime($jsFile) : \AVIFLOSU_VERSION;
+
+        wp_enqueue_style('avif-local-support-admin', $base . 'assets/admin.css', [], $cssVer);
+        wp_enqueue_script('avif-local-support-admin', $base . 'assets/admin.js', ['wp-api-fetch'], $jsVer, true);
+
+        $data = [
+            'restUrl' => esc_url_raw(rest_url()),
+            'restNonce' => wp_create_nonce('wp_rest'),
+        ];
+        wp_add_inline_script(
+            'avif-local-support-admin',
+            'window.AVIFLocalSupportData = ' . wp_json_encode($data) . ';',
+            'before'
+        );
+    }
+
+    public function register_rest_routes(): void
+    {
+        $namespace = 'aviflosu/v1';
+
+        register_rest_route($namespace, '/scan-missing', [
+            'methods' => 'POST',
+            'permission_callback' => [$this, 'rest_permission_manage_options'],
+            'callback' => [$this, 'rest_scan_missing'],
         ]);
+
+        register_rest_route($namespace, '/convert-now', [
+            'methods' => 'POST',
+            'permission_callback' => [$this, 'rest_permission_manage_options'],
+            'callback' => [$this, 'rest_convert_now'],
+        ]);
+
+        register_rest_route($namespace, '/delete-all-avifs', [
+            'methods' => 'POST',
+            'permission_callback' => [$this, 'rest_permission_manage_options'],
+            'callback' => [$this, 'rest_delete_all_avifs'],
+        ]);
+
+        register_rest_route($namespace, '/logs', [
+            'methods' => 'GET',
+            'permission_callback' => [$this, 'rest_permission_manage_options'],
+            'callback' => [$this, 'rest_get_logs'],
+        ]);
+
+        register_rest_route($namespace, '/logs/clear', [
+            'methods' => 'POST',
+            'permission_callback' => [$this, 'rest_permission_manage_options'],
+            'callback' => [$this, 'rest_clear_logs'],
+        ]);
+
+        register_rest_route($namespace, '/magick-test', [
+            'methods' => 'POST',
+            'permission_callback' => [$this, 'rest_permission_manage_options'],
+            'callback' => [$this, 'rest_run_magick_test'],
+        ]);
+
+        register_rest_route($namespace, '/upload-test', [
+            'methods' => 'POST',
+            'permission_callback' => [$this, 'rest_permission_manage_options'],
+            'callback' => [$this, 'rest_upload_test'],
+        ]);
+    }
+
+    public function rest_permission_manage_options(): bool
+    {
+        return current_user_can('manage_options');
+    }
+
+    public function rest_scan_missing(\WP_REST_Request $request): \WP_REST_Response
+    {
+        return rest_ensure_response($this->compute_missing_counts());
+    }
+
+    public function rest_convert_now(\WP_REST_Request $request): \WP_REST_Response
+    {
+        $queued = false;
+        if (!\wp_next_scheduled('aviflosu_run_on_demand')) {
+            \wp_schedule_single_event(time() + 5, 'aviflosu_run_on_demand');
+            $queued = true;
+        }
+        return rest_ensure_response(['queued' => $queued]);
+    }
+
+    public function rest_delete_all_avifs(\WP_REST_Request $request): \WP_REST_Response
+    {
+        $uploads = \wp_upload_dir();
+        $baseDir = (string) ($uploads['basedir'] ?? '');
+        if ($baseDir === '' || !is_dir($baseDir)) {
+            return new \WP_REST_Response(['message' => 'uploads_not_found'], 400);
+        }
+
+        $deleted = 0;
+        $failed = 0;
+
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($baseDir, \FilesystemIterator::SKIP_DOTS)
+        );
+        foreach ($iterator as $fileInfo) {
+            if (!$fileInfo instanceof \SplFileInfo) {
+                continue;
+            }
+            $path = $fileInfo->getPathname();
+            if (\preg_match('/\.avif$/i', $path)) {
+                if ($fileInfo->isLink()) {
+                    continue;
+                }
+                $ok = \wp_delete_file($path);
+                if ($ok) {
+                    $deleted++;
+                } else {
+                    $failed++;
+                }
+            }
+        }
+
+        return rest_ensure_response(['deleted' => $deleted, 'failed' => $failed]);
+    }
+
+    public function rest_get_logs(\WP_REST_Request $request): \WP_REST_Response
+    {
+        ob_start();
+        $this->render_logs_content();
+        $content = ob_get_clean();
+        return rest_ensure_response(['content' => $content]);
+    }
+
+    public function rest_clear_logs(\WP_REST_Request $request): \WP_REST_Response
+    {
+        $this->clear_logs();
+        return rest_ensure_response(['message' => 'Logs cleared']);
+    }
+
+    public function rest_run_magick_test(\WP_REST_Request $request): \WP_REST_Response
+    {
+        $path = (string) get_option('aviflosu_cli_path', '');
+        $detected = $this->detect_cli_binaries();
+        if ($path === '' && !empty($detected)) {
+            $path = (string) ($detected[0]['path'] ?? '');
+        }
+        $autoSelected = false;
+        if ($path === '') {
+            $auto = ImageMagickCli::getAutoDetectedPath(null);
+            if ($auto !== '') {
+                $path = $auto;
+                $autoSelected = true;
+            }
+        }
+
+        $disableFunctions = array_map('trim', explode(',', (string) ini_get('disable_functions')));
+        $execAvailable = !in_array('exec', $disableFunctions, true);
+        if (!$execAvailable) {
+            return new \WP_REST_Response(['message' => 'exec disabled by PHP disable_functions.'], 400);
+        }
+        if ($path === '' || !@file_exists($path)) {
+            return new \WP_REST_Response(['message' => 'No ImageMagick CLI path found. Set a custom path under Engine Selection.'], 400);
+        }
+
+        // Also report define strategy for this binary.
+        $strategy = ImageMagickCli::getDefineStrategy($path, null);
+
+        $cmd = escapeshellarg($path) . ' -version 2>&1';
+        $outLines = [];
+        $exitCode = 0;
+        @exec($cmd, $outLines, $exitCode);
+        $output = trim(implode("\n", array_map('strval', $outLines)));
+
+        if ($output === '') {
+            $hint = 'No output. If using ImageMagick 7, ensure the path points to `magick`.';
+            return rest_ensure_response([
+                'code' => $exitCode,
+                'output' => $output,
+                'hint' => $hint,
+                'selected_path' => $path,
+                'auto_selected' => $autoSelected,
+                'define_strategy' => $strategy,
+            ]);
+        }
+        return rest_ensure_response([
+            'code' => $exitCode,
+            'output' => $output,
+            'selected_path' => $path,
+            'auto_selected' => $autoSelected,
+            'define_strategy' => $strategy,
+        ]);
+    }
+
+    public function rest_upload_test(\WP_REST_Request $request): \WP_REST_Response
+    {
+        if (!function_exists('media_handle_sideload')) {
+            require_once ABSPATH . 'wp-admin/includes/file.php';
+            require_once ABSPATH . 'wp-admin/includes/media.php';
+            require_once ABSPATH . 'wp-admin/includes/image.php';
+        }
+
+        $files = $request->get_file_params();
+        $rawFile = isset($files['avif_local_support_test_file']) && is_array($files['avif_local_support_test_file'])
+            ? $files['avif_local_support_test_file']
+            : [];
+
+        if (empty($rawFile) || empty($rawFile['tmp_name'])) {
+            return new \WP_REST_Response(['message' => __('No file uploaded.', 'avif-local-support')], 400);
+        }
+
+        $fileType = wp_check_filetype_and_ext((string) $rawFile['tmp_name'], (string) ($rawFile['name'] ?? ''), ['jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg']);
+        if (empty($fileType['ext']) || !\in_array($fileType['ext'], ['jpg', 'jpeg'], true)) {
+            return new \WP_REST_Response(['message' => __('Only JPEG files are allowed.', 'avif-local-support')], 400);
+        }
+
+        $attachment_id = media_handle_sideload($rawFile, 0);
+        if (is_wp_error($attachment_id)) {
+            return new \WP_REST_Response(['message' => $attachment_id->get_error_message()], 400);
+        }
+
+        $file = get_attached_file($attachment_id);
+        if ($file) {
+            $metadata = \wp_generate_attachment_metadata($attachment_id, $file);
+            if ($metadata) {
+                \wp_update_attachment_metadata($attachment_id, $metadata);
+            }
+        }
+
+        $results = $this->converter->convertAttachmentNow((int) $attachment_id);
+        $editLink = get_edit_post_link($attachment_id);
+        $title = get_the_title($attachment_id) ?: (string) $attachment_id;
+
+        ob_start();
+        echo '<hr />';
+        echo '<p><strong>' . esc_html__('Test results for attachment:', 'avif-local-support') . '</strong> ' . sprintf('<a href="%s" target="_blank">%s</a>', esc_url($editLink ?: '#'), esc_html($title)) . '</p>';
+        echo '<table class="widefat striped" style="max-width:960px">';
+        echo '  <thead><tr>'
+            . '<th>' . esc_html__('Size', 'avif-local-support') . '</th>'
+            . '<th>' . esc_html__('Dimensions', 'avif-local-support') . '</th>'
+            . '<th>' . esc_html__('JPEG', 'avif-local-support') . '</th>'
+            . '<th>' . esc_html__('JPEG size', 'avif-local-support') . '</th>'
+            . '<th>' . esc_html__('AVIF', 'avif-local-support') . '</th>'
+            . '<th>' . esc_html__('AVIF size', 'avif-local-support') . '</th>'
+            . '<th>' . esc_html__('Status', 'avif-local-support') . '</th>'
+            . '</tr></thead>';
+        echo '  <tbody>';
+        foreach (($results['sizes'] ?? []) as $row) {
+            $name = isset($row['name']) ? (string) $row['name'] : '';
+            $dims = '';
+            if (!empty($row['width']) && !empty($row['height'])) {
+                $dims = (int) $row['width'] . '×' . (int) $row['height'];
+            }
+            $jpegUrl = isset($row['jpeg_url']) ? (string) $row['jpeg_url'] : '';
+            $jpegSize = isset($row['jpeg_size']) ? (int) $row['jpeg_size'] : 0;
+            $avifUrl = isset($row['avif_url']) ? (string) $row['avif_url'] : '';
+            $avifSize = isset($row['avif_size']) ? (int) $row['avif_size'] : 0;
+            $status = !empty($row['converted']) ? __('Converted', 'avif-local-support') : __('Not created', 'avif-local-support');
+            $fmt = function (int $bytes): string {
+                if ($bytes <= 0) {
+                    return '-';
+                }
+                $units = ['B', 'KB', 'MB', 'GB'];
+                $i = 0;
+                $n = (float) $bytes;
+                while ($n >= 1024 && $i < count($units) - 1) {
+                    $n /= 1024;
+                    $i++;
+                }
+                return sprintf('%.1f %s', $n, $units[$i]);
+            };
+            echo '<tr>'
+                . '<td>' . esc_html($name) . '</td>'
+                . '<td>' . esc_html($dims) . '</td>'
+                . '<td>' . ($jpegUrl !== '' ? '<a href="' . esc_url($jpegUrl) . '" target="_blank" rel="noopener">' . esc_html__('View', 'avif-local-support') . '</a>' : '-') . '</td>'
+                . '<td>' . esc_html($fmt($jpegSize)) . '</td>'
+                . '<td>' . (!empty($row['converted']) && $avifUrl !== '' ? '<a href="' . esc_url($avifUrl) . '" target="_blank" rel="noopener">' . esc_html__('View', 'avif-local-support') . '</a>' : '-') . '</td>'
+                . '<td>' . esc_html($fmt($avifSize)) . '</td>'
+                . '<td>' . esc_html($status) . '</td>'
+                . '</tr>';
+        }
+        echo '  </tbody>';
+        echo '</table>';
+        $html = ob_get_clean();
+
+        return rest_ensure_response(['html' => $html, 'attachment_id' => $attachment_id]);
     }
 
     public function add_admin_menu(): void
@@ -391,7 +656,7 @@ final class Plugin
                 if ($cliEnv !== $suggestedEnv) {
                     echo '<br><small>' . esc_html__('Suggested environment:', 'avif-local-support');
                     echo ' <a href="#" class="aviflosu-apply-suggestion" data-target="aviflosu_cli_env" data-value="' . esc_attr($suggestedEnv) . '">[' . esc_html__('Apply', 'avif-local-support') . ']</a></small>';
-                }echo '<p class="description" style="margin-top:6px;">' . esc_html__('Environment variables for the CLI process (KEY=VALUE), one per line.', 'avif-local-support') . '</p>';
+                }echo '<p class="description" style="margin-top:6px;">' . esc_html__('Environment variables for the CLI process (KEY=VALUE), one per line. This does not change the CLI Path; it only affects the subprocess environment.', 'avif-local-support') . '</p>';
 
                 echo '</div>';
             },
@@ -674,9 +939,9 @@ final class Plugin
         echo '            <tr><td><strong>' . esc_html__('WordPress Version', 'avif-local-support') . '</strong></td><td>' . esc_html(get_bloginfo('version')) . '</td></tr>';
         echo '            <tr><td><strong>' . esc_html__('GD Extension', 'avif-local-support') . '</strong></td><td>' . (!empty($system_status['gd_available']) ? esc_html__('Available', 'avif-local-support') : esc_html__('Not available', 'avif-local-support')) . '</td></tr>';
         echo '            <tr><td><strong>' . esc_html__('GD AVIF Support', 'avif-local-support') . '</strong></td><td>' . (!empty($system_status['gd_avif_support']) ? esc_html__('Available', 'avif-local-support') : esc_html__('Not available', 'avif-local-support')) . '</td></tr>';
-        echo '            <tr><td><strong>' . esc_html__('ImageMagick (Imagick)', 'avif-local-support') . '</strong></td><td>' . (!empty($system_status['imagick_available']) ? esc_html__('Available', 'avif-local-support') : esc_html__('Not available', 'avif-local-support')) . '</td></tr>';
+        echo '            <tr><td><strong>' . esc_html__('Imagick (PHP extension)', 'avif-local-support') . '</strong></td><td>' . (!empty($system_status['imagick_available']) ? esc_html__('Available', 'avif-local-support') : esc_html__('Not available', 'avif-local-support')) . '</td></tr>';
         if (!empty($system_status['imagick_version'])) {
-            echo '            <tr><td><strong>' . esc_html__('ImageMagick Version', 'avif-local-support') . '</strong></td><td>' . esc_html($system_status['imagick_version']) . '</td></tr>';
+            echo '            <tr><td><strong>' . esc_html__('ImageMagick library version (used by Imagick)', 'avif-local-support') . '</strong></td><td>' . esc_html($system_status['imagick_version']) . '</td></tr>';
         }
         echo '            <tr><td><strong>' . esc_html__('ImageMagick AVIF Support', 'avif-local-support') . '</strong></td><td>' . (!empty($system_status['imagick_avif_support']) ? esc_html__('Available', 'avif-local-support') : esc_html__('Not available', 'avif-local-support')) . '</td></tr>';
         $formats = isset($system_status['imagick_formats']) && is_array($system_status['imagick_formats']) ? $system_status['imagick_formats'] : [];
@@ -687,7 +952,7 @@ final class Plugin
         // CLI binaries found
         $cliDetected = isset($system_status['cli_detected']) && is_array($system_status['cli_detected']) ? $system_status['cli_detected'] : [];
         if (!empty($cliDetected)) {
-            echo '            <tr><td><strong>' . esc_html__('ImageMagick CLI detected', 'avif-local-support') . '</strong></td><td>';
+            echo '            <tr><td><strong>' . esc_html__('ImageMagick CLI binaries (magick/convert)', 'avif-local-support') . '</strong></td><td>';
             echo '<ul style="margin:0;padding-left:18px;">';
             foreach ($cliDetected as $bin) {
                 $path = isset($bin['path']) ? (string) $bin['path'] : '';
@@ -750,20 +1015,6 @@ final class Plugin
     }
 
 
-
-    public function ajax_convert_now(): void
-    {
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(['message' => 'forbidden'], 403);
-        }
-        check_ajax_referer('aviflosu_convert_now', '_wpnonce');
-        $queued = false;
-        if (!\wp_next_scheduled('aviflosu_run_on_demand')) {
-            \wp_schedule_single_event(time() + 5, 'aviflosu_run_on_demand');
-            $queued = true;
-        }
-        wp_send_json_success(['queued' => $queued]);
-    }
 
     public function handle_upload_test(): void
     {
@@ -834,106 +1085,6 @@ final class Plugin
         exit;
     }
 
-    public function handle_upload_test_ajax(): void
-    {
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(['message' => 'forbidden'], 403);
-        }
-        check_ajax_referer('aviflosu_upload_test_ajax', '_wpnonce');
-
-        // Handle file upload
-        // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-        $rawFile = isset($_FILES['avif_local_support_test_file']) ? $_FILES['avif_local_support_test_file'] : [];
-
-        if (empty($rawFile) || !is_array($rawFile) || empty($rawFile['tmp_name'])) {
-            wp_send_json_error(['message' => __('No file uploaded.', 'avif-local-support')]);
-        }
-
-        if (!function_exists('media_handle_upload')) {
-            require_once ABSPATH . 'wp-admin/includes/file.php';
-            require_once ABSPATH . 'wp-admin/includes/media.php';
-            require_once ABSPATH . 'wp-admin/includes/image.php';
-        }
-
-        // Validate file type
-        $fileType = wp_check_filetype_and_ext($rawFile['tmp_name'], $rawFile['name'], ['jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg']);
-        if (empty($fileType['ext']) || !\in_array($fileType['ext'], ['jpg', 'jpeg'], true)) {
-            wp_send_json_error(['message' => __('Only JPEG files are allowed.', 'avif-local-support')]);
-        }
-
-        $attachment_id = media_handle_upload('avif_local_support_test_file', 0);
-        if (is_wp_error($attachment_id)) {
-            wp_send_json_error(['message' => $attachment_id->get_error_message()]);
-        }
-
-        // Generate metadata if needed (media_handle_upload usually does this, but good to ensure)
-        $file = get_attached_file($attachment_id);
-        if ($file) {
-            $metadata = \wp_generate_attachment_metadata($attachment_id, $file);
-            if ($metadata) {
-                \wp_update_attachment_metadata($attachment_id, $metadata);
-            }
-        }
-
-        // Run conversion
-        $results = $this->converter->convertAttachmentNow((int) $attachment_id);
-        $editLink = get_edit_post_link($attachment_id);
-        $title = get_the_title($attachment_id) ?: (string) $attachment_id;
-
-        // Generate HTML output
-        ob_start();
-        echo '<hr />';
-        echo '<p><strong>' . esc_html__('Test results for attachment:', 'avif-local-support') . '</strong> ' . sprintf('<a href="%s" target="_blank">%s</a>', esc_url($editLink ?: '#'), esc_html($title)) . '</p>';
-        echo '<table class="widefat striped" style="max-width:960px">';
-        echo '  <thead><tr>'
-            . '<th>' . esc_html__('Size', 'avif-local-support') . '</th>'
-            . '<th>' . esc_html__('Dimensions', 'avif-local-support') . '</th>'
-            . '<th>' . esc_html__('JPEG', 'avif-local-support') . '</th>'
-            . '<th>' . esc_html__('JPEG size', 'avif-local-support') . '</th>'
-            . '<th>' . esc_html__('AVIF', 'avif-local-support') . '</th>'
-            . '<th>' . esc_html__('AVIF size', 'avif-local-support') . '</th>'
-            . '<th>' . esc_html__('Status', 'avif-local-support') . '</th>'
-            . '</tr></thead>';
-        echo '  <tbody>';
-        foreach (($results['sizes'] ?? []) as $row) {
-            $name = isset($row['name']) ? (string) $row['name'] : '';
-            $dims = '';
-            if (!empty($row['width']) && !empty($row['height'])) {
-                $dims = (int) $row['width'] . '×' . (int) $row['height'];
-            }
-            $jpegUrl = isset($row['jpeg_url']) ? (string) $row['jpeg_url'] : '';
-            $jpegSize = isset($row['jpeg_size']) ? (int) $row['jpeg_size'] : 0;
-            $avifUrl = isset($row['avif_url']) ? (string) $row['avif_url'] : '';
-            $avifSize = isset($row['avif_size']) ? (int) $row['avif_size'] : 0;
-            $status = !empty($row['converted']) ? __('Converted', 'avif-local-support') : __('Not created', 'avif-local-support');
-            $fmt = function (int $bytes): string {
-                if ($bytes <= 0)
-                    return '-';
-                $units = ['B', 'KB', 'MB', 'GB'];
-                $i = 0;
-                $n = (float) $bytes;
-                while ($n >= 1024 && $i < count($units) - 1) {
-                    $n /= 1024;
-                    $i++;
-                }return sprintf('%.1f %s', $n, $units[$i]);
-            };
-            echo '<tr>'
-                . '<td>' . esc_html($name) . '</td>'
-                . '<td>' . esc_html($dims) . '</td>'
-                . '<td>' . ($jpegUrl !== '' ? '<a href="' . esc_url($jpegUrl) . '" target="_blank" rel="noopener">' . esc_html__('View', 'avif-local-support') . '</a>' : '-') . '</td>'
-                . '<td>' . esc_html($fmt($jpegSize)) . '</td>'
-                . '<td>' . (!empty($row['converted']) && $avifUrl !== '' ? '<a href="' . esc_url($avifUrl) . '" target="_blank" rel="noopener">' . esc_html__('View', 'avif-local-support') . '</a>' : '-') . '</td>'
-                . '<td>' . esc_html($fmt($avifSize)) . '</td>'
-                . '<td>' . esc_html($status) . '</td>'
-                . '</tr>';
-        }
-        echo '  </tbody>';
-        echo '</table>';
-        $html = ob_get_clean();
-
-        wp_send_json_success(['html' => $html, 'attachment_id' => $attachment_id]);
-    }
-
     public function handle_reset_defaults(): void
     {
         if (!current_user_can('manage_options')) {
@@ -966,57 +1117,6 @@ final class Plugin
         return $links;
     }
 
-    public function ajax_scan_missing(): void
-    {
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(['message' => 'forbidden'], 403);
-        }
-        check_ajax_referer('aviflosu_scan_missing', '_wpnonce');
-        $stats = $this->compute_missing_counts();
-        wp_send_json_success($stats);
-    }
-
-    public function ajax_delete_all_avifs(): void
-    {
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(['message' => 'forbidden'], 403);
-        }
-        check_ajax_referer('aviflosu_delete_all_avifs', '_wpnonce');
-
-        $uploads = \wp_upload_dir();
-        $baseDir = (string) ($uploads['basedir'] ?? '');
-        if ($baseDir === '' || !is_dir($baseDir)) {
-            wp_send_json_error(['message' => 'uploads_not_found']);
-        }
-
-        $deleted = 0;
-        $failed = 0;
-
-        $iterator = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator($baseDir, \FilesystemIterator::SKIP_DOTS)
-        );
-        foreach ($iterator as $fileInfo) {
-            if (!$fileInfo instanceof \SplFileInfo) {
-                continue;
-            }
-            $path = $fileInfo->getPathname();
-            if (preg_match('/\.avif$/i', $path)) {
-                // Do not follow symlinks
-                if ($fileInfo->isLink()) {
-                    continue;
-                }
-                $ok = \wp_delete_file($path);
-                if ($ok) {
-                    $deleted++;
-                } else {
-                    $failed++;
-                }
-            }
-        }
-
-        wp_send_json_success(['deleted' => $deleted, 'failed' => $failed]);
-    }
-
     private function compute_missing_counts(): array
     {
         $uploadDir = \wp_upload_dir();
@@ -1033,6 +1133,9 @@ final class Plugin
             'posts_per_page' => -1,
             'fields' => 'ids',
             'no_found_rows' => true,
+            'update_post_meta_cache' => false,
+            'update_post_term_cache' => false,
+            'cache_results' => false,
             'post_mime_type' => 'image/jpeg',
         ]);
         foreach ($query->posts as $attachmentId) {
@@ -1101,9 +1204,14 @@ final class Plugin
     private function get_suggested_cli_env(): string
     {
         $path = '/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin';
-        // Add Homebrew path on macOS
+        // Add common package manager paths on macOS (only if they exist)
         if (PHP_OS_FAMILY === 'Darwin') {
-            $path .= ':/opt/homebrew/bin';
+            if (@is_dir('/opt/homebrew/bin')) {
+                $path .= ':/opt/homebrew/bin';
+            }
+            if (@is_dir('/opt/local/bin')) {
+                $path .= ':/opt/local/bin';
+            }
         }
         return "PATH=$path\nHOME=/tmp\nLC_ALL=C";
     }
@@ -1190,107 +1298,17 @@ final class Plugin
      */
     private function detect_cli_binaries(): array
     {
-        $candidates = [];
-
-        // Check if shell functions are available
-        if (in_array('shell_exec', explode(',', ini_get('disable_functions')), true)) {
-            // shell_exec is disabled, only check hardcoded paths
-            foreach (['/usr/bin/magick', '/usr/local/bin/magick', '/opt/homebrew/bin/magick', '/opt/local/bin/magick', '/usr/bin/convert', '/usr/local/bin/convert', '/opt/homebrew/bin/convert', '/opt/local/bin/convert'] as $p) {
-                if (@file_exists($p) && @is_executable($p)) {
-                    $candidates[$p] = true;
-                }
-            }
-        } else {
-            // Common names using which/command -v
-            foreach (['magick', 'convert', 'convert-im6', 'convert-im7'] as $name) {
-                $p = $this->which($name);
-                if ($p) {
-                    $candidates[$p] = true;
-                }
-            }
-            // Common locations
-            foreach (['/usr/bin/magick', '/usr/local/bin/magick', '/opt/homebrew/bin/magick', '/opt/local/bin/magick', '/usr/bin/convert', '/usr/local/bin/convert', '/opt/homebrew/bin/convert', '/opt/local/bin/convert'] as $p) {
-                if (@file_exists($p) && @is_executable($p)) {
-                    $candidates[$p] = true;
-                }
-            }
-        }
-
+        $candidates = ImageMagickCli::detectCandidates(null);
+        // Keep return shape stable for existing UI: {path, version, avif}
         $out = [];
-        foreach (array_keys($candidates) as $path) {
-            // Ensure the path exists and is executable
-            if (!@file_exists($path) || !@is_executable($path)) {
-                continue;
-            }
-
-            $version = $this->im_version($path);
-            if ($version === '') {
-                continue;
-            }
-            $avif = $this->im_supports_avif($path);
-            $out[] = ['path' => $path, 'version' => $version, 'avif' => $avif];
+        foreach ($candidates as $c) {
+            $out[] = [
+                'path' => (string) ($c['path'] ?? ''),
+                'version' => (string) ($c['version'] ?? ''),
+                'avif' => !empty($c['avif']),
+            ];
         }
         return $out;
-    }
-
-    private function which(string $bin): string
-    {
-        // Check if shell functions are disabled
-        if (in_array('shell_exec', explode(',', ini_get('disable_functions')), true)) {
-            return '';
-        }
-
-        $cmd = 'command -v ' . escapeshellarg($bin) . ' 2>/dev/null';
-        $res = @shell_exec($cmd);
-        $p = is_string($res) ? trim($res) : '';
-
-        // Verify the result exists and is executable
-        if ($p !== '' && @file_exists($p) && @is_executable($p)) {
-            return $p;
-        }
-
-        return '';
-    }
-
-    private function im_version(string $path): string
-    {
-        // Check if exec is disabled
-        if (in_array('exec', explode(',', ini_get('disable_functions')), true)) {
-            return '';
-        }
-
-        $cmd = escapeshellarg($path) . ' -version 2>&1';
-        @exec($cmd, $out, $code);
-        if ($code !== 0 || empty($out)) {
-            return '';
-        }
-        // First line like: Version: ImageMagick 7.1.1-34 Q16-HDRI ...
-        $line = $out[0] ?? '';
-        return is_string($line) ? trim($line) : '';
-    }
-
-    private function im_supports_avif(string $path): bool
-    {
-        // Check if exec is disabled
-        if (in_array('exec', explode(',', ini_get('disable_functions')), true)) {
-            return false;
-        }
-
-        // Use -list format for both 'magick' and 'convert' as it is supported by both.
-        // Use 2>&1 to capture all output including potential warnings.
-        $cmd = escapeshellarg($path) . ' -list format 2>&1';
-        @exec($cmd, $out, $code);
-        if ($code !== 0 || empty($out)) {
-            return false;
-        }
-        foreach ($out as $line) {
-            // Look for AVIF in the format list (case-insensitive)
-            if (stripos($line, 'AVIF') !== false) {
-                // Check if the line contains 'w' indicating write support
-                return (stripos($line, 'w') !== false);
-            }
-        }
-        return false;
     }
 
     /**
@@ -1380,74 +1398,5 @@ final class Plugin
     private function clear_logs(): void
     {
         delete_transient('aviflosu_logs');
-    }
-
-    /**
-     * AJAX handler to get logs
-     */
-    public function ajax_get_logs(): void
-    {
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(['message' => 'forbidden'], 403);
-        }
-        check_ajax_referer('aviflosu_logs', '_wpnonce');
-
-        ob_start();
-        $this->render_logs_content();
-        $content = ob_get_clean();
-
-        wp_send_json_success(['content' => $content]);
-    }
-
-    /**
-     * AJAX handler to clear logs
-     */
-    public function ajax_clear_logs(): void
-    {
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(['message' => 'forbidden'], 403);
-        }
-        check_ajax_referer('aviflosu_logs', '_wpnonce');
-
-        $this->clear_logs();
-        wp_send_json_success(['message' => 'Logs cleared']);
-    }
-
-    /**
-     * AJAX: Run `magick -version` (or selected CLI) via proc_open and return output
-     */
-    public function ajax_run_magick_test(): void
-    {
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(['message' => 'forbidden'], 403);
-        }
-        check_ajax_referer('aviflosu_diag', '_wpnonce');
-
-        $path = (string) get_option('aviflosu_cli_path', '');
-        $detected = $this->detect_cli_binaries();
-        if ($path === '' && !empty($detected)) {
-            $path = (string) ($detected[0]['path'] ?? '');
-        }
-
-        $disableFunctions = array_map('trim', explode(',', (string) ini_get('disable_functions')));
-        $execAvailable = !in_array('exec', $disableFunctions, true);
-        if (!$execAvailable) {
-            wp_send_json_error(['message' => 'exec disabled by PHP disable_functions.'], 400);
-        }
-        if ($path === '' || !@file_exists($path)) {
-            wp_send_json_error(['message' => 'No ImageMagick CLI path found. Set a custom path under Engine Selection.'], 400);
-        }
-
-        $cmd = escapeshellarg($path) . ' -version 2>&1';
-        $outLines = [];
-        $exitCode = 0;
-        @exec($cmd, $outLines, $exitCode);
-        $output = trim(implode("\n", array_map('strval', $outLines)));
-
-        if ($output === '') {
-            $hint = 'No output. If using ImageMagick 7, ensure the path points to `magick`.';
-            wp_send_json_success(['code' => $exitCode, 'output' => $output, 'hint' => $hint]);
-        }
-        wp_send_json_success(['code' => $exitCode, 'output' => $output]);
     }
 }

@@ -4,6 +4,28 @@
   function $(selector) { return document.querySelector(selector); }
   function $all(selector) { return Array.prototype.slice.call(document.querySelectorAll(selector)); }
 
+  var apiConfigured = false;
+  function configureApiFetch() {
+    if (apiConfigured) return;
+    apiConfigured = true;
+    if (typeof AVIFLocalSupportData === 'undefined') return;
+    if (!window.wp || !wp.apiFetch) return;
+    if (AVIFLocalSupportData.restUrl) {
+      wp.apiFetch.use(wp.apiFetch.createRootURLMiddleware(AVIFLocalSupportData.restUrl));
+    }
+    if (AVIFLocalSupportData.restNonce) {
+      wp.apiFetch.use(wp.apiFetch.createNonceMiddleware(AVIFLocalSupportData.restNonce));
+    }
+  }
+
+  function apiFetch(options) {
+    configureApiFetch();
+    if (!window.wp || !wp.apiFetch) {
+      return Promise.reject(new Error('wp.apiFetch unavailable'));
+    }
+    return wp.apiFetch(options);
+  }
+
   function activateTab(id) {
     var tabs = ['settings', 'tools', 'about'];
     tabs.forEach(function (t) {
@@ -43,8 +65,6 @@
   function initStatus() {
     var btn = $('#avif-local-support-rescan');
     if (!btn || typeof AVIFLocalSupportData === 'undefined') return;
-    var ajaxUrl = AVIFLocalSupportData.ajaxUrl;
-    var nonce = AVIFLocalSupportData.scanNonce;
     function setLoading() {
       var totalEl = $('#avif-local-support-total-jpegs');
       var avifsEl = $('#avif-local-support-existing-avifs');
@@ -55,17 +75,8 @@
     }
     function scan() {
       setLoading();
-      var form = new URLSearchParams();
-      form.append('action', 'aviflosu_scan_missing');
-      form.append('_wpnonce', nonce);
-      fetch(ajaxUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
-        body: form.toString()
-      })
-        .then(function (r) { return r.json(); })
-        .then(function (json) {
-          var data = (json && json.success && json.data) ? json.data : {};
+      apiFetch({ path: '/aviflosu/v1/scan-missing', method: 'POST' })
+        .then(function (data) {
           var totalEl = $('#avif-local-support-total-jpegs');
           var avifsEl = $('#avif-local-support-existing-avifs');
           var missingEl = $('#avif-local-support-missing-avifs');
@@ -120,27 +131,12 @@
     var pollingTimerLocal = null;
     if (convertBtn && typeof AVIFLocalSupportData !== 'undefined') {
       convertBtn.addEventListener('click', function () {
-        var ajaxUrl = AVIFLocalSupportData.ajaxUrl;
-        var nonce = AVIFLocalSupportData.convertNonce;
         convertBtn.disabled = true;
         if (spinner) spinner.classList.add('is-active');
         if (statusEl) statusEl.textContent = 'Converting Images...';
-        var form = new URLSearchParams();
-        form.append('action', 'aviflosu_convert_now');
-        form.append('_wpnonce', nonce);
-        fetch(ajaxUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
-          body: form.toString()
-        })
-          .then(function (r) { return r.json(); })
-          .then(function (json) {
-            if (!(json && json.success)) {
-              if (statusEl) statusEl.textContent = 'Failed';
-              return;
-            }
+        apiFetch({ path: '/aviflosu/v1/convert-now', method: 'POST' })
+          .then(function () {
             // Show inline progress on this tab
-            if (json && json.success) {
               if (toolsProgress) toolsProgress.style.display = '';
               // start local polling of counts and animate progress bar
               var prevMissing = null;
@@ -149,17 +145,8 @@
               var MAX_UNCHANGED_TICKS = 20; // stop if not changing (increased from 3)
               var MAX_DURATION_MS = 10 * 60 * 1000; // 10 minutes safety (increased from 5)
               function updateLocal() {
-                var sform = new URLSearchParams();
-                sform.append('action', 'aviflosu_scan_missing');
-                sform.append('_wpnonce', AVIFLocalSupportData.scanNonce);
-                fetch(ajaxUrl, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
-                  body: sform.toString()
-                })
-                  .then(function (r) { return r.json(); })
-                  .then(function (json2) {
-                    var data = (json2 && json2.success && json2.data) ? json2.data : {};
+                apiFetch({ path: '/aviflosu/v1/scan-missing', method: 'POST' })
+                  .then(function (data) {
                     var total = data.total_jpegs || 0;
                     var avifs = data.existing_avifs || 0;
                     var missing = data.missing_avifs || 0;
@@ -193,7 +180,6 @@
               // Poll more frequently for a snappier progress display
               pollingTimerLocal = window.setInterval(updateLocal, 1500);
               updateLocal();
-            }
           })
           .catch(function () {
             if (statusEl) statusEl.textContent = 'Failed';
@@ -214,27 +200,12 @@
         if (!confirm('Delete all .avif files in uploads? This cannot be undone.')) {
           return;
         }
-        var ajaxUrl = AVIFLocalSupportData.ajaxUrl;
-        var nonce = AVIFLocalSupportData.deleteNonce;
         deleteBtn.disabled = true;
         if (deleteSpinner) deleteSpinner.classList.add('is-active');
         if (deleteStatus) deleteStatus.textContent = '';
-        var form = new URLSearchParams();
-        form.append('action', 'aviflosu_delete_all_avifs');
-        form.append('_wpnonce', nonce);
-        fetch(ajaxUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
-          body: form.toString()
-        })
-          .then(function (r) { return r.json(); })
-          .then(function (json) {
-            if (json && json.success && json.data) {
-              var d = json.data;
-              if (deleteStatus) deleteStatus.textContent = 'Deleted ' + String(d.deleted || 0) + (d.failed ? (', failed ' + String(d.failed)) : '');
-            } else {
-              if (deleteStatus) deleteStatus.textContent = 'Failed';
-            }
+        apiFetch({ path: '/aviflosu/v1/delete-all-avifs', method: 'POST' })
+          .then(function (d) {
+            if (deleteStatus) deleteStatus.textContent = 'Deleted ' + String(d.deleted || 0) + (d.failed ? (', failed ' + String(d.failed)) : '');
           })
           .catch(function () { if (deleteStatus) deleteStatus.textContent = 'Failed'; })
           .finally(function () {
@@ -296,23 +267,11 @@
 
     if (refreshLogsBtn && typeof AVIFLocalSupportData !== 'undefined') {
       refreshLogsBtn.addEventListener('click', function () {
-        var ajaxUrl = AVIFLocalSupportData.ajaxUrl;
-        var nonce = AVIFLocalSupportData.logsNonce;
         if (logsSpinner) logsSpinner.classList.add('is-active');
-
-        var form = new URLSearchParams();
-        form.append('action', 'aviflosu_get_logs');
-        form.append('_wpnonce', nonce);
-
-        fetch(ajaxUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
-          body: form.toString()
-        })
-          .then(function (r) { return r.json(); })
+        apiFetch({ path: '/aviflosu/v1/logs', method: 'GET' })
           .then(function (json) {
-            if (json && json.success && json.data && json.data.content && logsContent) {
-              logsContent.innerHTML = json.data.content;
+            if (json && json.content && logsContent) {
+              logsContent.innerHTML = json.content;
             }
           })
           .catch(function () {
@@ -330,22 +289,10 @@
           return;
         }
 
-        var ajaxUrl = AVIFLocalSupportData.ajaxUrl;
-        var nonce = AVIFLocalSupportData.logsNonce;
         if (logsSpinner) logsSpinner.classList.add('is-active');
-
-        var form = new URLSearchParams();
-        form.append('action', 'aviflosu_clear_logs');
-        form.append('_wpnonce', nonce);
-
-        fetch(ajaxUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
-          body: form.toString()
-        })
-          .then(function (r) { return r.json(); })
-          .then(function (json) {
-            if (json && json.success && logsContent) {
+        apiFetch({ path: '/aviflosu/v1/logs/clear', method: 'POST' })
+          .then(function () {
+            if (logsContent) {
               logsContent.innerHTML = '<p class="description">No logs available.</p>';
             }
           })
@@ -365,36 +312,36 @@
     var runTestOutput = document.querySelector('#avif-local-support-magick-test-output');
     if (runTestBtn && typeof AVIFLocalSupportData !== 'undefined') {
       runTestBtn.addEventListener('click', function () {
-        var ajaxUrl = AVIFLocalSupportData.ajaxUrl;
-        var nonce = AVIFLocalSupportData.diagNonce;
         runTestBtn.disabled = true;
         if (runTestSpinner) runTestSpinner.classList.add('is-active');
         if (runTestStatus) runTestStatus.textContent = 'Running…';
         if (runTestOutput) { runTestOutput.style.display = 'none'; runTestOutput.textContent = ''; }
-        var form = new URLSearchParams();
-        form.append('action', 'aviflosu_run_magick_test');
-        form.append('_wpnonce', nonce);
-        fetch(ajaxUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
-          body: form.toString()
-        })
-          .then(function (r) { return r.json(); })
-          .then(function (json) {
-            if (!json) return;
-            if (json.success && json.data) {
-              if (runTestStatus) runTestStatus.textContent = 'Exit code ' + String(json.data.code);
-              var text = String(json.data.output || '');
-              if (json.data.hint) { text += '\n\nHint: ' + String(json.data.hint); }
-              if (runTestOutput) { runTestOutput.textContent = text; runTestOutput.style.display = ''; }
-            } else if (json.data && json.data.message) {
-              if (runTestStatus) runTestStatus.textContent = String(json.data.message);
-            } else {
-              if (runTestStatus) runTestStatus.textContent = 'Failed';
+        apiFetch({ path: '/aviflosu/v1/magick-test', method: 'POST' })
+          .then(function (data) {
+            if (!data) return;
+            if (runTestStatus) runTestStatus.textContent = 'Exit code ' + String(data.code);
+            var lines = [];
+            if (data.selected_path) {
+              lines.push('Selected binary: ' + String(data.selected_path) + (data.auto_selected ? ' (auto)' : ''));
             }
+            if (data.define_strategy && data.define_strategy.namespace) {
+              var s = data.define_strategy;
+              lines.push(
+                'Define strategy: ' + String(s.namespace) +
+                ' (lossless=' + String(!!s.supports_lossless) +
+                ', chroma=' + String(!!s.supports_chroma) +
+                ', -depth=' + String(!!s.supports_depth) +
+                ', bit-depth-define=' + String(!!s.supports_bit_depth_define) + ')'
+              );
+            }
+            if (lines.length) { lines.push(''); }
+            lines.push(String(data.output || ''));
+            if (data.hint) { lines.push(''); lines.push('Hint: ' + String(data.hint)); }
+            var text = lines.join('\n');
+            if (runTestOutput) { runTestOutput.textContent = text; runTestOutput.style.display = ''; }
           })
-          .catch(function () {
-            if (runTestStatus) runTestStatus.textContent = 'Failed';
+          .catch(function (err) {
+            if (runTestStatus) runTestStatus.textContent = (err && err.message) ? String(err.message) : 'Failed';
           })
           .finally(function () {
             if (runTestSpinner) runTestSpinner.classList.remove('is-active');
@@ -417,37 +364,27 @@
         var file = testFile.files[0];
         if (!file) return;
 
-        var ajaxUrl = AVIFLocalSupportData.ajaxUrl;
-        var nonce = AVIFLocalSupportData.uploadTestNonce;
-
         testSubmit.disabled = true;
         if (testSpinner) testSpinner.classList.add('is-active');
         if (testStatus) testStatus.textContent = 'Uploading & converting…';
         if (testResults) testResults.innerHTML = '';
 
         var formData = new FormData();
-        formData.append('action', 'aviflosu_upload_test_ajax');
-        formData.append('_wpnonce', nonce);
         formData.append('avif_local_support_test_file', file);
-
-        fetch(ajaxUrl, {
-          method: 'POST',
-          body: formData
-        })
-          .then(function (r) { return r.json(); })
+        apiFetch({ path: '/aviflosu/v1/upload-test', method: 'POST', body: formData })
           .then(function (json) {
-            if (json && json.success && json.data) {
+            if (json && json.html) {
               if (testStatus) testStatus.textContent = 'Done';
-              if (testResults && json.data.html) {
-                testResults.innerHTML = json.data.html;
+              if (testResults) {
+                testResults.innerHTML = json.html;
               }
             } else {
-              var msg = (json && json.data && json.data.message) ? json.data.message : 'Failed';
-              if (testStatus) testStatus.textContent = msg;
+              if (testStatus) testStatus.textContent = 'Failed';
             }
           })
-          .catch(function () {
-            if (testStatus) testStatus.textContent = 'Error';
+          .catch(function (err) {
+            var msg = (err && err.message) ? String(err.message) : 'Error';
+            if (testStatus) testStatus.textContent = msg;
           })
           .finally(function () {
             if (testSpinner) testSpinner.classList.remove('is-active');

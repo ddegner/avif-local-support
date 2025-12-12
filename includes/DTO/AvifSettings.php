@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Ddegner\AvifLocalSupport\DTO;
 
+use Ddegner\AvifLocalSupport\ImageMagickCli;
+
 defined('ABSPATH') || exit;
 
 /**
@@ -52,8 +54,23 @@ readonly class AvifSettings
 
         $cliArgs = (string) get_option('aviflosu_cli_args', '');
         // Default environment if not set
-        $defaultEnv = "PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/opt/homebrew/bin\nHOME=/tmp\nLC_ALL=C";
+        $path = '/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin';
+        if (PHP_OS_FAMILY === 'Darwin') {
+            if (@is_dir('/opt/homebrew/bin')) {
+                $path .= ':/opt/homebrew/bin';
+            }
+            if (@is_dir('/opt/local/bin')) {
+                $path .= ':/opt/local/bin';
+            }
+        }
+        $defaultEnv = "PATH=$path\nHOME=/tmp\nLC_ALL=C";
         $cliEnv = (string) get_option('aviflosu_cli_env', $defaultEnv);
+
+        // Auto-detect ImageMagick CLI when not explicitly configured.
+        // This enables Auto mode to use CLI on servers where ImageMagick is installed but the user didn't set a path.
+        if ($cliPath === '' && in_array($engineMode, ['auto', 'cli'], true)) {
+            $cliPath = ImageMagickCli::getAutoDetectedPath(null);
+        }
 
         return new self(
             quality: $quality,

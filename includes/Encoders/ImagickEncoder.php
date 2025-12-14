@@ -92,11 +92,7 @@ class ImagickEncoder implements AvifEncoderInterface
             }
 
             // Subsampling & Bit Depth
-            $chromaLabel = $settings->subsampling === '444' ? '4:4:4' : ($settings->subsampling === '422' ? '4:2:2' : '4:2:0');
-            if ($settings->lossless) {
-                $chromaLabel = '4:4:4';
-            }
-            @$im->setOption('avif:chroma-subsample', $chromaLabel);
+            @$im->setOption('avif:chroma-subsample', $settings->getChromaLabel());
             @$im->setOption('avif:bit-depth', $settings->bitDepth);
             $im->setImageDepth((int) $settings->bitDepth);
 

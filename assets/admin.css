@@ -34,6 +34,16 @@ body.settings_page_avif-local-support .postbox h2.avif-header {
 }
 
 /* Logs styling */
+.avif-logs-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 6px;
+}
+.avif-logs-filter input {
+  margin: 0;
+}
+
 .avif-logs-container {
   max-height: 400px;
   overflow-y: auto;
@@ -87,5 +97,62 @@ body.settings_page_avif-local-support .postbox h2.avif-header {
   color: #666;
   font-family: Consolas, Monaco, monospace;
   line-height: 1.4;
+}
+
+.avif-log-suggestion {
+  margin: 4px 0;
+  padding: 4px;
+  background: #fff4f4;
+  border-left: 3px solid #d63638;
+  color: #d63638;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+/* Server Support (guided diagnostics) */
+.avif-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 1.6;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+.avif-badge-ok {
+  background: #edfaef;
+  border-color: #b7e1c0;
+  color: #1a7f37;
+}
+.avif-badge-bad {
+  background: #fff1f0;
+  border-color: #f4c7c3;
+  color: #b42318;
+}
+.avif-badge-neutral {
+  background: #f6f7f7;
+  border-color: #dcdcde;
+  color: #50575e;
+}
+.avif-support-panel .widefat td {
+  vertical-align: top;
+}
+.avif-support-details {
+  margin: 10px 0;
+  padding: 8px 10px;
+  border: 1px solid #dcdcde;
+  background: #fff;
+}
+.avif-support-details > summary {
+  cursor: pointer;
+}
+.avif-support-details-body {
+  margin-top: 8px;
+}
+.avif-support-callout {
+  margin: 10px 0 14px;
+  padding: 10px;
+  border: 1px solid #dcdcde;
+  background: #fff;
 }
 

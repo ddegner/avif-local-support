@@ -7,6 +7,7 @@ namespace Ddegner\AvifLocalSupport\Encoders;
 use Ddegner\AvifLocalSupport\Contracts\AvifEncoderInterface;
 use Ddegner\AvifLocalSupport\DTO\AvifSettings;
 use Ddegner\AvifLocalSupport\DTO\ConversionResult;
+use Ddegner\AvifLocalSupport\Environment;
 use Ddegner\AvifLocalSupport\ImageMagickCli;
 
 defined('ABSPATH') || exit;
@@ -60,46 +61,8 @@ class CliEncoder implements AvifEncoderInterface
         }
 
         // Prepare environment variables from settings early (used for probing and execution).
-        $env = [];
-        $envLines = explode("\n", $settings->cliEnv);
-        foreach ($envLines as $line) {
-            $line = trim($line);
-            if ($line === '' || strpos($line, '=') === false) {
-                continue;
-            }
-            [$key, $val] = explode('=', $line, 2);
-            $env[trim($key)] = trim($val);
-        }
-        if (empty($env)) {
-            $fallbackPath = '/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin';
-            if (PHP_OS_FAMILY === 'Darwin') {
-                if (@is_dir('/opt/homebrew/bin')) {
-                    $fallbackPath .= ':/opt/homebrew/bin';
-                }
-                if (@is_dir('/opt/local/bin')) {
-                    $fallbackPath .= ':/opt/local/bin';
-                }
-            }
-            $env = [
-                'PATH' => getenv('PATH') ?: $fallbackPath,
-                'HOME' => getenv('HOME') ?: '/tmp',
-                'LC_ALL' => 'C',
-            ];
-        }
-        if (PHP_OS_FAMILY === 'Darwin' && isset($env['PATH'])) {
-            if (@is_dir('/opt/homebrew/bin') && strpos($env['PATH'], '/opt/homebrew/bin') === false) {
-                $env['PATH'] .= ':/opt/homebrew/bin';
-            }
-            if (@is_dir('/opt/local/bin') && strpos($env['PATH'], '/opt/local/bin') === false) {
-                $env['PATH'] .= ':/opt/local/bin';
-            }
-        }
-        /**
-         * Filters the environment variables passed to the CLI encoder process.
-         *
-         * @param array $env The environment variables array.
-         */
-        $env = apply_filters('aviflosu_cli_environment', $env);
+        $env = Environment::parseEnvString($settings->cliEnv);
+        $env = Environment::normalizeEnv($env);
 
         // Build arguments
         $args = [];
@@ -130,14 +93,8 @@ class CliEncoder implements AvifEncoderInterface
         $ns = isset($strategy['namespace']) ? (string) $strategy['namespace'] : 'none';
 
         // Chroma subsampling
-        $chromaLabel = $settings->subsampling === '444' ? '4:4:4' : ($settings->subsampling === '422' ? '4:2:2' : '4:2:0');
-        if ($settings->lossless) {
-            $chromaLabel = '4:4:4';
-        }
-        $chromaNumeric = $settings->subsampling === '444' ? '444' : ($settings->subsampling === '422' ? '422' : '420');
-        if ($settings->lossless) {
-            $chromaNumeric = '444';
-        }
+        $chromaLabel = $settings->getChromaLabel();
+        $chromaNumeric = $settings->getChromaNumeric();
 
         // Speed / Lossless / Chroma (guarded by probe results)
         if ($ns === 'heic') {

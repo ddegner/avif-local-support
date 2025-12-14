@@ -16,6 +16,8 @@ defined('ABSPATH') || exit;
 
 final class Converter
 {
+    private const JPEG_MIMES = ['image/jpeg', 'image/jpg'];
+
     private ?Plugin $plugin = null;
 
     /** @var AvifEncoderInterface[] */
@@ -24,6 +26,26 @@ final class Converter
     public function set_plugin(Plugin $plugin): void
     {
         $this->plugin = $plugin;
+    }
+
+    /**
+     * Check if a MIME type is a JPEG type.
+     */
+    private function isJpegMime(?string $mime): bool
+    {
+        return is_string($mime) && in_array($mime, self::JPEG_MIMES, true);
+    }
+
+    /**
+     * Get the relative directory from attachment metadata.
+     */
+    private function getMetadataDir(array $metadata): string
+    {
+        $relativeDir = pathinfo((string) ($metadata['file'] ?? ''), PATHINFO_DIRNAME);
+        if ($relativeDir === '.' || $relativeDir === DIRECTORY_SEPARATOR) {
+            return '';
+        }
+        return $relativeDir;
     }
 
     public function init(): void
@@ -111,8 +133,7 @@ final class Converter
             return $metadata;
         }
 
-        $mime = get_post_mime_type($attachmentId);
-        if (!is_string($mime) || !in_array($mime, ['image/jpeg', 'image/jpg'], true)) {
+        if (!$this->isJpegMime(get_post_mime_type($attachmentId))) {
             return $metadata;
         }
 
@@ -381,10 +402,7 @@ final class Converter
             $this->checkMissingAvif($originalPath);
         }
         if (!empty($metadata['sizes']) && is_array($metadata['sizes'])) {
-            $relativeDir = pathinfo((string) ($metadata['file'] ?? ''), PATHINFO_DIRNAME);
-            if ($relativeDir === '.' || $relativeDir === DIRECTORY_SEPARATOR) {
-                $relativeDir = '';
-            }
+            $relativeDir = $this->getMetadataDir($metadata);
             foreach ($metadata['sizes'] as $sizeData) {
                 if (!empty($sizeData['file'])) {
                     $sizePath = $baseDir . trailingslashit($relativeDir) . $sizeData['file'];
@@ -414,8 +432,7 @@ final class Converter
         ]);
         $count = 0;
         foreach ($query->posts as $attachmentId) {
-            $mime = get_post_mime_type($attachmentId);
-            if (!is_string($mime) || !in_array($mime, ['image/jpeg', 'image/jpg'], true)) {
+            if (!$this->isJpegMime(get_post_mime_type($attachmentId))) {
                 continue;
             }
             $path = get_attached_file($attachmentId);
@@ -435,8 +452,7 @@ final class Converter
 
     private function convertGeneratedSizesForce(array $metadata, int $attachmentId): void
     {
-        $mime = get_post_mime_type($attachmentId);
-        if (!is_string($mime) || !in_array($mime, ['image/jpeg', 'image/jpg'], true)) {
+        if (!$this->isJpegMime(get_post_mime_type($attachmentId))) {
             return;
         }
         $uploadDir = wp_upload_dir();
@@ -459,8 +475,7 @@ final class Converter
             'sizes' => [],
         ];
 
-        $mime = get_post_mime_type($attachmentId);
-        if (!is_string($mime) || !in_array($mime, ['image/jpeg', 'image/jpg'], true)) {
+        if (!$this->isJpegMime(get_post_mime_type($attachmentId))) {
             return $results;
         }
 
@@ -478,10 +493,7 @@ final class Converter
         } elseif ($originalAbs !== '' && str_starts_with($originalAbs, $baseDir)) {
             $originalRel = ltrim(substr($originalAbs, strlen($baseDir)), '/');
         }
-        $dirRel = pathinfo($originalRel, PATHINFO_DIRNAME);
-        if ($dirRel === '.' || $dirRel === DIRECTORY_SEPARATOR) {
-            $dirRel = '';
-        }
+        $dirRel = $this->getMetadataDir($meta);
 
         $addRow = function (string $label, string $jpegAbs, string $jpegRel, ?int $width, ?int $height) use (&$results, $baseUrl): void {
             $avifAbs = (string) preg_replace('/\.(jpe?g)$/i', '.avif', $jpegAbs);
@@ -543,8 +555,7 @@ final class Converter
      */
     public function deleteAvifsForAttachment(int $attachmentId): void
     {
-        $mime = get_post_mime_type($attachmentId);
-        if (!is_string($mime) || !in_array($mime, ['image/jpeg', 'image/jpg'], true)) {
+        if (!$this->isJpegMime(get_post_mime_type($attachmentId))) {
             return;
         }
 
@@ -564,10 +575,7 @@ final class Converter
         }
 
         if (!empty($meta['sizes']) && is_array($meta['sizes'])) {
-            $dirRel = pathinfo((string) ($meta['file'] ?? ''), PATHINFO_DIRNAME);
-            if ($dirRel === '.' || $dirRel === DIRECTORY_SEPARATOR) {
-                $dirRel = '';
-            }
+            $dirRel = $this->getMetadataDir($meta);
             foreach ($meta['sizes'] as $sizeData) {
                 if (!empty($sizeData['file']) && is_string($sizeData['file'])) {
                     $paths[] = $baseDir . trailingslashit($dirRel) . $sizeData['file'];

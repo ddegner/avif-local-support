@@ -4,7 +4,7 @@ Plugin URI: https://github.com/ddegner/avif-local-support
 Tags: images, avif, performance, conversion, media
 Requires at least: 6.8
 Tested up to: 6.9
-Stable tag: 0.4.2
+Stable tag: 0.4.3
 Requires PHP: 8.3
 License: GPL v2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -132,6 +132,13 @@ sudo ldconfig
 The plugin now estimates memory usage before processing to prevent fatal errors (crashes) on servers with limited RAM. If you see this, try switching to the "ImageMagick CLI" engine or increasing your PHP `memory_limit`. As a last resort, you can check "Disable memory check" in the settings to bypass this safety measure.
 
 == Changelog ==
+
+= 0.4.3 =
+- Feature: Added WP-CLI commands for server management (`wp avif status`, `convert`, `stats`, `logs`, `delete`).
+- Enhancement: Refactored admin interface with modular architecture for improved maintainability.
+- Enhancement: Improved logging system with structured storage and better error tracking.
+- Enhancement: Better environment detection and diagnostics utilities.
+- Code: Separated admin functionality into dedicated Admin namespace for better organization.
 
 = 0.4.2 =
 - Enhancement: ImageMagick CLI auto-detection now works in "Auto" mode without manual path configuration.

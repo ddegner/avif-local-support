@@ -221,7 +221,39 @@
     var clearLogsBtn = document.querySelector('#avif-local-support-clear-logs');
     var logsSpinner = document.querySelector('#avif-local-support-logs-spinner');
     var logsContent = document.querySelector('#avif-local-support-logs-content');
+    var logsOnlyErrorsToggle = document.querySelector('#avif-local-support-logs-only-errors');
     var copyStatus = document.querySelector('#avif-local-support-copy-status');
+    var copySupportBtn = document.querySelector('#avif-local-support-copy-support');
+    var copySupportStatus = document.querySelector('#avif-local-support-copy-support-status');
+
+    function applyLogsFilter() {
+      if (!logsContent || !logsOnlyErrorsToggle) return;
+      var onlyErrors = !!logsOnlyErrorsToggle.checked;
+      var entries = logsContent.querySelectorAll('.avif-log-entry');
+      for (var i = 0; i < entries.length; i++) {
+        var el = entries[i];
+        var status = '';
+        if (el && el.getAttribute) {
+          status = String(el.getAttribute('data-status') || '').toLowerCase();
+        }
+        if (!status && el && el.classList) {
+          if (el.classList.contains('error')) status = 'error';
+          else if (el.classList.contains('failed')) status = 'failed';
+          else if (el.classList.contains('warning')) status = 'warning';
+          else if (el.classList.contains('success')) status = 'success';
+          else if (el.classList.contains('info')) status = 'info';
+        }
+
+        var isErrorish = (status === 'error' || status === 'failed');
+        el.style.display = (onlyErrors && !isErrorish) ? 'none' : '';
+      }
+    }
+
+    if (logsOnlyErrorsToggle) {
+      logsOnlyErrorsToggle.addEventListener('change', applyLogsFilter);
+      // Apply immediately on page load for the initial server-rendered logs.
+      applyLogsFilter();
+    }
 
     if (copyLogsBtn) {
       copyLogsBtn.addEventListener('click', function () {
@@ -242,7 +274,33 @@
       });
     }
 
-    function fallbackCopy(text) {
+    if (copySupportBtn) {
+      copySupportBtn.addEventListener('click', function () {
+        var text = buildSupportDiagnosticsText();
+        if (!text) return;
+
+        if (navigator.clipboard && window.isSecureContext) {
+          navigator.clipboard.writeText(text).then(function () {
+            showCopySupportStatus();
+          }, function () {
+            fallbackCopySupport(text);
+          });
+        } else {
+          fallbackCopySupport(text);
+        }
+      });
+    }
+
+    // Consolidated copy helpers
+    function showStatusElement(element) {
+      if (!element) return;
+      element.style.display = 'inline';
+      setTimeout(function () {
+        element.style.display = 'none';
+      }, 2000);
+    }
+
+    function fallbackCopyToClipboard(text, statusElement) {
       var ta = document.createElement('textarea');
       ta.value = text;
       ta.style.position = 'fixed';
@@ -252,17 +310,182 @@
       ta.select();
       try {
         document.execCommand('copy');
-        showCopyStatus();
+        showStatusElement(statusElement);
       } catch (e) { }
       document.body.removeChild(ta);
     }
 
+    // Backward-compatible wrappers
+    function fallbackCopy(text) {
+      fallbackCopyToClipboard(text, copyStatus);
+    }
+
+    function fallbackCopySupport(text) {
+      fallbackCopyToClipboard(text, copySupportStatus);
+    }
+
     function showCopyStatus() {
-      if (!copyStatus) return;
-      copyStatus.style.display = 'inline';
-      setTimeout(function () {
-        copyStatus.style.display = 'none';
-      }, 2000);
+      showStatusElement(copyStatus);
+    }
+
+    function showCopySupportStatus() {
+      showStatusElement(copySupportStatus);
+    }
+
+    function buildSupportDiagnosticsText() {
+      var panel = document.querySelector('.avif-support-panel');
+      if (!panel) return '';
+
+      // Clone to avoid mutating UI state. Force-open details so their text is included.
+      var clone = panel.cloneNode(true);
+      var details = clone.querySelectorAll('details');
+      for (var i = 0; i < details.length; i++) {
+        details[i].setAttribute('open', '');
+      }
+
+      // Remove UI-only elements
+      var kill = clone.querySelectorAll('button, .spinner, script, style');
+      for (var k = 0; k < kill.length; k++) {
+        if (kill[k] && kill[k].parentNode) kill[k].parentNode.removeChild(kill[k]);
+      }
+
+      function clean(s) {
+        return String(s || '').replace(/\s+/g, ' ').trim();
+      }
+
+      function indent(n) {
+        var out = '';
+        for (var j = 0; j < n; j++) out += '  ';
+        return out;
+      }
+
+      var lines = [];
+
+      function pushLine(s) {
+        s = String(s || '');
+        if (!s) return;
+        lines.push(s);
+      }
+
+      function renderTable(tableEl, level) {
+        var rows = tableEl.querySelectorAll('tr');
+        for (var r = 0; r < rows.length; r++) {
+          var tds = rows[r].querySelectorAll('td');
+          if (!tds || tds.length < 2) continue;
+          var label = clean(tds[0].textContent || '').replace(/:$/, '');
+          var value = clean(tds[1].textContent || '');
+          if (!label && !value) continue;
+          pushLine(indent(level) + '- ' + (label ? (label + ': ') : '') + value);
+        }
+      }
+
+      function renderList(listEl, level) {
+        var items = listEl.querySelectorAll('li');
+        for (var r = 0; r < items.length; r++) {
+          var itemText = clean(items[r].textContent || '');
+          if (!itemText) continue;
+          pushLine(indent(level) + '- ' + itemText);
+        }
+      }
+
+      function renderPre(preEl, level) {
+        var t = (preEl && preEl.textContent) ? String(preEl.textContent) : '';
+        // Keep original newlines for output blocks.
+        t = t.replace(/\r/g, '').trim();
+        if (!t) return;
+        pushLine(indent(level) + '```');
+        var preLines = t.split('\n');
+        for (var i2 = 0; i2 < preLines.length; i2++) {
+          pushLine(indent(level) + preLines[i2]);
+        }
+        pushLine(indent(level) + '```');
+      }
+
+      function renderElement(el, level) {
+        if (!el || !el.tagName) return;
+        var tag = el.tagName.toUpperCase();
+
+        if (tag === 'H3') {
+          var h = clean(el.textContent || '');
+          if (h) {
+            if (lines.length) pushLine('');
+            pushLine('## ' + h);
+          }
+          return;
+        }
+
+        if (tag === 'DETAILS') {
+          var summaryEl = el.querySelector('summary');
+          var summary = clean(summaryEl ? summaryEl.textContent : '');
+          if (summary) {
+            if (lines.length) pushLine('');
+            pushLine('### ' + summary);
+          }
+          // Render children except summary
+          var kids = el.children;
+          for (var d = 0; d < kids.length; d++) {
+            if (kids[d].tagName && kids[d].tagName.toUpperCase() === 'SUMMARY') continue;
+            renderElement(kids[d], level + 1);
+          }
+          return;
+        }
+
+        if (tag === 'TABLE') {
+          renderTable(el, level);
+          return;
+        }
+
+        if (tag === 'UL' || tag === 'OL') {
+          renderList(el, level);
+          return;
+        }
+
+        if (tag === 'PRE') {
+          renderPre(el, level);
+          return;
+        }
+
+        if (tag === 'P') {
+          var p = clean(el.textContent || '');
+          // Skip empty / duplicate button-ish lines.
+          if (p) {
+            pushLine(indent(level) + p);
+          }
+          return;
+        }
+
+        // Default: walk children
+        var children = el.children;
+        for (var c = 0; c < children.length; c++) {
+          renderElement(children[c], level);
+        }
+      }
+
+      // Render in visual order from the panel root
+      var rootChildren = clone.children;
+      for (var rc = 0; rc < rootChildren.length; rc++) {
+        renderElement(rootChildren[rc], 0);
+      }
+
+      // Remove duplicate blank lines
+      var compact = [];
+      for (var li = 0; li < lines.length; li++) {
+        var cur = lines[li];
+        var prev = compact.length ? compact[compact.length - 1] : null;
+        if (cur === '' && prev === '') continue;
+        compact.push(cur);
+      }
+      var body = compact.join('\n').trim();
+      if (!body) return '';
+
+      var header = [
+        'AVIF Local Support — Server Support diagnostics',
+        'Generated: ' + (new Date()).toISOString(),
+        'Page: ' + (window.location && window.location.href ? window.location.href : ''),
+        ''
+      ].join('\n');
+
+      return header + body;
     }
 
     if (refreshLogsBtn && typeof AVIFLocalSupportData !== 'undefined') {
@@ -272,6 +495,7 @@
           .then(function (json) {
             if (json && json.content && logsContent) {
               logsContent.innerHTML = json.content;
+              applyLogsFilter();
             }
           })
           .catch(function () {

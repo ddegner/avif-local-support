@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Ddegner\AvifLocalSupport\DTO;
 
+use Ddegner\AvifLocalSupport\Environment;
 use Ddegner\AvifLocalSupport\ImageMagickCli;
 
 defined('ABSPATH') || exit;
@@ -80,16 +81,7 @@ final class AvifSettings
 
         $cliArgs = (string) get_option('aviflosu_cli_args', '');
         // Default environment if not set
-        $path = '/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin';
-        if (PHP_OS_FAMILY === 'Darwin') {
-            if (@is_dir('/opt/homebrew/bin')) {
-                $path .= ':/opt/homebrew/bin';
-            }
-            if (@is_dir('/opt/local/bin')) {
-                $path .= ':/opt/local/bin';
-            }
-        }
-        $defaultEnv = "PATH=$path\nHOME=/tmp\nLC_ALL=C";
+        $defaultEnv = Environment::buildDefaultEnvString();
         $cliEnv = (string) get_option('aviflosu_cli_env', $defaultEnv);
 
         // Auto-detect ImageMagick CLI when not explicitly configured.
@@ -130,5 +122,39 @@ final class AvifSettings
             'cli_args' => $this->cliArgs,
             'cli_env' => $this->cliEnv,
         ];
+    }
+
+    /**
+     * Get the chroma label string (e.g., '4:2:0') for AVIF encoding.
+     * If lossless mode is enabled, always returns '4:4:4'.
+     */
+    public function getChromaLabel(): string
+    {
+        if ($this->lossless) {
+            return '4:4:4';
+        }
+
+        return match ($this->subsampling) {
+            '444' => '4:4:4',
+            '422' => '4:2:2',
+            default => '4:2:0',
+        };
+    }
+
+    /**
+     * Get the numeric chroma value (e.g., '420') for CLI encoding.
+     * If lossless mode is enabled, always returns '444'.
+     */
+    public function getChromaNumeric(): string
+    {
+        if ($this->lossless) {
+            return '444';
+        }
+
+        return match ($this->subsampling) {
+            '444' => '444',
+            '422' => '422',
+            default => '420',
+        };
     }
 }

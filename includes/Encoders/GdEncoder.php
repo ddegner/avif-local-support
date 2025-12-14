@@ -23,9 +23,9 @@ class GdEncoder implements AvifEncoderInterface
         if (!extension_loaded('gd')) {
             return false;
         }
-        $hasImageAvif = function_exists('imageavif');
-        $hasGdInfoFlag = function_exists('gd_info') ? (bool) ((gd_info()['AVIF Support'] ?? false)) : false;
-        return $hasImageAvif || $hasGdInfoFlag;
+        // Conversion requires the imageavif() function.
+        // Some environments may report "AVIF Support" in gd_info() but still lack imageavif().
+        return function_exists('imageavif');
     }
 
     public function convert(string $source, string $destination, AvifSettings $settings, ?array $dimensions = null): ConversionResult

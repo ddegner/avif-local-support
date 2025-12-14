@@ -276,41 +276,7 @@ final class ImageMagickCli
      */
     private static function normalizeEnv(?array $env): array
     {
-        $env = is_array($env) ? $env : [];
-
-        if (empty($env['PATH'])) {
-            $path = '/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin';
-            if (PHP_OS_FAMILY === 'Darwin') {
-                if (@is_dir('/opt/homebrew/bin')) {
-                    $path .= ':/opt/homebrew/bin';
-                }
-                if (@is_dir('/opt/local/bin')) {
-                    $path .= ':/opt/local/bin';
-                }
-            }
-            $env['PATH'] = getenv('PATH') ?: $path;
-        }
-        if (PHP_OS_FAMILY === 'Darwin') {
-            if (@is_dir('/opt/homebrew/bin') && strpos((string) $env['PATH'], '/opt/homebrew/bin') === false) {
-                $env['PATH'] .= ':/opt/homebrew/bin';
-            }
-            if (@is_dir('/opt/local/bin') && strpos((string) $env['PATH'], '/opt/local/bin') === false) {
-                $env['PATH'] .= ':/opt/local/bin';
-            }
-        }
-        if (empty($env['HOME'])) {
-            $env['HOME'] = getenv('HOME') ?: '/tmp';
-        }
-        if (empty($env['LC_ALL'])) {
-            $env['LC_ALL'] = 'C';
-        }
-
-        /**
-         * Filters the environment used for ImageMagick CLI discovery/probing.
-         *
-         * @param array $env
-         */
-        return apply_filters('aviflosu_cli_environment', $env);
+        return Environment::normalizeEnv($env);
     }
 
     private static function flavor(string $path): string
@@ -443,5 +409,8 @@ final class ImageMagickCli
         return self::run($sh, ['-lc', $shellCommand], $env);
     }
 }
+
+
+
 
 

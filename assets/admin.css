@@ -156,3 +156,45 @@ body.settings_page_avif-local-support .postbox h2.avif-header {
   background: #fff;
 }
 
+/* About tab readme styling */
+.avif-readme-section {
+  margin-bottom: 24px;
+  max-width: 960px;
+}
+.avif-readme-section h3 {
+  margin: 0 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #dcdcde;
+}
+.avif-readme-content p {
+  margin: 0 0 12px;
+  line-height: 1.6;
+}
+.avif-faq-list {
+  margin: 0;
+}
+.avif-faq-list dt {
+  margin: 0 0 4px;
+  font-weight: 600;
+}
+.avif-faq-list dd {
+  margin: 0 0 16px 0;
+  padding-left: 0;
+  color: #50575e;
+}
+.avif-faq-list dd p {
+  margin: 0;
+}
+.avif-changelog-entry {
+  margin-bottom: 16px;
+}
+.avif-changelog-entry h4 {
+  margin: 0 0 8px;
+}
+.avif-changelog-changes ul {
+  margin: 0;
+  padding-left: 20px;
+}
+.avif-changelog-changes li {
+  margin-bottom: 4px;
+}

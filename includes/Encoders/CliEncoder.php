@@ -17,6 +17,7 @@ class CliEncoder implements AvifEncoderInterface
 
     private string $lastOutput = '';
     private int $lastExitCode = 0;
+    private int $lastSourceSize = 0;
 
     public function getName(): string
     {
@@ -60,6 +61,43 @@ class CliEncoder implements AvifEncoderInterface
             return ConversionResult::failure("CLI binary not executable: $bin");
         }
 
+        // Get source file size for diagnostic purposes
+        $sourceSize = @filesize($source);
+        if ($sourceSize === false) {
+            $sourceSize = 0;
+        }
+        $this->lastSourceSize = $sourceSize;
+
+        // Check output dimensions against AVIF specification limits.
+        // AVIF Advanced Profile max: 35,651,584 pixels (16384×8704).
+        // Skip conversion only if the OUTPUT would exceed this limit.
+        $imageInfo = @getimagesize($source);
+        if ($imageInfo !== false && isset($imageInfo[0], $imageInfo[1])) {
+            $srcWidth = (int) $imageInfo[0];
+            $srcHeight = (int) $imageInfo[1];
+            $maxPixels = 35651584; // AVIF Advanced Profile limit
+
+            // Determine output dimensions
+            if ($dimensions && isset($dimensions['width'], $dimensions['height'])) {
+                $outputWidth = (int) $dimensions['width'];
+                $outputHeight = (int) $dimensions['height'];
+            } else {
+                // No resize - output will be same as source
+                $outputWidth = $srcWidth;
+                $outputHeight = $srcHeight;
+            }
+
+            $outputPixels = $outputWidth * $outputHeight;
+            if ($outputPixels > $maxPixels) {
+                $megapixels = round($outputPixels / 1000000, 1);
+                return ConversionResult::failure(
+                    "Output exceeds AVIF maximum size: {$outputWidth}×{$outputHeight} ({$megapixels}MP)",
+                    'AVIF Advanced Profile supports max 35.6 megapixels (16384×8704). ' .
+                    'Resize the image before conversion or use WordPress media settings to generate smaller sizes.'
+                );
+            }
+        }
+
         // Prepare environment variables from settings early (used for probing and execution).
         $env = Environment::parseEnvString($settings->cliEnv);
         $env = Environment::normalizeEnv($env);
@@ -67,13 +105,15 @@ class CliEncoder implements AvifEncoderInterface
         // Build arguments
         $args = [];
 
-        // Resize/Crop logic
+        // Resize/Crop logic with LANCZOS filter for high quality
         if ($dimensions && isset($dimensions['width'], $dimensions['height'])) {
             $tW = max(1, (int) $dimensions['width']);
             $tH = max(1, (int) $dimensions['height']);
-            // -auto-orient -thumbnail WxH^ -gravity center -extent WxH
+            // Use LANCZOS filter for high-quality resizing (same as Imagick)
             $args[] = '-auto-orient';
-            $args[] = '-thumbnail';
+            $args[] = '-filter';
+            $args[] = 'Lanczos';
+            $args[] = '-resize';
             $args[] = $tW . 'x' . $tH . '^';
             $args[] = '-gravity';
             $args[] = 'center';
@@ -83,8 +123,9 @@ class CliEncoder implements AvifEncoderInterface
             $args[] = '-auto-orient';
         }
 
-        // Settings
-        $args[] = '-strip';
+        // Preserve all metadata (EXIF, XMP, IPTC, ICC profiles)
+        // No -strip or +profile commands - keep everything
+
         $args[] = '-quality';
         $args[] = (string) $settings->quality;
 
@@ -255,6 +296,17 @@ class CliEncoder implements AvifEncoderInterface
 
         if ($this->lastExitCode === 127) {
             $suggestion = 'Binary not found or not executable.';
+        } elseif ($this->lastExitCode === 134) {
+            // Exit 134 = SIGABRT (abort signal) - encoder crash, often due to resolution limits
+            $sizeMB = round($this->lastSourceSize / 1024 / 1024, 2);
+            $suggestion = 'ImageMagick aborted (exit 134) while processing ' . $sizeMB . 'MB source file. ' .
+                'This usually indicates the source image exceeds AVIF encoding limits. ' .
+                'AVIF Baseline Profile supports max 8.9 megapixels (8192×4352); ' .
+                'AVIF Advanced Profile supports max 35.6 megapixels (16384×8704). ' .
+                'Images exceeding these limits require grid tiling, which ImageMagick/libheif may not support automatically. ' .
+                'Solutions: (1) Resize the source image before conversion (e.g., max 8000px on longest edge), ' .
+                '(2) Use a tool that supports AVIF grid tiling for very large images, or ' .
+                '(3) Check if your libheif version supports automatic tiling.';
         } elseif (str_contains($outLower, 'delegate') || str_contains($outLower, 'no decode delegate')) {
             $suggestion = 'ImageMagick is missing a delegate (libjpeg/libavif).';
         } elseif (str_contains($outLower, 'memory') || str_contains($outLower, 'resource limit')) {

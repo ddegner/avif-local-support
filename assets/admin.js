@@ -119,74 +119,108 @@
     initStatus();
     initCliSuggestions();
 
-    // Convert-now button (AJAX queue + switch to Status with spinner + polling)
+    // Convert-now button (AJAX queue + simple counter progress)
     var convertBtn = document.querySelector('#avif-local-support-convert-now');
+    var stopBtn = document.querySelector('#avif-local-support-stop-convert');
     var spinner = document.querySelector('#avif-local-support-convert-spinner');
     var statusEl = document.querySelector('#avif-local-support-convert-status');
-    var toolsProgress = document.querySelector('#avif-local-support-tools-progress');
-    var toolsTotal = document.querySelector('#avif-local-support-tools-total');
-    var toolsAvifs = document.querySelector('#avif-local-support-tools-avifs');
-    var toolsMissing = document.querySelector('#avif-local-support-tools-missing');
-    var toolsFill = document.querySelector('#avif-local-support-tools-progress-fill');
+    var progressEl = document.querySelector('#avif-local-support-convert-progress');
+    var progressAvifs = document.querySelector('#avif-local-support-progress-avifs');
+    var progressJpegs = document.querySelector('#avif-local-support-progress-jpegs');
     var pollingTimerLocal = null;
+
+    function stopPolling() {
+      if (pollingTimerLocal) {
+        window.clearInterval(pollingTimerLocal);
+        pollingTimerLocal = null;
+      }
+      if (stopBtn) stopBtn.style.display = 'none';
+      if (progressEl) progressEl.style.display = 'none';
+      if (spinner) spinner.classList.remove('is-active');
+      if (convertBtn) convertBtn.disabled = false;
+    }
+
+    if (stopBtn && typeof AVIFLocalSupportData !== 'undefined') {
+      stopBtn.addEventListener('click', function () {
+        stopBtn.disabled = true;
+        apiFetch({ path: '/aviflosu/v1/stop-convert', method: 'POST' })
+          .then(function () {
+            if (statusEl) statusEl.textContent = 'Stopped';
+          })
+          .catch(function () {
+            if (statusEl) statusEl.textContent = 'Stop failed';
+          })
+          .finally(function () {
+            stopPolling();
+            stopBtn.disabled = false;
+          });
+      });
+    }
+
     if (convertBtn && typeof AVIFLocalSupportData !== 'undefined') {
       convertBtn.addEventListener('click', function () {
         convertBtn.disabled = true;
         if (spinner) spinner.classList.add('is-active');
-        if (statusEl) statusEl.textContent = 'Converting Images...';
+        if (statusEl) statusEl.textContent = 'Converting...';
+        if (progressEl) progressEl.style.display = 'none';
+        if (stopBtn) stopBtn.style.display = '';
         apiFetch({ path: '/aviflosu/v1/convert-now', method: 'POST' })
           .then(function () {
-            // Show inline progress on this tab
-              if (toolsProgress) toolsProgress.style.display = '';
-              // start local polling of counts and animate progress bar
-              var prevMissing = null;
-              var unchangedTicks = 0;
-              var startTime = Date.now();
-              var MAX_UNCHANGED_TICKS = 20; // stop if not changing (increased from 3)
-              var MAX_DURATION_MS = 10 * 60 * 1000; // 10 minutes safety (increased from 5)
-              function updateLocal() {
-                apiFetch({ path: '/aviflosu/v1/scan-missing', method: 'POST' })
-                  .then(function (data) {
-                    var total = data.total_jpegs || 0;
-                    var avifs = data.existing_avifs || 0;
-                    var missing = data.missing_avifs || 0;
-                    if (toolsTotal) toolsTotal.textContent = String(total);
-                    if (toolsAvifs) toolsAvifs.textContent = String(avifs);
-                    if (toolsMissing) toolsMissing.textContent = String(missing);
-                    if (toolsFill) {
-                      var pct = total > 0 ? Math.round((avifs / total) * 100) : 0;
-                      toolsFill.style.width = pct + '%';
-                    }
-                    // Stop conditions: finished, stalled, or too long
-                    if (missing === 0) {
-                      if (statusEl) statusEl.textContent = 'Completed';
-                      if (pollingTimerLocal) { window.clearInterval(pollingTimerLocal); pollingTimerLocal = null; }
+            // Show inline counter progress
+            if (progressEl) progressEl.style.display = '';
+            var prevMissing = null;
+            var unchangedTicks = 0;
+            var startTime = Date.now();
+            var MAX_UNCHANGED_TICKS = 20;
+            var MAX_DURATION_MS = 10 * 60 * 1000; // 10 minutes safety
+            function updateLocal() {
+              apiFetch({ path: '/aviflosu/v1/scan-missing', method: 'POST' })
+                .then(function (data) {
+                  var total = data.total_jpegs || 0;
+                  var avifs = data.existing_avifs || 0;
+                  var missing = data.missing_avifs || 0;
+
+                  // Update top stats display too
+                  var totalEl = document.querySelector('#avif-local-support-total-jpegs');
+                  var avifsEl = document.querySelector('#avif-local-support-existing-avifs');
+                  var missingEl = document.querySelector('#avif-local-support-missing-avifs');
+                  if (totalEl) totalEl.textContent = String(total);
+                  if (avifsEl) avifsEl.textContent = String(avifs);
+                  if (missingEl) missingEl.textContent = String(missing);
+
+                  // Update progress counter
+                  if (progressAvifs) progressAvifs.textContent = String(avifs);
+                  if (progressJpegs) progressJpegs.textContent = String(total);
+
+                  // Stop conditions: finished, stalled, or too long
+                  if (missing === 0) {
+                    if (statusEl) statusEl.textContent = 'Complete!';
+                    stopPolling();
+                  } else {
+                    if (prevMissing !== null && missing === prevMissing) {
+                      unchangedTicks++;
                     } else {
-                      if (prevMissing !== null && missing === prevMissing) {
-                        unchangedTicks++;
-                      } else {
-                        unchangedTicks = 0;
-                      }
-                      prevMissing = missing;
-                      if (unchangedTicks >= MAX_UNCHANGED_TICKS || (Date.now() - startTime) > MAX_DURATION_MS) {
-                        if (statusEl) statusEl.textContent = 'Continuing in Background...';
-                        if (pollingTimerLocal) { window.clearInterval(pollingTimerLocal); pollingTimerLocal = null; }
-                      }
+                      unchangedTicks = 0;
                     }
-                  })
-                  .catch(function () { });
-              }
-              if (pollingTimerLocal) window.clearInterval(pollingTimerLocal);
-              // Poll more frequently for a snappier progress display
-              pollingTimerLocal = window.setInterval(updateLocal, 1500);
-              updateLocal();
+                    prevMissing = missing;
+                    if (unchangedTicks >= MAX_UNCHANGED_TICKS || (Date.now() - startTime) > MAX_DURATION_MS) {
+                      if (statusEl) statusEl.textContent = 'Continuing in background...';
+                      stopPolling();
+                    }
+                  }
+                })
+                .catch(function () { });
+            }
+            if (pollingTimerLocal) window.clearInterval(pollingTimerLocal);
+            pollingTimerLocal = window.setInterval(updateLocal, 1500);
+            updateLocal();
           })
           .catch(function () {
             if (statusEl) statusEl.textContent = 'Failed';
+            stopPolling();
           })
           .finally(function () {
-            if (spinner) spinner.classList.remove('is-active');
-            convertBtn.disabled = false;
+            // Don't disable button here - let stopPolling handle it
           });
       });
     }
@@ -228,6 +262,9 @@
 
     function applyLogsFilter() {
       if (!logsContent || !logsOnlyErrorsToggle) return;
+      // Ensure the container exists and is in the DOM before accessing
+      if (!logsContent.parentNode || !document.body.contains(logsContent)) return;
+
       var onlyErrors = !!logsOnlyErrorsToggle.checked;
       var entries = logsContent.querySelectorAll('.avif-log-entry');
       for (var i = 0; i < entries.length; i++) {
@@ -252,7 +289,8 @@
     if (logsOnlyErrorsToggle) {
       logsOnlyErrorsToggle.addEventListener('change', applyLogsFilter);
       // Apply immediately on page load for the initial server-rendered logs.
-      applyLogsFilter();
+      // Use setTimeout to ensure DOM is fully ready
+      setTimeout(applyLogsFilter, 0);
     }
 
     if (copyLogsBtn) {
@@ -608,6 +646,10 @@
           })
           .catch(function (err) {
             var msg = (err && err.message) ? String(err.message) : 'Error';
+            // Provide helpful hint for timeout-like errors
+            if (msg.toLowerCase().indexOf('json') !== -1 || msg.toLowerCase().indexOf('timeout') !== -1 || msg.toLowerCase().indexOf('fetch') !== -1) {
+              msg = 'Request timed out. The image may be too large or conversion is taking too long. Check htop/logs to see if conversion is still running.';
+            }
             if (testStatus) testStatus.textContent = msg;
           })
           .finally(function () {

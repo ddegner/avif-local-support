@@ -19,6 +19,7 @@ final class Converter
     private const JPEG_MIMES = ['image/jpeg', 'image/jpg'];
 
     private ?Plugin $plugin = null;
+    private ?Logger $logger = null;
 
     /** @var AvifEncoderInterface[] */
     private array $encoders = [];
@@ -26,6 +27,14 @@ final class Converter
     public function set_plugin(Plugin $plugin): void
     {
         $this->plugin = $plugin;
+    }
+
+    /**
+     * Set a logger instance for CLI usage (when Plugin is not available).
+     */
+    public function set_logger(Logger $logger): void
+    {
+        $this->logger = $logger;
     }
 
     /**
@@ -82,22 +91,18 @@ final class Converter
     {
         $enabled = (bool) get_option('aviflosu_convert_via_schedule', true);
         if (!$enabled) {
-            // clear if exists
-            $timestamp = wp_next_scheduled('aviflosu_daily_event');
-            if ($timestamp) {
-                wp_unschedule_event($timestamp, 'aviflosu_daily_event');
-            }
+            // Clear if exists
+            wp_clear_scheduled_hook('aviflosu_daily_event');
             return;
         }
 
-        // compute next based on time option
+        // Calculate next run time based on schedule time option
         $time = (string) get_option('aviflosu_schedule_time', '01:00');
         if (!preg_match('/^([01]?\d|2[0-3]):[0-5]\d$/', $time)) {
             $time = '01:00';
         }
         [$hour, $minute] = array_map('intval', explode(':', $time));
         $now = (int) current_time('timestamp', true);
-        // Use DateTime with site timezone and compare using GMT epoch for correctness
         $tz = wp_timezone();
         $dt = new \DateTimeImmutable('@' . $now);
         $dt = $dt->setTimezone($tz);
@@ -106,18 +111,12 @@ final class Converter
             ? $targetToday->modify('+1 day')
             : $targetToday;
         $next = $nextDt->getTimestamp();
+
+        // Schedule or reschedule if needed (tolerance: 60 seconds)
         $existing = wp_next_scheduled('aviflosu_daily_event');
-        if ($existing === false) {
+        if ($existing === false || abs((int) $existing - (int) $next) > 60) {
+            wp_clear_scheduled_hook('aviflosu_daily_event');
             wp_schedule_event($next, 'daily', 'aviflosu_daily_event');
-        } else {
-            if (abs((int) $existing - (int) $next) > 60) {
-                if (function_exists('wp_clear_scheduled_hook')) {
-                    wp_clear_scheduled_hook('aviflosu_daily_event');
-                } else {
-                    wp_unschedule_event((int) $existing, 'aviflosu_daily_event');
-                }
-                wp_schedule_event($next, 'daily', 'aviflosu_daily_event');
-            }
         }
     }
 
@@ -420,6 +419,9 @@ final class Converter
 
     private function convertAllJpegsIfMissingAvif(bool $cli = false): void
     {
+        // Clear any previous stop flag when starting
+        \delete_transient('aviflosu_stop_conversion');
+
         $query = new \WP_Query([
             'post_type' => 'attachment',
             'post_status' => 'inherit',
@@ -432,6 +434,15 @@ final class Converter
         ]);
         $count = 0;
         foreach ($query->posts as $attachmentId) {
+            // Check for stop flag
+            if (\get_transient('aviflosu_stop_conversion')) {
+                if ($cli && defined('WP_CLI') && \WP_CLI) {
+                    \WP_CLI::warning("Conversion stopped by user after {$count} attachments.");
+                }
+                \delete_transient('aviflosu_stop_conversion');
+                return;
+            }
+
             if (!$this->isJpegMime(get_post_mime_type($attachmentId))) {
                 continue;
             }
@@ -552,11 +563,15 @@ final class Converter
     /**
      * When an attachment is permanently deleted, remove any companion .avif files
      * for the original and its generated sizes.
+     *
+     * @return array{attempted: int, deleted: int} Count of AVIF files found and successfully deleted.
      */
-    public function deleteAvifsForAttachment(int $attachmentId): void
+    public function deleteAvifsForAttachment(int $attachmentId): array
     {
+        $result = ['attempted' => 0, 'deleted' => 0];
+
         if (!$this->isJpegMime(get_post_mime_type($attachmentId))) {
-            return;
+            return $result;
         }
 
         $uploads = wp_upload_dir();
@@ -584,22 +599,108 @@ final class Converter
         }
 
         foreach ($paths as $jpegPath) {
-            if (!is_string($jpegPath) || $jpegPath === '' || !@file_exists($jpegPath)) {
-                continue;
-            }
-            if (!preg_match('/\.(jpe?g)$/i', $jpegPath)) {
-                continue;
-            }
             $avifPath = (string) preg_replace('/\.(jpe?g)$/i', '.avif', $jpegPath);
-            if ($avifPath !== '' && @file_exists($avifPath)) {
-                // Do not follow symlinks
-                if (@is_link($avifPath)) {
-                    continue;
+            if (file_exists($avifPath)) {
+                $result['attempted']++;
+                if (@unlink($avifPath)) {
+                    $result['deleted']++;
                 }
-                wp_delete_file($avifPath);
             }
         }
+
+        return $result;
     }
+
+    /**
+     * Helper for Async Upload Test: Get all sizes from attachment metadata without converting.
+     */
+    public function getAttachmentSizes(int $attachmentId): array
+    {
+        $results = [
+            'attachment_id' => $attachmentId,
+            'sizes' => [],
+        ];
+
+        if (!$this->isJpegMime(get_post_mime_type($attachmentId))) {
+            return $results;
+        }
+
+        $uploads = wp_upload_dir();
+        $baseDir = trailingslashit($uploads['basedir'] ?? '');
+        $baseUrl = trailingslashit($uploads['baseurl'] ?? '');
+
+        $meta = wp_get_attachment_metadata($attachmentId) ?: [];
+        $originalAbs = get_attached_file($attachmentId) ?: '';
+
+        // Derive relative paths for URLs
+        $originalRel = '';
+        if (!empty($meta['file']) && is_string($meta['file'])) {
+            $originalRel = (string) $meta['file'];
+        } elseif ($originalAbs !== '' && str_starts_with($originalAbs, $baseDir)) {
+            $originalRel = ltrim(substr($originalAbs, strlen($baseDir)), '/');
+        }
+        $dirRel = $this->getMetadataDir($meta);
+
+        $addRow = function (string $label, string $jpegAbs, string $jpegRel, ?int $width, ?int $height) use (&$results, $baseUrl): void {
+            $avifAbs = (string) preg_replace('/\.(jpe?g)$/i', '.avif', $jpegAbs);
+            $avifRel = (string) preg_replace('/\.(jpe?g)$/i', '.avif', $jpegRel);
+            $jpegUrl = $jpegRel !== '' ? $baseUrl . $jpegRel : '';
+            $avifUrl = $avifRel !== '' ? $baseUrl . $avifRel : '';
+            $results['sizes'][] = [
+                'name' => $label,
+                'jpeg_path' => $jpegAbs,
+                'jpeg_url' => $jpegUrl,
+                'avif_path' => $avifAbs,
+                'avif_url' => $avifUrl,
+                'width' => $width,
+                'height' => $height,
+                'jpeg_size' => file_exists($jpegAbs) ? (int) filesize($jpegAbs) : 0,
+                'avif_size' => file_exists($avifAbs) ? (int) filesize($avifAbs) : 0,
+                'converted' => file_exists($avifAbs),
+            ];
+        };
+
+        if ($originalAbs !== '' && file_exists($originalAbs)) {
+            $w = isset($meta['width']) ? (int) $meta['width'] : null;
+            $h = isset($meta['height']) ? (int) $meta['height'] : null;
+            $addRow('original', $originalAbs, $originalRel, $w, $h);
+        }
+        if (!empty($meta['sizes']) && is_array($meta['sizes'])) {
+            foreach ($meta['sizes'] as $sizeName => $sizeData) {
+                if (empty($sizeData['file']) || !is_string($sizeData['file'])) {
+                    continue;
+                }
+                $jpegRel = ($dirRel !== '' ? trailingslashit($dirRel) : '') . $sizeData['file'];
+                $jpegAbs = $baseDir . $jpegRel;
+                if (!file_exists($jpegAbs))
+                    continue;
+
+                $width = isset($sizeData['width']) ? (int) $sizeData['width'] : null;
+                $height = isset($sizeData['height']) ? (int) $sizeData['height'] : null;
+                $addRow((string) $sizeName, $jpegAbs, $jpegRel, $width, $height);
+            }
+        }
+        return $results;
+    }
+
+    /**
+     * Helper for Async Upload Test: Convert a single JPEG file path to AVIF.
+     * Returns true if AVIF exists after attempt.
+     */
+    public function convertSingleJpegToAvif(string $jpegPath): bool
+    {
+        if (empty($jpegPath) || !file_exists($jpegPath)) {
+            return false;
+        }
+
+        // This will create the AVIF if it doesn't exist
+        $this->checkMissingAvif($jpegPath);
+
+        $avifPath = (string) preg_replace('/\.(jpe?g)$/i', '.avif', $jpegPath);
+        return file_exists($avifPath);
+    }
+
+
 
     /**
      * When WordPress deletes a specific file (e.g., a resized JPEG), also delete its
@@ -621,7 +722,8 @@ final class Converter
      */
     private function log_conversion(string $status, string $sourcePath, string $avifPath, string $engine_used, float $start_time, ?string $error_message = null, ?array $details = null): void
     {
-        if (!$this->plugin) {
+        // Skip logging if neither plugin nor logger is available
+        if (!$this->plugin && !$this->logger) {
             return;
         }
 
@@ -655,7 +757,12 @@ final class Converter
             $message .= ": $error_message";
         }
 
-        $this->plugin->add_log($status, $message, $logDetails);
+        // Use direct logger if available (CLI), otherwise use plugin's logger
+        if ($this->logger) {
+            $this->logger->addLog($status, $message, $logDetails);
+        } elseif ($this->plugin) {
+            $this->plugin->add_log($status, $message, $logDetails);
+        }
     }
 
     /**

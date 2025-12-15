@@ -27,6 +27,7 @@ final class AvifSettings
     public bool $convertViaSchedule;
     public string $cliArgs;
     public string $cliEnv;
+    public int $maxDimension;
 
     public function __construct(
         int $quality = 85,
@@ -40,7 +41,8 @@ final class AvifSettings
         bool $convertOnUpload = true,
         bool $convertViaSchedule = true,
         string $cliArgs = '',
-        string $cliEnv = ''
+        string $cliEnv = '',
+        int $maxDimension = 4096
     ) {
         $this->quality = $quality;
         $this->speed = $speed;
@@ -54,6 +56,7 @@ final class AvifSettings
         $this->convertViaSchedule = $convertViaSchedule;
         $this->cliArgs = $cliArgs;
         $this->cliEnv = $cliEnv;
+        $this->maxDimension = $maxDimension;
     }
 
     public static function fromOptions(): self

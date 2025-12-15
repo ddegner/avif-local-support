@@ -35,43 +35,68 @@ final class RestController
      */
     public function register(): void
     {
-        register_rest_route(self::NAMESPACE, '/scan-missing', [
+        register_rest_route(self::NAMESPACE , '/scan-missing', [
             'methods' => 'POST',
             'permission_callback' => [$this, 'permissionManageOptions'],
             'callback' => [$this, 'scanMissing'],
         ]);
 
-        register_rest_route(self::NAMESPACE, '/convert-now', [
+        register_rest_route(self::NAMESPACE , '/convert-now', [
             'methods' => 'POST',
             'permission_callback' => [$this, 'permissionManageOptions'],
             'callback' => [$this, 'convertNow'],
         ]);
 
-        register_rest_route(self::NAMESPACE, '/delete-all-avifs', [
+        register_rest_route(self::NAMESPACE , '/stop-convert', [
+            'methods' => 'POST',
+            'permission_callback' => [$this, 'permissionManageOptions'],
+            'callback' => [$this, 'stopConvert'],
+        ]);
+
+        register_rest_route(self::NAMESPACE , '/delete-all-avifs', [
             'methods' => 'POST',
             'permission_callback' => [$this, 'permissionManageOptions'],
             'callback' => [$this, 'deleteAllAvifs'],
         ]);
 
-        register_rest_route(self::NAMESPACE, '/logs', [
+        register_rest_route(self::NAMESPACE , '/logs', [
             'methods' => 'GET',
             'permission_callback' => [$this, 'permissionManageOptions'],
             'callback' => [$this, 'getLogs'],
         ]);
 
-        register_rest_route(self::NAMESPACE, '/logs/clear', [
+        register_rest_route(self::NAMESPACE , '/logs/clear', [
             'methods' => 'POST',
             'permission_callback' => [$this, 'permissionManageOptions'],
             'callback' => [$this, 'clearLogs'],
         ]);
 
-        register_rest_route(self::NAMESPACE, '/magick-test', [
+        register_rest_route(self::NAMESPACE , '/magick-test', [
             'methods' => 'POST',
             'permission_callback' => [$this, 'permissionManageOptions'],
             'callback' => [$this, 'runMagickTest'],
         ]);
 
-        register_rest_route(self::NAMESPACE, '/upload-test', [
+        register_rest_route(self::NAMESPACE , '/upload-test-status', [
+            'methods' => 'POST',
+            'permission_callback' => [$this, 'permissionManageOptions'],
+            'callback' => [$this, 'uploadTestStatus'],
+            'args' => [
+                'attachment_id' => [
+                    'required' => true,
+                    'type' => 'integer',
+                    'sanitize_callback' => 'absint',
+                ],
+                'target_index' => [
+                    'required' => false,
+                    'type' => 'integer',
+                    'default' => 0,
+                    'sanitize_callback' => 'absint',
+                ],
+            ],
+        ]);
+
+        register_rest_route(self::NAMESPACE , '/upload-test', [
             'methods' => 'POST',
             'permission_callback' => [$this, 'permissionManageOptions'],
             'callback' => [$this, 'uploadTest'],
@@ -96,6 +121,20 @@ final class RestController
             $queued = true;
         }
         return rest_ensure_response(['queued' => $queued]);
+    }
+
+    public function stopConvert(\WP_REST_Request $request): \WP_REST_Response
+    {
+        // Set stop flag that the conversion loop checks
+        \set_transient('aviflosu_stop_conversion', true, 300); // 5 minute expiry
+
+        // Also unschedule any pending cron job
+        $timestamp = \wp_next_scheduled('aviflosu_run_on_demand');
+        if ($timestamp) {
+            \wp_unschedule_event($timestamp, 'aviflosu_run_on_demand');
+        }
+
+        return rest_ensure_response(['stopped' => true]);
     }
 
     public function deleteAllAvifs(\WP_REST_Request $request): \WP_REST_Response
@@ -246,68 +285,96 @@ final class RestController
             }
         }
 
-        $results = $this->converter->convertAttachmentNow((int) $attachment_id);
+        // Get sizes without converting - conversion happens incrementally via status endpoint
+        $sizes = $this->converter->getAttachmentSizes((int) $attachment_id);
         $editLink = get_edit_post_link($attachment_id);
         $title = get_the_title($attachment_id) ?: (string) $attachment_id;
 
-        $html = $this->renderTestResultsTable($results, $editLink, $title);
-
-        return rest_ensure_response(['html' => $html, 'attachment_id' => $attachment_id]);
+        return rest_ensure_response([
+            'attachment_id' => $attachment_id,
+            'edit_link' => $editLink ?: '',
+            'title' => $title,
+            'sizes' => $sizes['sizes'] ?? [],
+            'complete' => false,
+        ]);
     }
 
     /**
-     * Render the test results table HTML.
+     * Poll for upload test status and convert one size at a time by index.
+     * Guaranteed to progress through the list one by one.
      */
-    private function renderTestResultsTable(array $results, ?string $editLink, string $title): string
+    public function uploadTestStatus(\WP_REST_Request $request): \WP_REST_Response
     {
-        ob_start();
+        $attachmentId = (int) $request->get_param('attachment_id');
+        $targetIndex = (int) $request->get_param('target_index');
 
-        echo '<hr />';
-        echo '<p><strong>' . esc_html__('Test results for attachment:', 'avif-local-support') . '</strong> ';
-        echo sprintf('<a href="%s" target="_blank">%s</a>', esc_url($editLink ?: '#'), esc_html($title));
-        echo '</p>';
-
-        echo '<table class="widefat striped" style="max-width:960px">';
-        echo '<thead><tr>';
-        echo '<th>' . esc_html__('Size', 'avif-local-support') . '</th>';
-        echo '<th>' . esc_html__('Dimensions', 'avif-local-support') . '</th>';
-        echo '<th>' . esc_html__('JPEG', 'avif-local-support') . '</th>';
-        echo '<th>' . esc_html__('JPEG size', 'avif-local-support') . '</th>';
-        echo '<th>' . esc_html__('AVIF', 'avif-local-support') . '</th>';
-        echo '<th>' . esc_html__('AVIF size', 'avif-local-support') . '</th>';
-        echo '<th>' . esc_html__('Status', 'avif-local-support') . '</th>';
-        echo '</tr></thead>';
-        echo '<tbody>';
-
-        foreach (($results['sizes'] ?? []) as $row) {
-            $name = isset($row['name']) ? (string) $row['name'] : '';
-            $dims = '';
-            if (!empty($row['width']) && !empty($row['height'])) {
-                $dims = (int) $row['width'] . '×' . (int) $row['height'];
-            }
-            $jpegUrl = isset($row['jpeg_url']) ? (string) $row['jpeg_url'] : '';
-            $jpegSize = isset($row['jpeg_size']) ? (int) $row['jpeg_size'] : 0;
-            $avifUrl = isset($row['avif_url']) ? (string) $row['avif_url'] : '';
-            $avifSize = isset($row['avif_size']) ? (int) $row['avif_size'] : 0;
-            $status = !empty($row['converted'])
-                ? __('Converted', 'avif-local-support')
-                : __('Not created', 'avif-local-support');
-
-            echo '<tr>';
-            echo '<td>' . esc_html($name) . '</td>';
-            echo '<td>' . esc_html($dims) . '</td>';
-            echo '<td>' . ($jpegUrl !== '' ? '<a href="' . esc_url($jpegUrl) . '" target="_blank" rel="noopener">' . esc_html__('View', 'avif-local-support') . '</a>' : '-') . '</td>';
-            echo '<td>' . esc_html(Formatter::bytes($jpegSize)) . '</td>';
-            echo '<td>' . (!empty($row['converted']) && $avifUrl !== '' ? '<a href="' . esc_url($avifUrl) . '" target="_blank" rel="noopener">' . esc_html__('View', 'avif-local-support') . '</a>' : '-') . '</td>';
-            echo '<td>' . esc_html(Formatter::bytes($avifSize)) . '</td>';
-            echo '<td>' . esc_html($status) . '</td>';
-            echo '</tr>';
+        if ($attachmentId <= 0) {
+            return new \WP_REST_Response(['message' => 'Invalid attachment ID.'], 400);
         }
 
-        echo '</tbody>';
-        echo '</table>';
+        // Get current sizes
+        $data = $this->converter->getAttachmentSizes($attachmentId);
+        $sizes = $data['sizes'] ?? [];
+        $totalCount = count($sizes);
 
-        return (string) ob_get_clean();
+        $processedResult = 'skipped';
+
+        if ($targetIndex >= $totalCount) {
+            // Index out of bounds - we are done
+            $complete = true;
+        } else {
+            $complete = false;
+            $size = &$sizes[$targetIndex];
+
+            if (!empty($size['converted'])) {
+                $processedResult = 'already_converted';
+            } else {
+                $jpegPath = $size['jpeg_path'] ?? '';
+                if ($jpegPath !== '') {
+                    $success = $this->converter->convertSingleJpegToAvif($jpegPath);
+                    $size['converted'] = $success;
+                    if ($success) {
+                        // Refresh AVIF size
+                        $avifPath = $size['avif_path'] ?? '';
+                        $size['avif_size'] = file_exists($avifPath) ? (int) filesize($avifPath) : 0;
+                        $processedResult = 'success';
+                    } else {
+                        $processedResult = 'failure';
+                    }
+                } else {
+                    $processedResult = 'failure';
+                }
+            }
+        }
+
+        $editLink = get_edit_post_link($attachmentId);
+        $title = get_the_title($attachmentId) ?: (string) $attachmentId;
+
+        // Recalculate summary counts
+        $convertedCount = 0;
+        foreach ($sizes as $s) {
+            if (!empty($s['converted'])) {
+                $convertedCount++;
+            }
+        }
+
+        return rest_ensure_response([
+            'attachment_id' => $attachmentId,
+            'edit_link' => $editLink ?: '',
+            'title' => $title,
+            'sizes' => $sizes,
+            'complete' => $complete,
+            'target_index' => $targetIndex,
+            'next_index' => $targetIndex + 1,
+            'processed_result' => $processedResult,
+            'converted_count' => $convertedCount,
+            'total_count' => $totalCount,
+        ]);
     }
+
+
 }
+
+
+
 

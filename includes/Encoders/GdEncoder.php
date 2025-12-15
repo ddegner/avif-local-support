@@ -40,6 +40,32 @@ class GdEncoder implements AvifEncoderInterface
             return ConversionResult::failure('Invalid JPEG or unreadable file');
         }
 
+        // Check output dimensions against AVIF specification limits.
+        // AVIF Advanced Profile max: 35,651,584 pixels (16384×8704).
+        $srcWidth = (int) $imageInfo[0];
+        $srcHeight = (int) $imageInfo[1];
+        $maxPixels = 35651584; // AVIF Advanced Profile limit
+
+        // Determine output dimensions
+        if ($dimensions && isset($dimensions['width'], $dimensions['height'])) {
+            $outputWidth = (int) $dimensions['width'];
+            $outputHeight = (int) $dimensions['height'];
+        } else {
+            // No resize - output will be same as source
+            $outputWidth = $srcWidth;
+            $outputHeight = $srcHeight;
+        }
+
+        $outputPixels = $outputWidth * $outputHeight;
+        if ($outputPixels > $maxPixels) {
+            $megapixels = round($outputPixels / 1000000, 1);
+            return ConversionResult::failure(
+                "Output exceeds AVIF maximum size: {$outputWidth}×{$outputHeight} ({$megapixels}MP)",
+                'AVIF Advanced Profile supports max 35.6 megapixels (16384×8704). ' .
+                'Resize the image before conversion or use WordPress media settings to generate smaller sizes.'
+            );
+        }
+
         $gd = @imagecreatefromjpeg($source);
         if (!$gd) {
             return ConversionResult::failure('Failed to create GD resource', 'File corrupt or memory limit too low.');

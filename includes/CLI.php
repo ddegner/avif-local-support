@@ -22,6 +22,8 @@ class CLI
         $this->diagnostics = new Diagnostics();
         $this->converter = new Converter();
         $this->logger = new Logger();
+        $this->converter->set_logger($this->logger);
+        $this->converter->init();
     }
 
     /**
@@ -90,7 +92,7 @@ class CLI
             default => '%R',
         };
         \WP_CLI::line(\WP_CLI::colorize('%B-- Overall --%n'));
-        \WP_CLI::line(\WP_CLI::colorize(sprintf('AVIF Support:      %s%s%%n', $color, strtoupper($level))));
+        \WP_CLI::line(\WP_CLI::colorize(sprintf('AVIF Support:      %s%s', $color, strtoupper($level)) . '%n'));
         \WP_CLI::line('');
     }
 
@@ -356,6 +358,30 @@ class CLI
      */
     private function convertAll(bool $dryRun): void
     {
+        // Get counts like the Tools page
+        $counts = $this->diagnostics->computeMissingCounts();
+
+        if ($counts['total_jpegs'] === 0) {
+            \WP_CLI::line('No JPEG files found in media library.');
+            return;
+        }
+
+        if ($counts['missing_avifs'] === 0) {
+            \WP_CLI::success('All JPEG files already have AVIF versions.');
+            return;
+        }
+
+        \WP_CLI::line('');
+        \WP_CLI::line(sprintf('Total JPEG files:  %d', $counts['total_jpegs']));
+        \WP_CLI::line(sprintf('Existing AVIFs:    %d', $counts['existing_avifs']));
+        \WP_CLI::line(sprintf('Missing AVIFs:     %d', $counts['missing_avifs']));
+        \WP_CLI::line('');
+
+        if ($dryRun) {
+            \WP_CLI::line(sprintf('Would convert %d missing AVIF files.', $counts['missing_avifs']));
+            return;
+        }
+
         $query = new \WP_Query([
             'post_type' => 'attachment',
             'post_status' => 'inherit',
@@ -369,20 +395,9 @@ class CLI
         ]);
 
         $attachmentIds = $query->posts;
-        $total = count($attachmentIds);
 
-        if ($total === 0) {
-            \WP_CLI::line('No JPEG attachments found.');
-            return;
-        }
-
-        if ($dryRun) {
-            \WP_CLI::line("Would convert {$total} attachments.");
-            return;
-        }
-
-        \WP_CLI::line("Converting {$total} attachments...");
-        $progress = \WP_CLI\Utils\make_progress_bar('Converting', $total);
+        \WP_CLI::line(sprintf('Converting %d missing AVIF files...', $counts['missing_avifs']));
+        $progress = \WP_CLI\Utils\make_progress_bar('Converting', $counts['missing_avifs']);
 
         $totalConverted = 0;
         $totalSkipped = 0;
@@ -393,16 +408,15 @@ class CLI
             foreach ($results['sizes'] as $size) {
                 if ($size['converted'] && !$size['existed_before']) {
                     $totalConverted++;
+                    $progress->tick();
                 } else {
                     $totalSkipped++;
                 }
             }
-
-            $progress->tick();
         }
 
         $progress->finish();
-        \WP_CLI::success("Converted {$totalConverted} files, skipped {$totalSkipped} (already exist).");
+        \WP_CLI::success(sprintf('Converted %d files, skipped %d (already exist).', $totalConverted, $totalSkipped));
     }
 
     /**
@@ -416,8 +430,20 @@ class CLI
             return;
         }
 
-        $this->converter->deleteAvifsForAttachment($attachmentId);
-        \WP_CLI::success("Deleted AVIF files for attachment ID {$attachmentId}.");
+        $result = $this->converter->deleteAvifsForAttachment($attachmentId);
+
+        if ($result['attempted'] === 0) {
+            \WP_CLI::line("No AVIF files found for attachment ID {$attachmentId}.");
+            return;
+        }
+
+        if ($result['deleted'] === $result['attempted']) {
+            \WP_CLI::success("Deleted {$result['deleted']} AVIF file(s) for attachment ID {$attachmentId}.");
+        } elseif ($result['deleted'] > 0) {
+            \WP_CLI::warning("Partially deleted AVIF files for attachment ID {$attachmentId}: {$result['deleted']}/{$result['attempted']} files deleted. Check file permissions.");
+        } else {
+            \WP_CLI::error("Failed to delete AVIF files for attachment ID {$attachmentId}. Check file permissions.");
+        }
     }
 
     /**
@@ -436,8 +462,7 @@ class CLI
 
         if (!isset($assoc_args['yes'])) {
             \WP_CLI::confirm(
-                sprintf('This will delete %d AVIF files. Continue?', $counts['existing_avifs']),
-                $assoc_args
+                sprintf('This will delete %d AVIF files. Continue?', $counts['existing_avifs'])
             );
         }
 
@@ -464,12 +489,26 @@ class CLI
         \WP_CLI::line("Deleting AVIF files for {$total} attachments...");
         $progress = \WP_CLI\Utils\make_progress_bar('Deleting', $total);
 
+        $totalAttempted = 0;
+        $totalDeleted = 0;
+
         foreach ($attachmentIds as $attachmentId) {
-            $this->converter->deleteAvifsForAttachment((int) $attachmentId);
+            $result = $this->converter->deleteAvifsForAttachment((int) $attachmentId);
+            $totalAttempted += $result['attempted'];
+            $totalDeleted += $result['deleted'];
             $progress->tick();
         }
 
         $progress->finish();
-        \WP_CLI::success("Deleted AVIF files for {$total} attachments.");
+
+        if ($totalAttempted === 0) {
+            \WP_CLI::line('No AVIF files were found to delete.');
+        } elseif ($totalDeleted === $totalAttempted) {
+            \WP_CLI::success("Deleted {$totalDeleted} AVIF file(s).");
+        } elseif ($totalDeleted > 0) {
+            \WP_CLI::warning("Partially deleted: {$totalDeleted}/{$totalAttempted} AVIF files. Check file permissions for remaining files.");
+        } else {
+            \WP_CLI::error("Failed to delete any AVIF files. Check file permissions.");
+        }
     }
 }

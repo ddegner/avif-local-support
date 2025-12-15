@@ -388,10 +388,21 @@ final class Settings
     {
         $cliPath = (string) get_option('aviflosu_cli_path', '');
         $cliArgs = (string) get_option('aviflosu_cli_args', '');
-        $suggestedEnv = $this->diagnostics->getSuggestedCliEnv();
+        
+        // Suppress any output/errors from diagnostic methods
+        ob_start();
+        try {
+            $suggestedEnv = $this->diagnostics->getSuggestedCliEnv();
+            $detected = $this->diagnostics->detectCliBinaries();
+            $suggestedArgs = $this->diagnostics->getSuggestedCliArgs();
+        } catch (\Throwable $e) {
+            $suggestedEnv = '';
+            $detected = [];
+            $suggestedArgs = '';
+        }
+        ob_end_clean();
+        
         $cliEnv = (string) get_option('aviflosu_cli_env', $suggestedEnv);
-        $detected = $this->diagnostics->detectCliBinaries();
-        $suggestedArgs = $this->diagnostics->getSuggestedCliArgs();
 
         echo '<div id="aviflosu_cli_options">';
 
@@ -445,4 +456,7 @@ final class Settings
         return self::PAGE_SLUG;
     }
 }
+
+
+
 

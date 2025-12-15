@@ -67,6 +67,11 @@ final class Logger
      */
     public function renderLogsContent(): void
     {
+        // Ensure we're in a safe context (admin page) before rendering
+        if (!is_admin()) {
+            return;
+        }
+        
         $logs = $this->getLogs();
 
         if (empty($logs)) {
@@ -120,4 +125,7 @@ final class Logger
         echo '</div>';
     }
 }
+
+
+
 

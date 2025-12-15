@@ -184,6 +184,7 @@ LiteSpeed's open_basedir restriction prevents PHP from detecting executables out
 
 - Feature: Fully asynchronous "Upload & Test" conversion to prevent timeouts on large images
 - Enhancement: Re-architected test conversion to use sequential polling
+- Enhancement: Admin UI modularized with template-based architecture
 - Optimization: Removed unused `vendor` storage and legacy dependencies, reducing plugin size
 - Fix: Restored robust queue rendering for test results
 

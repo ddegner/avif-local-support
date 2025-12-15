@@ -163,25 +163,25 @@ final class Converter
         return $file;
     }
 
-    private function checkMissingAvif(string $path): void
+    private function checkMissingAvif(string $path): ?ConversionResult
     {
         if ($path === '' || !file_exists($path)) {
-            return;
+            return null;
         }
         if (!preg_match('/\.(jpe?g)$/i', $path)) {
-            return;
+            return null;
         }
         $avifPath = (string) preg_replace('/\.(jpe?g)$/i', '.avif', $path);
         if ($avifPath !== '' && file_exists($avifPath)) {
-            return; // already converted
+            return null; // already converted
         }
 
         // Determine better source based on WordPress logic (if enabled)
         [$sourcePath, $targetDimensions] = $this->getConversionData($path);
-        $this->convertToAvif($sourcePath, $avifPath, $targetDimensions);
+        return $this->convertToAvif($sourcePath, $avifPath, $targetDimensions);
     }
 
-    private function convertToAvif(string $sourcePath, string $avifPath, ?array $targetDimensions): void
+    private function convertToAvif(string $sourcePath, string $avifPath, ?array $targetDimensions): ConversionResult
     {
         $start_time = microtime(true);
         $settings = AvifSettings::fromOptions();
@@ -197,7 +197,7 @@ final class Converter
             $memoryWarning = $this->check_memory_safe($sourcePath);
             if ($memoryWarning) {
                 $this->log_conversion('error', $sourcePath, $avifPath, 'none', $start_time, $memoryWarning, $settings->toArray());
-                return;
+                return ConversionResult::failure($memoryWarning);
             }
         }
 
@@ -237,8 +237,9 @@ final class Converter
         }
 
         if (empty($encodersToTry)) {
-            $this->log_conversion('error', $sourcePath, $avifPath, 'none', $start_time, 'No available encoders found.', $settings->toArray());
-            return;
+            $msg = 'No available encoders found.';
+            $this->log_conversion('error', $sourcePath, $avifPath, 'none', $start_time, $msg, $settings->toArray());
+            return ConversionResult::failure($msg);
         }
 
         $lastResult = null;
@@ -251,7 +252,7 @@ final class Converter
 
             if ($result->success) {
                 $this->log_conversion('success', $sourcePath, $avifPath, $engineUsed, $start_time, null, $settings->toArray());
-                return;
+                return ConversionResult::success();
             }
 
             $lastResult = $result;
@@ -268,6 +269,7 @@ final class Converter
         }
 
         $this->log_conversion('error', $sourcePath, $avifPath, $engineUsed, $start_time, $errorMsg, $details);
+        return ConversionResult::failure($errorMsg ?? 'Unknown error', $suggestion);
     }
 
     /**
@@ -646,6 +648,7 @@ final class Converter
             $avifRel = (string) preg_replace('/\.(jpe?g)$/i', '.avif', $jpegRel);
             $jpegUrl = $jpegRel !== '' ? $baseUrl . $jpegRel : '';
             $avifUrl = $avifRel !== '' ? $baseUrl . $avifRel : '';
+            $avifExists = file_exists($avifAbs);
             $results['sizes'][] = [
                 'name' => $label,
                 'jpeg_path' => $jpegAbs,
@@ -655,8 +658,9 @@ final class Converter
                 'width' => $width,
                 'height' => $height,
                 'jpeg_size' => file_exists($jpegAbs) ? (int) filesize($jpegAbs) : 0,
-                'avif_size' => file_exists($avifAbs) ? (int) filesize($avifAbs) : 0,
-                'converted' => file_exists($avifAbs),
+                'avif_size' => $avifExists ? (int) filesize($avifAbs) : 0,
+                'converted' => $avifExists,
+                'status' => $avifExists ? 'success' : 'pending',
             ];
         };
 
@@ -687,17 +691,25 @@ final class Converter
      * Helper for Async Upload Test: Convert a single JPEG file path to AVIF.
      * Returns true if AVIF exists after attempt.
      */
-    public function convertSingleJpegToAvif(string $jpegPath): bool
+    public function convertSingleJpegToAvif(string $jpegPath): ConversionResult
     {
         if (empty($jpegPath) || !file_exists($jpegPath)) {
-            return false;
+            return ConversionResult::failure(__('Source file not found', 'avif-local-support'));
         }
 
-        // This will create the AVIF if it doesn't exist
-        $this->checkMissingAvif($jpegPath);
+        // This will create the AVIF if it doesn't exist. Returns ConversionResult if attempted, null if skipped.
+        $result = $this->checkMissingAvif($jpegPath);
+
+        if ($result !== null) {
+            return $result;
+        }
 
         $avifPath = (string) preg_replace('/\.(jpe?g)$/i', '.avif', $jpegPath);
-        return file_exists($avifPath);
+        if (file_exists($avifPath)) {
+            return ConversionResult::success();
+        }
+
+        return ConversionResult::failure(__('Unknown error (conversion skipped)', 'avif-local-support'));
     }
 
 

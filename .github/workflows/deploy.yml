@@ -10,11 +10,30 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@master
+
     - name: Generate readme.txt
       run: cp README.md readme.txt
+
+    - name: Build Release Zip
+      run: |
+        mkdir -p _build/avif-local-support
+        grep -vE '^(#|$)' .distignore > .rsync_ignore
+        rsync -rc --exclude-from=.rsync_ignore . _build/avif-local-support/
+        cd _build
+        zip -r ../avif-local-support.zip avif-local-support
+        cd ..
+        rm -rf _build
+
     - name: WordPress Plugin Deploy
       uses: 10up/action-wordpress-plugin-deploy@stable
       env:
         SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
         SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
         SLUG: avif-local-support
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: avif-local-support.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

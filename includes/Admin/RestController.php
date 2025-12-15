@@ -317,7 +317,15 @@ final class RestController
         $sizes = $data['sizes'] ?? [];
         $totalCount = count($sizes);
 
-        $processedResult = 'skipped';
+        // Fix stateless polling issue:
+        // Function getAttachmentSizes() returns 'pending' if file is missing.
+        // But if we have already iterated past an index (i < targetIndex),
+        // and it is still 'pending' (meaning no file created), it corresponds to a failure.
+        for ($i = 0; $i < $targetIndex && $i < $totalCount; $i++) {
+            if (isset($sizes[$i]['status']) && $sizes[$i]['status'] === 'pending') {
+                $sizes[$i]['status'] = 'failure';
+            }
+        }
 
         if ($targetIndex >= $totalCount) {
             // Index out of bounds - we are done
@@ -326,37 +334,37 @@ final class RestController
             $complete = false;
             $size = &$sizes[$targetIndex];
 
-            if (!empty($size['converted'])) {
-                $processedResult = 'already_converted';
+            if ($size['status'] === 'success') {
+                // Already converted, skip
             } else {
                 $jpegPath = $size['jpeg_path'] ?? '';
                 if ($jpegPath !== '') {
-                    $success = $this->converter->convertSingleJpegToAvif($jpegPath);
+                    $conversionResult = $this->converter->convertSingleJpegToAvif($jpegPath);
+                    $success = $conversionResult->success;
                     $size['converted'] = $success;
+                    $size['status'] = $success ? 'success' : 'failure';
+                    if (!$success && !empty($conversionResult->error)) {
+                        $size['error'] = $conversionResult->error;
+                    }
                     if ($success) {
                         // Refresh AVIF size
                         $avifPath = $size['avif_path'] ?? '';
                         $size['avif_size'] = file_exists($avifPath) ? (int) filesize($avifPath) : 0;
-                        $processedResult = 'success';
-                    } else {
-                        $processedResult = 'failure';
                     }
                 } else {
-                    $processedResult = 'failure';
+                    $size['status'] = 'failure';
                 }
             }
         }
 
+        // Mark the next item as 'processing' so frontend can show spinner
+        $nextIndex = $targetIndex + 1;
+        if (!$complete && $nextIndex < $totalCount && $sizes[$nextIndex]['status'] === 'pending') {
+            $sizes[$nextIndex]['status'] = 'processing';
+        }
+
         $editLink = get_edit_post_link($attachmentId);
         $title = get_the_title($attachmentId) ?: (string) $attachmentId;
-
-        // Recalculate summary counts
-        $convertedCount = 0;
-        foreach ($sizes as $s) {
-            if (!empty($s['converted'])) {
-                $convertedCount++;
-            }
-        }
 
         return rest_ensure_response([
             'attachment_id' => $attachmentId,
@@ -364,11 +372,7 @@ final class RestController
             'title' => $title,
             'sizes' => $sizes,
             'complete' => $complete,
-            'target_index' => $targetIndex,
-            'next_index' => $targetIndex + 1,
-            'processed_result' => $processedResult,
-            'converted_count' => $convertedCount,
-            'total_count' => $totalCount,
+            'next_index' => $nextIndex,
         ]);
     }
 

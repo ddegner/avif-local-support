@@ -628,36 +628,75 @@
 
         testSubmit.disabled = true;
         if (testSpinner) testSpinner.classList.add('is-active');
-        if (testStatus) testStatus.textContent = 'Uploading & converting…';
+        if (testStatus) testStatus.textContent = 'Uploading...';
         if (testResults) testResults.innerHTML = '';
+
+        function pollTestStatus(attachmentId, targetIndex) {
+          apiFetch({
+            path: '/aviflosu/v1/upload-test-status',
+            method: 'POST',
+            body: JSON.stringify({ attachment_id: attachmentId, target_index: targetIndex }),
+            headers: { 'Content-Type': 'application/json' }
+          })
+            .then(function (json) {
+              if (json && json.sizes) {
+                renderTestResultsTable(json, testResults);
+
+                // Update status text
+                if (testStatus) {
+                  testStatus.textContent = 'Converting...';
+                }
+
+                if (!json.complete) {
+                  // Continue to next item
+                  pollTestStatus(attachmentId, json.next_index);
+                } else {
+                  // Done
+                  if (testStatus) testStatus.textContent = 'Done';
+                  if (testSpinner) testSpinner.classList.remove('is-active');
+                  testSubmit.disabled = false;
+                }
+              } else {
+                // Unexpected response
+                if (testStatus) testStatus.textContent = 'Failed to get status';
+                if (testSpinner) testSpinner.classList.remove('is-active');
+                testSubmit.disabled = false;
+              }
+            })
+            .catch(function (err) {
+              if (testStatus) testStatus.textContent = 'Error: ' + (err.message || 'Unknown');
+              if (testSpinner) testSpinner.classList.remove('is-active');
+              testSubmit.disabled = false;
+            });
+        }
 
         var formData = new FormData();
         formData.append('avif_local_support_test_file', file);
         apiFetch({ path: '/aviflosu/v1/upload-test', method: 'POST', body: formData })
           .then(function (json) {
-            if (json && json.html) {
-              if (testStatus) testStatus.textContent = 'Done';
-              if (testResults) {
-                testResults.innerHTML = json.html;
-              }
+            if (json && json.attachment_id) {
+              // Initial render with whatever we have (likely all "Not created" if conversion on upload is off)
+              renderTestResultsTable(json, testResults);
+
+              // Update status immediately to indicate we are moving to conversion phase
+              if (testStatus) testStatus.textContent = 'Converting...';
+
+              // Start polling from index 0
+              pollTestStatus(json.attachment_id, 0);
             } else {
-              if (testStatus) testStatus.textContent = 'Failed';
+              if (testStatus) testStatus.textContent = 'Upload failed';
+              if (testSpinner) testSpinner.classList.remove('is-active');
+              testSubmit.disabled = false;
             }
           })
           .catch(function (err) {
             var msg = (err && err.message) ? String(err.message) : 'Error';
-            // Provide helpful hint for timeout-like errors
             if (msg.toLowerCase().indexOf('json') !== -1 || msg.toLowerCase().indexOf('timeout') !== -1 || msg.toLowerCase().indexOf('fetch') !== -1) {
-              msg = 'Request timed out. The image may be too large or conversion is taking too long. Check htop/logs to see if conversion is still running.';
+              msg = 'Upload timed out or failed. Check logs.';
             }
             if (testStatus) testStatus.textContent = msg;
-          })
-          .finally(function () {
             if (testSpinner) testSpinner.classList.remove('is-active');
             testSubmit.disabled = false;
-            // Clear file input so same file can be selected again if needed, 
-            // though usually we want to see the filename. 
-            // Let's keep it populated.
           });
       });
     }
@@ -717,6 +756,63 @@
       // Initial state
       updateEngineVisibility();
     }
+  }
+
+  function formatBytes(bytes, decimals) {
+    if (bytes === 0) return '0 B';
+    var k = 1024;
+    var dm = decimals < 0 ? 0 : decimals;
+    var sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    var i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+  }
+
+  function renderTestResultsTable(data, container) {
+    var html = '<p><strong>Test results for attachment:</strong> <a href="' + (data.edit_link || '#') + '" target="_blank">' + (data.title || data.attachment_id) + '</a></p>';
+    html += '<table class="widefat striped" style="max-width:960px"><thead><tr>' +
+      '<th>Size</th><th>Dimensions</th><th>JPEG</th><th>JPEG size</th><th>AVIF</th><th>AVIF size</th><th>Status</th>' +
+      '</tr></thead><tbody>';
+
+    if (data.sizes && data.sizes.length) {
+      data.sizes.forEach(function (row) {
+        var dims = (row.width && row.height) ? (row.width + '×' + row.height) : '';
+        var jpegLink = row.jpeg_url ? '<a href="' + row.jpeg_url + '" target="_blank">View</a>' : '-';
+        var avifLink = (row.status === 'success' && row.avif_url) ? '<a href="' + row.avif_url + '" target="_blank">View</a>' : '-';
+
+        var status;
+        switch (row.status) {
+          case 'success':
+            status = '<span style="color:#00a32a;font-weight:bold;">Converted</span>';
+            break;
+          case 'failure':
+            status = '<span style="color:#d63638;font-weight:bold;">Failed</span>';
+            if (row.error) {
+              var errText = String(row.error).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+              status += '<br><span style="font-size:11px;color:#d63638;">' + errText + '</span>';
+            }
+            break;
+          case 'processing':
+            status = '<span class="spinner is-active" style="float:none;margin:0 4px -2px 0;"></span> Processing...';
+            break;
+          default:
+            status = 'Pending';
+        }
+
+        html += '<tr>' +
+          '<td>' + (row.name || '') + '</td>' +
+          '<td>' + dims + '</td>' +
+          '<td>' + jpegLink + '</td>' +
+          '<td>' + formatBytes(row.jpeg_size || 0, 2) + '</td>' +
+          '<td>' + avifLink + '</td>' +
+          '<td>' + formatBytes(row.avif_size || 0, 2) + '</td>' +
+          '<td>' + status + '</td>' +
+          '</tr>';
+      });
+    } else {
+      html += '<tr><td colspan="7">No sizes found.</td></tr>';
+    }
+    html += '</tbody></table>';
+    container.innerHTML = html;
   }
 
   if (document.readyState === 'loading') {

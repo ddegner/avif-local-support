@@ -180,6 +180,13 @@ LiteSpeed's open_basedir restriction prevents PHP from detecting executables out
 
 ## Changelog
 
+### 0.4.5
+
+- Fix: Corrected "Upload & Test" status display issues (spinner visibility, status text alignment)
+- Fix: `wp avif delete` command now correctly reports success/failure counts and handles permission errors
+- Fix: `wp avif convert` command output now includes count of missing AVIFs
+- Enhancement: Added GitHub Action for automated release creation
+
 ### 0.4.4
 
 - Feature: Fully asynchronous "Upload & Test" conversion to prevent timeouts on large images

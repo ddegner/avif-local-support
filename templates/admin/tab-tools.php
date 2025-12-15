@@ -121,59 +121,7 @@ $avif_support_level = (string) ($system_status['avif_support_level'] ?? (!empty(
                 </form>
                 <div id="avif-local-support-test-results"></div>
 
-                <?php if (!empty($test_id) && !empty($test_results)): ?>
-                    <?php
-                    $attachment = get_post($test_id);
-                    if ($attachment && $attachment->post_type === 'attachment'):
-                        $edit_link = get_edit_post_link($test_id);
-                        ?>
-                        <hr />
-                        <p>
-                            <strong><?php esc_html_e('Test results for attachment:', 'avif-local-support'); ?></strong>
-                            <a
-                                href="<?php echo esc_url($edit_link ?: '#'); ?>"><?php echo esc_html(get_the_title($test_id) ?: (string) $test_id); ?></a>
-                        </p>
-                        <table class="widefat striped" style="max-width:960px">
-                            <thead>
-                                <tr>
-                                    <th><?php esc_html_e('Size', 'avif-local-support'); ?></th>
-                                    <th><?php esc_html_e('Dimensions', 'avif-local-support'); ?></th>
-                                    <th><?php esc_html_e('JPEG', 'avif-local-support'); ?></th>
-                                    <th><?php esc_html_e('JPEG size', 'avif-local-support'); ?></th>
-                                    <th><?php esc_html_e('AVIF', 'avif-local-support'); ?></th>
-                                    <th><?php esc_html_e('AVIF size', 'avif-local-support'); ?></th>
-                                    <th><?php esc_html_e('Status', 'avif-local-support'); ?></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach (($test_results['sizes'] ?? []) as $row):
-                                    $name = isset($row['name']) ? (string) $row['name'] : '';
-                                    $dims = '';
-                                    if (!empty($row['width']) && !empty($row['height'])) {
-                                        $dims = (int) $row['width'] . '×' . (int) $row['height'];
-                                    }
-                                    $jpeg_url = isset($row['jpeg_url']) ? (string) $row['jpeg_url'] : '';
-                                    $jpeg_size = isset($row['jpeg_size']) ? (int) $row['jpeg_size'] : 0;
-                                    $avif_url = isset($row['avif_url']) ? (string) $row['avif_url'] : '';
-                                    $avif_size = isset($row['avif_size']) ? (int) $row['avif_size'] : 0;
-                                    $status = !empty($row['converted']) ? __('Converted', 'avif-local-support') : __('Not created', 'avif-local-support');
-                                    ?>
-                                    <tr>
-                                        <td><?php echo esc_html($name); ?></td>
-                                        <td><?php echo esc_html($dims); ?></td>
-                                        <td><?php echo $jpeg_url !== '' ? '<a href="' . esc_url($jpeg_url) . '" target="_blank" rel="noopener">' . esc_html__('View', 'avif-local-support') . '</a>' : '-'; ?>
-                                        </td>
-                                        <td><?php echo esc_html(\Ddegner\AvifLocalSupport\Formatter::bytes($jpeg_size)); ?></td>
-                                        <td><?php echo (!empty($row['converted']) && $avif_url !== '') ? '<a href="' . esc_url($avif_url) . '" target="_blank" rel="noopener">' . esc_html__('View', 'avif-local-support') . '</a>' : '-'; ?>
-                                        </td>
-                                        <td><?php echo esc_html(\Ddegner\AvifLocalSupport\Formatter::bytes($avif_size)); ?></td>
-                                        <td><?php echo esc_html($status); ?></td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    <?php endif; ?>
-                <?php endif; ?>
+
             </div>
         </div>
 

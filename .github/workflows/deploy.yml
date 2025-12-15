@@ -12,7 +12,31 @@ jobs:
     - uses: actions/checkout@master
 
     - name: Generate readme.txt
-      run: cp README.md readme.txt
+      run: |
+        # Create WordPress-compatible readme.txt from README.md
+        cat > readme.txt << 'HEADER'
+        === AVIF Local Support ===
+        Contributors: daviddegner
+        Donate link: https://www.daviddegner.com
+        Tags: avif, images, performance, media, optimization
+        Requires at least: 6.5
+        Tested up to: 6.7
+        Stable tag: 0.4.5
+        Requires PHP: 8.1
+        License: GPLv2 or later
+        License URI: https://www.gnu.org/licenses/gpl-2.0.html
+
+        High-quality AVIF image conversion for WordPress.
+
+        HEADER
+        # Append converted README.md (skip first line which is the title)
+        tail -n +2 README.md | \
+          sed 's/^## /== /g' | \
+          sed 's/^### /= /g' | \
+          sed 's/^#### /= /g' | \
+          sed 's/ ==$/ ==/g' | \
+          sed 's/ =$/ =/g' | \
+          sed 's/^\*\*\([^*]*\)\*\*$/\1/g' >> readme.txt
 
     - name: Build Release Zip
       run: |

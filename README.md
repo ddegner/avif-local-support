@@ -1,10 +1,16 @@
 # AVIF Local Support
 
-[![WordPress Plugin Version](https://img.shields.io/wordpress/plugin/v/avif-local-support)](https://wordpress.org/plugins/avif-local-support/)
-[![WordPress Plugin Rating](https://img.shields.io/wordpress/plugin/stars/avif-local-support)](https://wordpress.org/plugins/avif-local-support/)
-[![License](https://img.shields.io/badge/license-GPL--2.0%2B-blue.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
+Contributors: daviddegner
+Donate link: https://www.daviddegner.com
+Tags: avif, images, performance, media, optimization
+Requires at least: 6.5
+Tested up to: 6.9
+Stable tag: 0.4.5
+Requires PHP: 8.1
+License: GPLv2 or later
+License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-**High-quality AVIF image conversion for WordPress — no subscriptions, no external services.**
+High-quality AVIF image conversion for WordPress — no subscriptions, no external services.
 
 Built by a [Boston photographer](https://www.daviddegner.com) who needed it for their own portfolio. This plugin prioritizes **image quality** over everything else.
 

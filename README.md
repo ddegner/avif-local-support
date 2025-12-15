@@ -1,18 +1,22 @@
 # AVIF Local Support
 
-Contributors: daviddegner
+Contributors: ddegner
 Donate link: https://www.daviddegner.com
 Tags: avif, images, performance, media, optimization
 Requires at least: 6.5
 Tested up to: 6.9
-Stable tag: 0.4.6
+Stable tag: 0.4.7
 Requires PHP: 8.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-High-quality AVIF image conversion for WordPress — no subscriptions, no external services.
+High-quality AVIF image conversion for WordPress — local, quality-first.
 
-Built by a [Boston photographer](https://www.daviddegner.com) who needed it for their own portfolio. This plugin prioritizes **image quality** over everything else.
+## Description
+
+Built by a [Boston photographer](https://www.daviddegner.com) who needed it for their own portfolio. This plugin prioritizes **image quality** over everything else — no subscriptions, no external services.
+
+**[View on WordPress.org](https://wordpress.org/plugins/avif-local-support/)** | **[View on GitHub](https://github.com/ddegner/avif-local-support)**
 
 ## Features
 
@@ -185,6 +189,17 @@ LiteSpeed's open_basedir restriction prevents PHP from detecting executables out
 4. **About** — Quick reference and version info
 
 ## Changelog
+
+### 0.4.7
+
+- Enhancement: Improved time formatting in conversion progress display (hh:mm:ss format)
+- Enhancement: CLI code formatting improvements
+- Fix: Corrected contributor username in readme
+
+### 0.4.6
+
+- Docs: Added WordPress.org metadata headers
+- Docs: Updated tested up to WordPress 6.9
 
 ### 0.4.5
 

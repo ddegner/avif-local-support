@@ -11,52 +11,52 @@
  * @var array|null $test_results Test conversion results if available
  */
 
-defined( 'ABSPATH' ) || exit;
+defined('ABSPATH') || exit;
 
 // Badge helper
-$badge = static function ( $state, string $yes = 'Yes', string $no = 'No', string $unknown = 'Unknown' ): string {
-	$s = \is_string( $state ) ? strtolower( $state ) : ( $state ? 'yes' : 'no' );
-	if ( $s === 'unknown' ) {
-		return '<span class="avif-badge avif-badge-neutral">' . esc_html( $unknown ) . '</span>';
+$badge = static function ($state, string $yes = 'Yes', string $no = 'No', string $unknown = 'Unknown'): string {
+	$s = \is_string($state) ? strtolower($state) : ($state ? 'yes' : 'no');
+	if ($s === 'unknown') {
+		return '<span class="avif-badge avif-badge-neutral">' . esc_html($unknown) . '</span>';
 	}
-	$ok  = $s === 'yes';
+	$ok = $s === 'yes';
 	$cls = $ok ? 'avif-badge avif-badge-ok' : 'avif-badge avif-badge-bad';
 	$txt = $ok ? $yes : $no;
-	return '<span class="' . esc_attr( $cls ) . '">' . esc_html( $txt ) . '</span>';
+	return '<span class="' . esc_attr($cls) . '">' . esc_html($txt) . '</span>';
 };
 
 // Extract values from system status
-$engine_mode       = $settings['engine_mode'] ?? 'auto';
+$engine_mode = $settings['engine_mode'] ?? 'auto';
 $convert_on_upload = $settings['convert_on_upload'] ?? true;
-$schedule_enabled  = $settings['schedule_enabled'] ?? true;
-$schedule_time     = $settings['schedule_time'] ?? '01:00';
-$frontend_enabled  = $settings['frontend_enabled'] ?? true;
+$schedule_enabled = $settings['schedule_enabled'] ?? true;
+$schedule_time = $settings['schedule_time'] ?? '01:00';
+$frontend_enabled = $settings['frontend_enabled'] ?? true;
 
-$auto_first_attempt = (string) ( $system_status['auto_first_attempt'] ?? 'none' );
-$auto_has_fallback  = ! empty( $system_status['auto_has_fallback'] );
-$avif_support_level = (string) ( $system_status['avif_support_level'] ?? ( ! empty( $system_status['avif_support'] ) ? 'yes' : 'no' ) );
+$auto_first_attempt = (string) ($system_status['auto_first_attempt'] ?? 'none');
+$auto_has_fallback = !empty($system_status['auto_has_fallback']);
+$avif_support_level = (string) ($system_status['avif_support_level'] ?? (!empty($system_status['avif_support']) ? 'yes' : 'no'));
 ?>
 <div id="avif-local-support-tab-tools" class="avif-local-support-tab">
 	<div class="metabox-holder">
 
 		<!-- Library AVIF coverage -->
 		<div class="postbox">
-			<h2 class="avif-header"><span><?php esc_html_e( 'Library AVIF coverage', 'avif-local-support' ); ?></span>
+			<h2 class="avif-header"><span><?php esc_html_e('Library AVIF coverage', 'avif-local-support'); ?></span>
 			</h2>
 			<div class="inside">
-				<p><?php esc_html_e( 'Overview of JPEGs with and without AVIFs.', 'avif-local-support' ); ?></p>
+				<p><?php esc_html_e('Overview of JPEGs with and without AVIFs.', 'avif-local-support'); ?></p>
 				<div id="avif-local-support-stats" style="display:flex;gap:24px;align-items:center;">
-					<div><strong><?php esc_html_e( 'JPEG files', 'avif-local-support' ); ?>:</strong> <span
-							id="avif-local-support-total-jpegs"><?php echo (int) ( $stats['total_jpegs'] ?? 0 ); ?></span>
+					<div><strong><?php esc_html_e('JPEG files', 'avif-local-support'); ?>:</strong> <span
+							id="avif-local-support-total-jpegs"><?php echo (int) ($stats['total_jpegs'] ?? 0); ?></span>
 					</div>
-					<div><strong><?php esc_html_e( 'AVIF files', 'avif-local-support' ); ?>:</strong> <span
-							id="avif-local-support-existing-avifs"><?php echo (int) ( $stats['existing_avifs'] ?? 0 ); ?></span>
+					<div><strong><?php esc_html_e('AVIF files', 'avif-local-support'); ?>:</strong> <span
+							id="avif-local-support-existing-avifs"><?php echo (int) ($stats['existing_avifs'] ?? 0); ?></span>
 					</div>
-					<div><strong><?php esc_html_e( 'Missing AVIFs', 'avif-local-support' ); ?>:</strong> <span
-							id="avif-local-support-missing-avifs"><?php echo (int) ( $stats['missing_avifs'] ?? 0 ); ?></span>
+					<div><strong><?php esc_html_e('Missing AVIFs', 'avif-local-support'); ?>:</strong> <span
+							id="avif-local-support-missing-avifs"><?php echo (int) ($stats['missing_avifs'] ?? 0); ?></span>
 					</div>
 					<div><button type="button" class="button"
-							id="avif-local-support-rescan"><?php esc_html_e( 'Refresh stats', 'avif-local-support' ); ?></button>
+							id="avif-local-support-rescan"><?php esc_html_e('Refresh stats', 'avif-local-support'); ?></button>
 					</div>
 				</div>
 			</div>
@@ -64,35 +64,35 @@ $avif_support_level = (string) ( $system_status['avif_support_level'] ?? ( ! emp
 
 		<!-- Convert missing AVIFs -->
 		<div class="postbox">
-			<h2 class="avif-header"><span><?php esc_html_e( 'Convert missing AVIFs', 'avif-local-support' ); ?></span>
+			<h2 class="avif-header"><span><?php esc_html_e('Convert missing AVIFs', 'avif-local-support'); ?></span>
 			</h2>
 			<div class="inside">
 				<p class="description">
-					<?php esc_html_e( 'Scan the Media Library and convert JPEGs that are missing AVIFs.', 'avif-local-support' ); ?>
+					<?php esc_html_e('Scan the Media Library and convert JPEGs that are missing AVIFs.', 'avif-local-support'); ?>
 				</p>
 				<p class="description" style="margin-top:4px;">
-					<strong><?php esc_html_e( 'Tip:', 'avif-local-support' ); ?></strong>
+					<strong><?php esc_html_e('Tip:', 'avif-local-support'); ?></strong>
 					<?php
 					printf(
 						/* translators: %s: WP-CLI command */
-						esc_html__( 'For large libraries, use WP-CLI for faster conversion: %s', 'avif-local-support' ),
+						esc_html__('For large libraries, use WP-CLI for faster conversion: %s', 'avif-local-support'),
 						'<code>wp avif convert --all</code>'
 					);
 					?>
 				</p>
 				<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
 					<button type="button" class="button button-primary"
-						id="avif-local-support-convert-now"><?php esc_html_e( 'Start bulk conversion', 'avif-local-support' ); ?></button>
+						id="avif-local-support-convert-now"><?php esc_html_e('Start bulk conversion', 'avif-local-support'); ?></button>
 					<button type="button" class="button" id="avif-local-support-stop-convert"
-						style="display:none;"><?php esc_html_e( 'Stop', 'avif-local-support' ); ?></button>
+						style="display:none;"><?php esc_html_e('Stop', 'avif-local-support'); ?></button>
 					<span class="spinner" id="avif-local-support-convert-spinner"
 						style="float:none;margin:0 6px;"></span>
 					<span id="avif-local-support-convert-status" class="description"></span>
 					<span id="avif-local-support-convert-progress" class="description" style="display:none;">
-						<strong><?php esc_html_e( 'Progress:', 'avif-local-support' ); ?></strong>
+						<strong><?php esc_html_e('Progress:', 'avif-local-support'); ?></strong>
 						<span id="avif-local-support-progress-avifs">0</span> / <span
 							id="avif-local-support-progress-jpegs">0</span>
-						<?php esc_html_e( 'AVIFs', 'avif-local-support' ); ?>
+						<?php esc_html_e('AVIFs', 'avif-local-support'); ?>
 					</span>
 				</div>
 			</div>
@@ -100,21 +100,21 @@ $avif_support_level = (string) ( $system_status['avif_support_level'] ?? ( ! emp
 
 		<!-- Test conversion -->
 		<div class="postbox">
-			<h2 class="avif-header"><span><?php esc_html_e( 'Test conversion', 'avif-local-support' ); ?></span></h2>
+			<h2 class="avif-header"><span><?php esc_html_e('Test conversion', 'avif-local-support'); ?></span></h2>
 			<div class="inside">
 				<p class="description">
-					<?php esc_html_e( 'Upload a JPEG to preview resized images and the AVIFs generated by your current settings. The file is added to the Media Library.', 'avif-local-support' ); ?>
+					<?php esc_html_e('Upload a JPEG to preview resized images and the AVIFs generated by your current settings. The file is added to the Media Library.', 'avif-local-support'); ?>
 				</p>
-				<form id="avif-local-support-test-form" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"
+				<form id="avif-local-support-test-form" action="<?php echo esc_url(admin_url('admin-post.php')); ?>"
 					method="post" enctype="multipart/form-data"
 					style="display:flex;flex-direction:column;align-items:flex-start;gap:8px">
 					<input type="hidden" name="action" value="aviflosu_upload_test" />
-					<?php wp_nonce_field( 'aviflosu_upload_test', '_wpnonce' ); ?>
+					<?php wp_nonce_field('aviflosu_upload_test', '_wpnonce'); ?>
 					<input type="file" id="avif-local-support-test-file" name="avif_local_support_test_file"
 						accept="image/jpeg" required />
 					<div style="display:flex;align-items:center;gap:8px;">
 						<button type="submit" class="button button-primary"
-							id="avif-local-support-test-submit"><?php esc_html_e( 'Upload & test', 'avif-local-support' ); ?></button>
+							id="avif-local-support-test-submit"><?php esc_html_e('Upload & test', 'avif-local-support'); ?></button>
 						<span class="spinner" id="avif-local-support-test-spinner" style="float:none;margin:0;"></span>
 						<span id="avif-local-support-test-status" class="description"></span>
 					</div>
@@ -127,15 +127,15 @@ $avif_support_level = (string) ( $system_status['avif_support_level'] ?? ( ! emp
 
 		<!-- Delete all AVIFs -->
 		<div class="postbox">
-			<h2 class="avif-header"><span><?php esc_html_e( 'Delete all AVIF files', 'avif-local-support' ); ?></span>
+			<h2 class="avif-header"><span><?php esc_html_e('Delete all AVIF files', 'avif-local-support'); ?></span>
 			</h2>
 			<div class="inside">
 				<p class="description">
-					<?php esc_html_e( 'Remove all .avif files from the uploads directory. Originals (JPEG/PNG) are not touched.', 'avif-local-support' ); ?>
+					<?php esc_html_e('Remove all .avif files from the uploads directory. Originals (JPEG/PNG) are not touched.', 'avif-local-support'); ?>
 				</p>
 				<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
 					<button type="button" class="button"
-						id="avif-local-support-delete-avifs"><?php esc_html_e( 'Delete AVIFs', 'avif-local-support' ); ?></button>
+						id="avif-local-support-delete-avifs"><?php esc_html_e('Delete AVIFs', 'avif-local-support'); ?></button>
 					<span class="spinner" id="avif-local-support-delete-spinner"
 						style="float:none;margin:0 6px;"></span>
 					<span id="avif-local-support-delete-status" class="description"></span>
@@ -145,124 +145,122 @@ $avif_support_level = (string) ( $system_status['avif_support_level'] ?? ( ! emp
 
 		<!-- Logs section -->
 		<div class="postbox">
-			<h2 class="avif-header"><span><?php esc_html_e( 'Logs', 'avif-local-support' ); ?></span></h2>
+			<h2 class="avif-header"><span><?php esc_html_e('Logs', 'avif-local-support'); ?></span></h2>
 			<div class="inside">
 				<p class="description">
-					<?php esc_html_e( 'View recent conversion logs including errors, settings used, and performance metrics.', 'avif-local-support' ); ?>
+					<?php esc_html_e('View recent conversion logs including errors, settings used, and performance metrics.', 'avif-local-support'); ?>
 				</p>
 				<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
 					<button type="button" class="button"
-						id="avif-local-support-refresh-logs"><?php esc_html_e( 'Refresh logs', 'avif-local-support' ); ?></button>
+						id="avif-local-support-refresh-logs"><?php esc_html_e('Refresh logs', 'avif-local-support'); ?></button>
 					<button type="button" class="button"
-						id="avif-local-support-copy-logs"><?php esc_html_e( 'Copy logs', 'avif-local-support' ); ?></button>
+						id="avif-local-support-copy-logs"><?php esc_html_e('Copy logs', 'avif-local-support'); ?></button>
 					<button type="button" class="button"
-						id="avif-local-support-clear-logs"><?php esc_html_e( 'Clear logs', 'avif-local-support' ); ?></button>
+						id="avif-local-support-clear-logs"><?php esc_html_e('Clear logs', 'avif-local-support'); ?></button>
 					<label class="avif-logs-filter"><input type="checkbox" id="avif-local-support-logs-only-errors" />
-						<?php esc_html_e( 'Only failed/errored', 'avif-local-support' ); ?></label>
+						<?php esc_html_e('Only failed/errored', 'avif-local-support'); ?></label>
 					<span class="spinner" id="avif-local-support-logs-spinner" style="float:none;margin:0 6px;"></span>
 					<span id="avif-local-support-copy-status" class="description"
-						style="color:#00a32a;display:none;"><?php esc_html_e( 'Copied!', 'avif-local-support' ); ?></span>
+						style="color:#00a32a;display:none;"><?php esc_html_e('Copied!', 'avif-local-support'); ?></span>
 				</div>
-				<div id="avif-local-support-logs-container">
-					<div id="avif-local-support-logs-content">
-						<?php
-						// Use the logger instance that was passed in the data
-						if ( isset( $logger ) && method_exists( $logger, 'renderLogsContent' ) ) {
-							$logger->renderLogsContent();
-						}
-						?>
-					</div>
+				<div id="avif-local-support-logs-content" class="avif-logs-container">
+					<?php
+					// Use the logger instance that was passed in the data
+					if (isset($logger) && method_exists($logger, 'renderLogsContent')) {
+						$logger->renderLogsContent();
+					}
+					?>
 				</div>
 			</div>
 		</div>
 
 		<!-- Server support -->
 		<div class="postbox">
-			<h2 class="avif-header"><span><?php esc_html_e( 'Server support', 'avif-local-support' ); ?></span></h2>
+			<h2 class="avif-header"><span><?php esc_html_e('Server support', 'avif-local-support'); ?></span></h2>
 			<div class="inside">
 				<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 10px;">
 					<button type="button" class="button"
-						id="avif-local-support-copy-support"><?php esc_html_e( 'Copy diagnostics as text', 'avif-local-support' ); ?></button>
+						id="avif-local-support-copy-support"><?php esc_html_e('Copy diagnostics as text', 'avif-local-support'); ?></button>
 					<span id="avif-local-support-copy-support-status" class="description"
-						style="color:#00a32a;display:none;"><?php esc_html_e( 'Copied!', 'avif-local-support' ); ?></span>
+						style="color:#00a32a;display:none;"><?php esc_html_e('Copied!', 'avif-local-support'); ?></span>
 				</div>
 
 				<p class="description" style="max-width:960px;margin-top:0;">
-					<?php esc_html_e( 'This panel explains what your server supports, what AVIF Local Support will do, and what to check when something is unexpected.', 'avif-local-support' ); ?>
+					<?php esc_html_e('This panel explains what your server supports, what AVIF Local Support will do, and what to check when something is unexpected.', 'avif-local-support'); ?>
 				</p>
 
 				<div class="avif-support-panel">
 					<!-- Summary section -->
-					<h3 style="margin:8px 0 6px;"><?php esc_html_e( 'Summary', 'avif-local-support' ); ?></h3>
+					<h3 style="margin:8px 0 6px;"><?php esc_html_e('Summary', 'avif-local-support'); ?></h3>
 					<?php
 					$mode_explain = $engine_mode === 'auto'
-						? esc_html__( 'Auto: the plugin will try engines in order (CLI → Imagick → GD) until one succeeds.', 'avif-local-support' )
-						: esc_html__( 'Forced: the plugin will use only the selected engine (no fallback).', 'avif-local-support' );
+						? esc_html__('Auto: the plugin will try engines in order (CLI → Imagick → GD) until one succeeds.', 'avif-local-support')
+						: esc_html__('Forced: the plugin will use only the selected engine (no fallback).', 'avif-local-support');
 					?>
 					<table class="widefat striped" style="max-width:960px;margin-bottom:10px;">
 						<tbody>
 							<tr>
 								<td style="width:260px;">
-									<strong><?php esc_html_e( 'AVIF conversion available', 'avif-local-support' ); ?></strong>
+									<strong><?php esc_html_e('AVIF conversion available', 'avif-local-support'); ?></strong>
 								</td>
-								<td><?php echo $badge( $avif_support_level, 'Yes', 'No', 'Unconfirmed' ); ?></td>
+								<td><?php echo $badge($avif_support_level, 'Yes', 'No', 'Unconfirmed'); ?></td>
 							</tr>
 							<tr>
-								<td><strong><?php esc_html_e( 'Engine setting', 'avif-local-support' ); ?></strong></td>
-								<td><code><?php echo esc_html( $engine_mode ); ?></code>
+								<td><strong><?php esc_html_e('Engine setting', 'avif-local-support'); ?></strong></td>
+								<td><code><?php echo esc_html($engine_mode); ?></code>
 									<div class="description" style="margin-top:4px;"><?php echo $mode_explain; ?></div>
 								</td>
 							</tr>
 							<?php
-							if ( $engine_mode === 'auto' ) :
-								$first_label = match ( $auto_first_attempt ) {
-									'cli' => esc_html__( 'CLI (ImageMagick command-line)', 'avif-local-support' ),
-									'imagick' => esc_html__( 'Imagick (PHP extension)', 'avif-local-support' ),
-									'gd' => esc_html__( 'GD (imageavif)', 'avif-local-support' ),
-									default => esc_html__( 'None', 'avif-local-support' ),
+							if ($engine_mode === 'auto'):
+								$first_label = match ($auto_first_attempt) {
+									'cli' => esc_html__('CLI (ImageMagick command-line)', 'avif-local-support'),
+									'imagick' => esc_html__('Imagick (PHP extension)', 'avif-local-support'),
+									'gd' => esc_html__('GD (imageavif)', 'avif-local-support'),
+									default => esc_html__('None', 'avif-local-support'),
 								};
 								?>
 								<tr>
-									<td><strong><?php esc_html_e( 'Auto mode: first attempt', 'avif-local-support' ); ?></strong>
+									<td><strong><?php esc_html_e('Auto mode: first attempt', 'avif-local-support'); ?></strong>
 									</td>
-									<td><?php echo esc_html( $first_label ); ?>
-									<?php
-									if ( $auto_has_fallback ) :
-										?>
-										<span
-												class="description">(<?php esc_html_e( 'fallbacks available', 'avif-local-support' ); ?>)</span><?php endif; ?>
+									<td><?php echo esc_html($first_label); ?>
+										<?php
+										if ($auto_has_fallback):
+											?>
+											<span
+												class="description">(<?php esc_html_e('fallbacks available', 'avif-local-support'); ?>)</span><?php endif; ?>
 									</td>
 								</tr>
-							<?php else : ?>
+							<?php else: ?>
 								<tr>
-									<td><strong><?php esc_html_e( 'Fallback behavior', 'avif-local-support' ); ?></strong>
+									<td><strong><?php esc_html_e('Fallback behavior', 'avif-local-support'); ?></strong>
 									</td>
-									<td><?php esc_html_e( 'No fallback in forced mode.', 'avif-local-support' ); ?></td>
+									<td><?php esc_html_e('No fallback in forced mode.', 'avif-local-support'); ?></td>
 								</tr>
 							<?php endif; ?>
 							<tr>
-								<td><strong><?php esc_html_e( 'Convert on upload', 'avif-local-support' ); ?></strong>
+								<td><strong><?php esc_html_e('Convert on upload', 'avif-local-support'); ?></strong>
 								</td>
-								<td><?php echo $badge( $convert_on_upload, 'Enabled', 'Disabled' ); ?></td>
+								<td><?php echo $badge($convert_on_upload, 'Enabled', 'Disabled'); ?></td>
 							</tr>
 							<tr>
-								<td><strong><?php esc_html_e( 'Daily scan for missing AVIFs', 'avif-local-support' ); ?></strong>
+								<td><strong><?php esc_html_e('Daily scan for missing AVIFs', 'avif-local-support'); ?></strong>
 								</td>
 								<td>
-									<?php echo $badge( $schedule_enabled, 'Enabled', 'Disabled' ); ?>
-									<?php if ( $schedule_enabled ) : ?>
+									<?php echo $badge($schedule_enabled, 'Enabled', 'Disabled'); ?>
+									<?php if ($schedule_enabled): ?>
 										<span
-											class="description">(<?php echo esc_html( sprintf( __( 'scheduled around %s', 'avif-local-support' ), $schedule_time ) ); ?>)</span>
+											class="description">(<?php echo esc_html(sprintf(__('scheduled around %s', 'avif-local-support'), $schedule_time)); ?>)</span>
 									<?php endif; ?>
 								</td>
 							</tr>
 							<tr>
-								<td><strong><?php esc_html_e( 'Front-end AVIF serving', 'avif-local-support' ); ?></strong>
+								<td><strong><?php esc_html_e('Front-end AVIF serving', 'avif-local-support'); ?></strong>
 								</td>
 								<td>
-									<?php echo $badge( $frontend_enabled, 'Enabled', 'Disabled' ); ?>
+									<?php echo $badge($frontend_enabled, 'Enabled', 'Disabled'); ?>
 									<div class="description" style="margin-top:4px;">
-										<?php esc_html_e( 'When enabled, the plugin wraps JPEG outputs in a <picture> tag with an AVIF <source> first.', 'avif-local-support' ); ?>
+										<?php esc_html_e('When enabled, the plugin wraps JPEG outputs in a <picture> tag with an AVIF <source> first.', 'avif-local-support'); ?>
 									</div>
 								</td>
 							</tr>
@@ -271,56 +269,57 @@ $avif_support_level = (string) ( $system_status['avif_support_level'] ?? ( ! emp
 
 
 					<!-- Engine Details (collapsed by default) -->
-					<h3 style="margin:14px 0 6px;"><?php esc_html_e( 'Engine details', 'avif-local-support' ); ?></h3>
+					<h3 style="margin:14px 0 6px;"><?php esc_html_e('Engine details', 'avif-local-support'); ?></h3>
 					<?php require __DIR__ . '/partials/engine-details.php'; ?>
 
 					<!-- Environment (collapsed) -->
 					<details class="avif-support-details">
-						<summary><strong><?php esc_html_e( 'Environment', 'avif-local-support' ); ?></strong></summary>
+						<summary><strong><?php esc_html_e('Environment', 'avif-local-support'); ?></strong></summary>
 						<div class="avif-support-details-body">
 							<?php
-							$current_user = (string) ( $system_status['current_user'] ?? @get_current_user() );
-							$ob           = (string) ( $system_status['open_basedir'] ?? ini_get( 'open_basedir' ) );
-							$df           = (string) ( $system_status['disable_functions'] ?? ini_get( 'disable_functions' ) );
+							$current_user = (string) ($system_status['current_user'] ?? @get_current_user());
+							$ob = (string) ($system_status['open_basedir'] ?? ini_get('open_basedir'));
+							$df = (string) ($system_status['disable_functions'] ?? ini_get('disable_functions'));
 							?>
 							<table class="widefat striped" style="max-width:960px;">
 								<tbody>
 									<tr>
 										<td style="width:260px;">
-											<strong><?php esc_html_e( 'PHP Version', 'avif-local-support' ); ?></strong>
+											<strong><?php esc_html_e('PHP Version', 'avif-local-support'); ?></strong>
 										</td>
-										<td><code><?php echo esc_html( PHP_VERSION ); ?></code></td>
+										<td><code><?php echo esc_html(PHP_VERSION); ?></code></td>
 									</tr>
 									<tr>
-										<td><strong><?php esc_html_e( 'WordPress Version', 'avif-local-support' ); ?></strong>
+										<td><strong><?php esc_html_e('WordPress Version', 'avif-local-support'); ?></strong>
 										</td>
-										<td><code><?php echo esc_html( get_bloginfo( 'version' ) ); ?></code></td>
+										<td><code><?php echo esc_html(get_bloginfo('version')); ?></code></td>
 									</tr>
 									<tr>
-										<td><strong><?php esc_html_e( 'PHP SAPI', 'avif-local-support' ); ?></strong></td>
-										<td><code><?php echo esc_html( $system_status['php_sapi'] ?? PHP_SAPI ); ?></code>
+										<td><strong><?php esc_html_e('PHP SAPI', 'avif-local-support'); ?></strong>
+										</td>
+										<td><code><?php echo esc_html($system_status['php_sapi'] ?? PHP_SAPI); ?></code>
 										</td>
 									</tr>
 									<tr>
-										<td><strong><?php esc_html_e( 'Current user', 'avif-local-support' ); ?></strong>
+										<td><strong><?php esc_html_e('Current user', 'avif-local-support'); ?></strong>
 										</td>
 										<td>
-											<code><?php echo esc_html( $current_user !== '' ? $current_user : '-' ); ?></code>
+											<code><?php echo esc_html($current_user !== '' ? $current_user : '-'); ?></code>
 											<div class="description" style="margin-top:4px;">
-												<?php esc_html_e( 'This is the OS user PHP runs as; it must have write access to wp-content/uploads.', 'avif-local-support' ); ?>
+												<?php esc_html_e('This is the OS user PHP runs as; it must have write access to wp-content/uploads.', 'avif-local-support'); ?>
 											</div>
 										</td>
 									</tr>
 									<tr>
-										<td><strong><?php esc_html_e( 'open_basedir', 'avif-local-support' ); ?></strong>
+										<td><strong><?php esc_html_e('open_basedir', 'avif-local-support'); ?></strong>
 										</td>
-										<td><?php echo $ob !== '' ? '<code style="white-space:pre-wrap;word-break:break-word;display:inline-block;max-width:680px;overflow:auto;">' . esc_html( $ob ) . '</code>' : '-'; ?>
+										<td><?php echo $ob !== '' ? '<code style="white-space:pre-wrap;word-break:break-word;display:inline-block;max-width:680px;overflow:auto;">' . esc_html($ob) . '</code>' : '-'; ?>
 										</td>
 									</tr>
 									<tr>
-										<td><strong><?php esc_html_e( 'disable_functions', 'avif-local-support' ); ?></strong>
+										<td><strong><?php esc_html_e('disable_functions', 'avif-local-support'); ?></strong>
 										</td>
-										<td><?php echo $df !== '' ? '<code style="white-space:pre-wrap;word-break:break-word;display:inline-block;max-width:680px;overflow:auto;">' . esc_html( $df ) . '</code>' : '-'; ?>
+										<td><?php echo $df !== '' ? '<code style="white-space:pre-wrap;word-break:break-word;display:inline-block;max-width:680px;overflow:auto;">' . esc_html($df) . '</code>' : '-'; ?>
 										</td>
 									</tr>
 								</tbody>

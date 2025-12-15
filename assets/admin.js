@@ -275,13 +275,12 @@
         }
         if (!status && el && el.classList) {
           if (el.classList.contains('error')) status = 'error';
-          else if (el.classList.contains('failed')) status = 'failed';
           else if (el.classList.contains('warning')) status = 'warning';
           else if (el.classList.contains('success')) status = 'success';
           else if (el.classList.contains('info')) status = 'info';
         }
 
-        var isErrorish = (status === 'error' || status === 'failed');
+        var isErrorish = (status === 'error');
         el.style.display = (onlyErrors && !isErrorish) ? 'none' : '';
       }
     }
@@ -537,7 +536,9 @@
             }
           })
           .catch(function () {
-            // Handle error silently
+            if (logsContent) {
+              logsContent.innerHTML = '<p class="description" style="color:#dc3232;">Failed to refresh logs. Please try again.</p>';
+            }
           })
           .finally(function () {
             if (logsSpinner) logsSpinner.classList.remove('is-active');
@@ -559,7 +560,7 @@
             }
           })
           .catch(function () {
-            // Handle error silently
+            alert('Failed to clear logs. Please try again.');
           })
           .finally(function () {
             if (logsSpinner) logsSpinner.classList.remove('is-active');

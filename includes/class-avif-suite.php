@@ -7,11 +7,13 @@ namespace Ddegner\AvifLocalSupport;
 use Ddegner\AvifLocalSupport\Admin\RestController;
 use Ddegner\AvifLocalSupport\Admin\Settings;
 
-// Prevent direct access
+// Prevent direct access.
 \defined('ABSPATH') || exit;
 
 final class Plugin
 {
+
+
 
 	private Support $support;
 	private Converter $converter;
@@ -33,7 +35,7 @@ final class Plugin
 
 	public function init(): void
 	{
-		// Settings page + Settings API
+		// Settings page + Settings API.
 		add_action('admin_menu', array($this, 'add_admin_menu'));
 		add_action('admin_init', array($this->settings, 'register'));
 		add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_assets'));
@@ -42,14 +44,14 @@ final class Plugin
 		add_action('admin_post_aviflosu_upload_test', array($this, 'handle_upload_test'));
 		add_action('admin_post_aviflosu_reset_defaults', array($this, 'handle_reset_defaults'));
 
-		// Features
+		// Features.
 		if ((bool) get_option('aviflosu_enable_support', true)) {
 			$this->support->init();
 		}
-		// Always init converter so schedule/on-demand are available
+		// Always init converter so schedule/on-demand are available.
 		$this->converter->init();
 
-		// Allow AVIF uploads
+		// Allow AVIF uploads.
 		add_filter(
 			'upload_mimes',
 			function (array $mimes): array {
@@ -61,8 +63,8 @@ final class Plugin
 
 	public function enqueue_admin_assets(string $hook): void
 	{
-		// Only on our settings page
-		if ($hook !== 'settings_page_avif-local-support') {
+		// Only on our settings page.
+		if ('settings_page_avif-local-support' !== $hook) {
 			return;
 		}
 		$base = \AVIFLOSU_PLUGIN_URL;
@@ -103,7 +105,7 @@ final class Plugin
 			wp_die(esc_html__('You do not have permission to access this page.', 'avif-local-support'));
 		}
 
-		// Gather data for templates
+		// Gather data for templates.
 		ob_start();
 		try {
 			$system_status = $this->diagnostics->getSystemStatus();
@@ -132,22 +134,22 @@ final class Plugin
 			'frontend_enabled' => (bool) get_option('aviflosu_enable_support', true),
 		);
 
-		// Check for test upload results
+		// Check for test upload results.
 		$test_id = 0;
 		$test_results = null;
 		$view_nonce = (string) (filter_input(INPUT_GET, '_wpnonce', FILTER_SANITIZE_FULL_SPECIAL_CHARS) ?? '');
 		$upload_id_raw = (string) (filter_input(INPUT_GET, 'avif-local-support-upload-id', FILTER_SANITIZE_NUMBER_INT) ?? '');
-		if ($view_nonce !== '' && wp_verify_nonce($view_nonce, 'aviflosu_view_results')) {
+		if ('' !== $view_nonce && wp_verify_nonce($view_nonce, 'aviflosu_view_results')) {
 			$test_id = absint($upload_id_raw);
 			if ($test_id > 0) {
 				$attachment = get_post($test_id);
-				if ($attachment && $attachment->post_type === 'attachment') {
+				if ($attachment && 'attachment' === $attachment->post_type) {
 					$test_results = $this->converter->convertAttachmentNow($test_id);
 				}
 			}
 		}
 
-		// Render template with data
+		// Render template with data.
 		$this->render_template(
 			'admin/page',
 			array(
@@ -186,7 +188,7 @@ final class Plugin
 		}
 		check_admin_referer('aviflosu_upload_test');
 
-		// Build a sanitized, validated view of the uploaded file entry
+		// Build a sanitized, validated view of the uploaded file entry.
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Reading from $_FILES; individual fields are sanitized below
 		$rawFile = isset($_FILES['avif_local_support_test_file']) && is_array($_FILES['avif_local_support_test_file']) ? $_FILES['avif_local_support_test_file'] : array();
 		$fileArray = array(
@@ -205,7 +207,7 @@ final class Plugin
 			require_once ABSPATH . 'wp-admin/includes/media.php';
 			require_once ABSPATH . 'wp-admin/includes/image.php';
 		}
-		if ($fileArray['tmp_name'] === '' || $fileArray['name'] === '') {
+		if ('' === $fileArray['tmp_name'] || '' === $fileArray['name']) {
 			\wp_safe_redirect(\add_query_arg('avif-local-support-upload-error', 'nofile', \admin_url('options-general.php?page=avif-local-support#tools')));
 			exit;
 		}
@@ -213,7 +215,7 @@ final class Plugin
 		$originalName = $fileArray['name'];
 
 		$errorCode = $fileArray['error'];
-		if ($errorCode !== UPLOAD_ERR_OK || $tmpName === '' || !is_uploaded_file($tmpName)) {
+		if (UPLOAD_ERR_OK !== $errorCode || '' === $tmpName || !is_uploaded_file($tmpName)) {
 			\wp_safe_redirect(\add_query_arg('avif-local-support-upload-error', 'upload', \admin_url('options-general.php?page=avif-local-support#tools')));
 			exit;
 		}
@@ -266,7 +268,7 @@ final class Plugin
 			wp_die(esc_html__('You do not have permission to do this.', 'avif-local-support'));
 		}
 		check_admin_referer('aviflosu_reset_defaults');
-		// Reset options to defaults
+		// Reset options to defaults.
 		update_option('aviflosu_enable_support', true);
 		update_option('aviflosu_convert_on_upload', true);
 		update_option('aviflosu_convert_via_schedule', true);
@@ -281,6 +283,18 @@ final class Plugin
 		update_option('aviflosu_cli_path', '');
 		update_option('aviflosu_cli_args', $this->get_suggested_cli_args());
 		update_option('aviflosu_cli_env', $this->get_suggested_cli_env());
+
+		// Clear caches to force fresh detection.
+		delete_transient('aviflosu_file_cache');
+
+		// Clear ImageMagick CLI detection caches.
+		// These use dynamic keys, so we need a database query for non-object-cache setups.
+		if (!wp_using_ext_object_cache()) {
+			global $wpdb;
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_aviflosu_imc_%' OR option_name LIKE '_transient_timeout_aviflosu_imc_%'");
+		}
+
 		\wp_safe_redirect(\admin_url('options-general.php?page=avif-local-support#settings'));
 		exit;
 	}

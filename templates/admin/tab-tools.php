@@ -11,21 +11,22 @@
  * @var array|null $test_results Test conversion results if available
  */
 
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Template local variables.
 defined('ABSPATH') || exit;
 
-// Badge helper
+// Badge helper.
 $badge = static function ($state, string $yes = 'Yes', string $no = 'No', string $unknown = 'Unknown'): string {
 	$s = \is_string($state) ? strtolower($state) : ($state ? 'yes' : 'no');
-	if ($s === 'unknown') {
+	if ('unknown' === $s) {
 		return '<span class="avif-badge avif-badge-neutral">' . esc_html($unknown) . '</span>';
 	}
-	$ok = $s === 'yes';
+	$ok = 'yes' === $s;
 	$cls = $ok ? 'avif-badge avif-badge-ok' : 'avif-badge avif-badge-bad';
 	$txt = $ok ? $yes : $no;
 	return '<span class="' . esc_attr($cls) . '">' . esc_html($txt) . '</span>';
 };
 
-// Extract values from system status
+// Extract values from system status.
 $engine_mode = $settings['engine_mode'] ?? 'auto';
 $convert_on_upload = $settings['convert_on_upload'] ?? true;
 $schedule_enabled = $settings['schedule_enabled'] ?? true;
@@ -165,7 +166,7 @@ $avif_support_level = (string) ($system_status['avif_support_level'] ?? (!empty(
 				</div>
 				<div id="avif-local-support-logs-content" class="avif-logs-container">
 					<?php
-					// Use the logger instance that was passed in the data
+					// Use the logger instance that was passed in the data.
 					if (isset($logger) && method_exists($logger, 'renderLogsContent')) {
 						$logger->renderLogsContent();
 					}
@@ -193,7 +194,7 @@ $avif_support_level = (string) ($system_status['avif_support_level'] ?? (!empty(
 					<!-- Summary section -->
 					<h3 style="margin:8px 0 6px;"><?php esc_html_e('Summary', 'avif-local-support'); ?></h3>
 					<?php
-					$mode_explain = $engine_mode === 'auto'
+					$mode_explain = 'auto' === $engine_mode
 						? esc_html__('Auto: the plugin will try engines in order (CLI → Imagick → GD) until one succeeds.', 'avif-local-support')
 						: esc_html__('Forced: the plugin will use only the selected engine (no fallback).', 'avif-local-support');
 					?>
@@ -203,16 +204,19 @@ $avif_support_level = (string) ($system_status['avif_support_level'] ?? (!empty(
 								<td style="width:260px;">
 									<strong><?php esc_html_e('AVIF conversion available', 'avif-local-support'); ?></strong>
 								</td>
-								<td><?php echo $badge($avif_support_level, 'Yes', 'No', 'Unconfirmed'); ?></td>
+								<td><?php echo wp_kses_post($badge($avif_support_level, 'Yes', 'No', 'Unconfirmed')); ?>
+								</td>
 							</tr>
 							<tr>
 								<td><strong><?php esc_html_e('Engine setting', 'avif-local-support'); ?></strong></td>
 								<td><code><?php echo esc_html($engine_mode); ?></code>
-									<div class="description" style="margin-top:4px;"><?php echo $mode_explain; ?></div>
+									<div class="description" style="margin-top:4px;">
+										<?php echo esc_html($mode_explain); ?>
+									</div>
 								</td>
 							</tr>
 							<?php
-							if ($engine_mode === 'auto'):
+							if ('auto' === $engine_mode):
 								$first_label = match ($auto_first_attempt) {
 									'cli' => esc_html__('CLI (ImageMagick command-line)', 'avif-local-support'),
 									'imagick' => esc_html__('Imagick (PHP extension)', 'avif-local-support'),
@@ -241,16 +245,21 @@ $avif_support_level = (string) ($system_status['avif_support_level'] ?? (!empty(
 							<tr>
 								<td><strong><?php esc_html_e('Convert on upload', 'avif-local-support'); ?></strong>
 								</td>
-								<td><?php echo $badge($convert_on_upload, 'Enabled', 'Disabled'); ?></td>
+								<td><?php echo wp_kses_post($badge($convert_on_upload, 'Enabled', 'Disabled')); ?>
+								</td>
 							</tr>
 							<tr>
 								<td><strong><?php esc_html_e('Daily scan for missing AVIFs', 'avif-local-support'); ?></strong>
 								</td>
 								<td>
-									<?php echo $badge($schedule_enabled, 'Enabled', 'Disabled'); ?>
+									<?php echo wp_kses_post($badge($schedule_enabled, 'Enabled', 'Disabled')); ?>
 									<?php if ($schedule_enabled): ?>
-										<span
-											class="description">(<?php echo esc_html(sprintf(__('scheduled around %s', 'avif-local-support'), $schedule_time)); ?>)</span>
+										class="description">(
+										<?php
+										/* translators: %s: Schedule time (e.g., "01:00") */
+										echo esc_html(sprintf(__('scheduled around %s', 'avif-local-support'), $schedule_time));
+										?>
+										)</span>
 									<?php endif; ?>
 								</td>
 							</tr>
@@ -258,7 +267,7 @@ $avif_support_level = (string) ($system_status['avif_support_level'] ?? (!empty(
 								<td><strong><?php esc_html_e('Front-end AVIF serving', 'avif-local-support'); ?></strong>
 								</td>
 								<td>
-									<?php echo $badge($frontend_enabled, 'Enabled', 'Disabled'); ?>
+									<?php echo wp_kses_post($badge($frontend_enabled, 'Enabled', 'Disabled')); ?>
 									<div class="description" style="margin-top:4px;">
 										<?php esc_html_e('When enabled, the plugin wraps JPEG outputs in a <picture> tag with an AVIF <source> first.', 'avif-local-support'); ?>
 									</div>
@@ -277,7 +286,7 @@ $avif_support_level = (string) ($system_status['avif_support_level'] ?? (!empty(
 						<summary><strong><?php esc_html_e('Environment', 'avif-local-support'); ?></strong></summary>
 						<div class="avif-support-details-body">
 							<?php
-							$current_user = (string) ($system_status['current_user'] ?? @get_current_user());
+							$php_user = (string) ($system_status['current_user'] ?? @get_current_user());
 							$ob = (string) ($system_status['open_basedir'] ?? ini_get('open_basedir'));
 							$df = (string) ($system_status['disable_functions'] ?? ini_get('disable_functions'));
 							?>
@@ -304,7 +313,7 @@ $avif_support_level = (string) ($system_status['avif_support_level'] ?? (!empty(
 										<td><strong><?php esc_html_e('Current user', 'avif-local-support'); ?></strong>
 										</td>
 										<td>
-											<code><?php echo esc_html($current_user !== '' ? $current_user : '-'); ?></code>
+											<code><?php echo esc_html('' !== $php_user ? $php_user : '-'); ?></code>
 											<div class="description" style="margin-top:4px;">
 												<?php esc_html_e('This is the OS user PHP runs as; it must have write access to wp-content/uploads.', 'avif-local-support'); ?>
 											</div>
@@ -313,13 +322,13 @@ $avif_support_level = (string) ($system_status['avif_support_level'] ?? (!empty(
 									<tr>
 										<td><strong><?php esc_html_e('open_basedir', 'avif-local-support'); ?></strong>
 										</td>
-										<td><?php echo $ob !== '' ? '<code style="white-space:pre-wrap;word-break:break-word;display:inline-block;max-width:680px;overflow:auto;">' . esc_html($ob) . '</code>' : '-'; ?>
+										<td><?php echo '' !== $ob ? '<code style="white-space:pre-wrap;word-break:break-word;display:inline-block;max-width:680px;overflow:auto;">' . esc_html($ob) . '</code>' : '-'; ?>
 										</td>
 									</tr>
 									<tr>
 										<td><strong><?php esc_html_e('disable_functions', 'avif-local-support'); ?></strong>
 										</td>
-										<td><?php echo $df !== '' ? '<code style="white-space:pre-wrap;word-break:break-word;display:inline-block;max-width:680px;overflow:auto;">' . esc_html($df) . '</code>' : '-'; ?>
+										<td><?php echo '' !== $df ? '<code style="white-space:pre-wrap;word-break:break-word;display:inline-block;max-width:680px;overflow:auto;">' . esc_html($df) . '</code>' : '-'; ?>
 										</td>
 									</tr>
 								</tbody>

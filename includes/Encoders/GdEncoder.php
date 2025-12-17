@@ -13,6 +13,7 @@ defined( 'ABSPATH' ) || exit;
 
 class GdEncoder implements AvifEncoderInterface {
 
+
 	public function getName(): string {
 		return 'gd';
 	}
@@ -31,9 +32,9 @@ class GdEncoder implements AvifEncoderInterface {
 			return ConversionResult::failure( 'imageavif function missing', 'Upgrade PHP or compile GD with AVIF support.' );
 		}
 
-		// Suppress warnings for getimagesize/imagecreatefromjpeg
+		// Suppress warnings for getimagesize/imagecreatefromjpeg.
 		$imageInfo = @getimagesize( $source );
-		if ( ! $imageInfo || ( $imageInfo[2] !== IMAGETYPE_JPEG ) ) {
+		if ( ! $imageInfo || ( IMAGETYPE_JPEG !== $imageInfo[2] ) ) {
 			return ConversionResult::failure( 'Invalid JPEG or unreadable file' );
 		}
 
@@ -41,14 +42,14 @@ class GdEncoder implements AvifEncoderInterface {
 		// AVIF Advanced Profile max: 35,651,584 pixels (16384×8704).
 		$srcWidth  = (int) $imageInfo[0];
 		$srcHeight = (int) $imageInfo[1];
-		$maxPixels = 35651584; // AVIF Advanced Profile limit
+		$maxPixels = 35651584; // AVIF Advanced Profile limit.
 
-		// Determine output dimensions
+		// Determine output dimensions.
 		if ( $dimensions && isset( $dimensions['width'], $dimensions['height'] ) ) {
 			$outputWidth  = (int) $dimensions['width'];
 			$outputHeight = (int) $dimensions['height'];
 		} else {
-			// No resize - output will be same as source
+			// No resize - output will be same as source.
 			$outputWidth  = $srcWidth;
 			$outputHeight = $srcHeight;
 		}
@@ -68,7 +69,7 @@ class GdEncoder implements AvifEncoderInterface {
 			return ConversionResult::failure( 'Failed to create GD resource', 'File corrupt or memory limit too low.' );
 		}
 
-		// Exif Orientation
+		// Exif Orientation.
 		if ( function_exists( 'exif_read_data' ) ) {
 			$exif = @exif_read_data( $source );
 			if ( $exif && isset( $exif['Orientation'] ) ) {
@@ -76,7 +77,7 @@ class GdEncoder implements AvifEncoderInterface {
 			}
 		}
 
-		// Resize/Crop
+		// Resize/Crop.
 		if ( $dimensions && isset( $dimensions['width'], $dimensions['height'] ) ) {
 			$resized = $this->resizeAndCrop( $gd, (int) $dimensions['width'], (int) $dimensions['height'] );
 			if ( $resized ) {
@@ -85,7 +86,7 @@ class GdEncoder implements AvifEncoderInterface {
 			}
 		}
 
-		// Convert
+		// Convert.
 		$speed   = min( 8, $settings->speed );
 		$success = false;
 
@@ -102,7 +103,7 @@ class GdEncoder implements AvifEncoderInterface {
 	}
 
 	private function applyOrientation( GdImage $source, int $orientation ): GdImage {
-		// Using match expression for PHP 8.0+
+		// Using match expression for PHP 8.0+.
 		return match ( $orientation ) {
 			2 => ( function_exists( 'imageflip' ) && imageflip( $source, IMG_FLIP_HORIZONTAL ) ) ? $source : $source,
 			3 => ( $rot = imagerotate( $source, 180, 0 ) ) ? $rot : $source,

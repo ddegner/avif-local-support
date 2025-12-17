@@ -3,7 +3,7 @@ Contributors: ddegner
 Tags: avif, images, performance, media, optimization
 Requires at least: 6.8
 Tested up to: 6.9
-Stable tag: 0.4.8
+Stable tag: 0.4.9
 Requires PHP: 8.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -185,6 +185,12 @@ LiteSpeed's open_basedir restriction prevents PHP from detecting executables out
 4. **About** — Quick reference and version info
 
 ## Changelog
+
+### 0.4.9
+
+- Fix: WordPress Plugin Check compliance — proper escaping, Yoda conditions, and PHPCS ignores
+- Fix: Improved uninstall cleanup with object cache awareness
+- Dev: Code formatting aligned with WordPress coding standards
 
 ### 0.4.8
 

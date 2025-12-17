@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
+if (!defined('WP_UNINSTALL_PLUGIN')) {
 	exit;
 }
 
@@ -27,17 +27,24 @@ $aviflosu_options = array(
 	'aviflosu_wordpress_logic',
 );
 
-foreach ( $aviflosu_options as $aviflosu_option ) {
-	if ( get_option( $aviflosu_option ) !== false ) {
-		delete_option( $aviflosu_option );
+foreach ($aviflosu_options as $aviflosu_option) {
+	if (get_option($aviflosu_option) !== false) {
+		delete_option($aviflosu_option);
 	}
 }
 
-// Delete transients
-delete_transient( 'aviflosu_file_cache' );
-delete_transient( 'aviflosu_logs' );
+// Delete transients using WordPress functions.
+delete_transient('aviflosu_file_cache');
+delete_transient('aviflosu_logs');
+delete_transient('aviflosu_stop_conversion');
 
-// Delete ImageMagick CLI cache transients (with wildcard pattern)
-// These use dynamic keys like aviflosu_imc_cand_*, aviflosu_imc_sel_*, aviflosu_imc_def_*
-global $wpdb;
-$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_aviflosu_imc_%' OR option_name LIKE '_transient_timeout_aviflosu_imc_%'" );
+// Delete ImageMagick CLI cache transients (with wildcard pattern).
+// These use dynamic keys like aviflosu_imc_cand_*, aviflosu_imc_sel_*, aviflosu_imc_def_*.
+// Note: Direct DB queries won't clear object cache entries (Redis/Memcached),
+// but those will naturally expire based on their TTL.
+if (!wp_using_ext_object_cache()) {
+	global $wpdb;
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+	$wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_aviflosu_imc_%' OR option_name LIKE '_transient_timeout_aviflosu_imc_%'");
+}
+

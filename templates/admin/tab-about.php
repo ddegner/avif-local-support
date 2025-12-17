@@ -5,6 +5,7 @@
  * @package Ddegner\AvifLocalSupport
  */
 
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Template local variables.
 defined('ABSPATH') || exit;
 
 /**

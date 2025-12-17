@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<ruleset name="AVIF Local Support">
+	<description>WordPress coding standards with PSR-4 compatibility.</description>
+
+	<!-- What to scan -->
+	<file>.</file>
+	<exclude-pattern>/vendor/*</exclude-pattern>
+	<exclude-pattern>*.min.js</exclude-pattern>
+	<exclude-pattern>*.min.css</exclude-pattern>
+
+	<!-- Use WordPress coding standards -->
+	<rule ref="WordPress">
+		<!-- Exclude filename rules for PSR-4 autoloaded classes -->
+		<exclude name="WordPress.Files.FileName.InvalidClassFileName"/>
+		<exclude name="WordPress.Files.FileName.NotHyphenatedLowercase"/>
+
+		<!-- Exclude naming rules for PSR-4 namespaced code -->
+		<exclude name="WordPress.NamingConventions.ValidVariableName"/>
+		<exclude name="WordPress.NamingConventions.ValidFunctionName"/>
+	</rule>
+
+	<!-- PHP version -->
+	<config name="testVersion" value="8.3-"/>
+
+	<!-- Text domain for i18n -->
+	<config name="text_domain" value="avif-local-support"/>
+
+	<!-- Minimum supported WordPress version -->
+	<config name="minimum_wp_version" value="6.8"/>
+
+	<!-- Only check PHP files -->
+	<arg name="extensions" value="php"/>
+
+	<!-- Show progress and use colors -->
+	<arg value="ps"/>
+	<arg name="colors"/>
+
+	<!-- Allow short array syntax -->
+	<rule ref="Generic.Arrays.DisallowShortArraySyntax">
+		<severity>0</severity>
+	</rule>
+
+</ruleset>

@@ -14,6 +14,8 @@ defined('ABSPATH') || exit;
 class CLI
 {
 
+
+
 	private Diagnostics $diagnostics;
 	private Converter $converter;
 	private Logger $logger;
@@ -50,17 +52,17 @@ class CLI
 		$status = $this->diagnostics->getSystemStatus();
 		$format = $assoc_args['format'] ?? 'table';
 
-		if ($format === 'json') {
+		if ('json' === $format) {
 			\WP_CLI::line((string) wp_json_encode($status, JSON_PRETTY_PRINT));
 			return;
 		}
 
-		// Display as formatted table
+		// Display as formatted table.
 		\WP_CLI::line('');
 		\WP_CLI::line(\WP_CLI::colorize('%G=== AVIF Local Support - System Status ===%n'));
 		\WP_CLI::line('');
 
-		// PHP & WordPress
+		// PHP & WordPress.
 		\WP_CLI::line(\WP_CLI::colorize('%B-- Environment --%n'));
 		\WP_CLI::line(sprintf('PHP Version:       %s', $status['php_version']));
 		\WP_CLI::line(sprintf('WordPress Version: %s', $status['wordpress_version']));
@@ -68,7 +70,7 @@ class CLI
 		\WP_CLI::line(sprintf('Current User:      %s', $status['current_user']));
 		\WP_CLI::line('');
 
-		// Engine support
+		// Engine support.
 		\WP_CLI::line(\WP_CLI::colorize('%B-- Engine Support --%n'));
 		$this->printSupport('GD Extension', $status['gd_available']);
 		$this->printSupport('GD AVIF Support', $status['gd_avif_support']);
@@ -78,14 +80,14 @@ class CLI
 		$this->printSupport('CLI AVIF Binary', $status['cli_has_avif_binary']);
 		\WP_CLI::line('');
 
-		// Current configuration
+		// Current configuration.
 		\WP_CLI::line(\WP_CLI::colorize('%B-- Configuration --%n'));
 		\WP_CLI::line(sprintf('Engine Mode:       %s', $status['engine_mode']));
 		\WP_CLI::line(sprintf('First Attempt:     %s', $status['auto_first_attempt']));
 		$this->printSupport('Has Fallback', $status['auto_has_fallback']);
 		\WP_CLI::line('');
 
-		// Overall support
+		// Overall support.
 		$level = $status['avif_support_level'];
 		$color = match ($level) {
 			'full' => '%G',
@@ -128,7 +130,7 @@ class CLI
 		$dryRun = isset($assoc_args['dry-run']);
 		$attachmentId = !empty($args[0]) ? (int) $args[0] : 0;
 
-		if (!$all && $attachmentId === 0) {
+		if (!$all && 0 === $attachmentId) {
 			\WP_CLI::error('Please specify an attachment ID or use --all flag.');
 			return;
 		}
@@ -164,18 +166,18 @@ class CLI
 		$format = $assoc_args['format'] ?? 'table';
 		$counts = $this->diagnostics->computeMissingCounts();
 
-		if ($format === 'json') {
+		if ('json' === $format) {
 			\WP_CLI::line((string) wp_json_encode($counts, JSON_PRETTY_PRINT));
 			return;
 		}
 
-		if ($format === 'csv') {
+		if ('csv' === $format) {
 			\WP_CLI::line('total_jpegs,existing_avifs,missing_avifs');
 			\WP_CLI::line(sprintf('%d,%d,%d', $counts['total_jpegs'], $counts['existing_avifs'], $counts['missing_avifs']));
 			return;
 		}
 
-		// Table format
+		// Table format.
 		$percentage = $counts['total_jpegs'] > 0
 			? round(($counts['existing_avifs'] / $counts['total_jpegs']) * 100, 1)
 			: 0;
@@ -238,12 +240,12 @@ class CLI
 			return;
 		}
 
-		if ($format === 'json') {
+		if ('json' === $format) {
 			\WP_CLI::line((string) wp_json_encode($logs, JSON_PRETTY_PRINT));
 			return;
 		}
 
-		// Table format
+		// Table format.
 		$tableData = array();
 		foreach ($logs as $log) {
 			$timestamp = isset($log['timestamp']) ? (int) $log['timestamp'] : 0;
@@ -287,7 +289,7 @@ class CLI
 		$all = isset($assoc_args['all']);
 		$attachmentId = !empty($args[0]) ? (int) $args[0] : 0;
 
-		if (!$all && $attachmentId === 0) {
+		if (!$all && 0 === $attachmentId) {
 			\WP_CLI::error('Please specify an attachment ID or use --all flag.');
 			return;
 		}
@@ -321,7 +323,7 @@ class CLI
 	private function convertSingle(int $attachmentId, bool $dryRun): void
 	{
 		$post = get_post($attachmentId);
-		if (!$post || $post->post_type !== 'attachment') {
+		if (!$post || 'attachment' !== $post->post_type) {
 			\WP_CLI::error("Attachment ID {$attachmentId} not found.");
 			return;
 		}
@@ -359,15 +361,15 @@ class CLI
 	 */
 	private function convertAll(bool $dryRun): void
 	{
-		// Get counts like the Tools page
+		// Get counts like the Tools page.
 		$counts = $this->diagnostics->computeMissingCounts();
 
-		if ($counts['total_jpegs'] === 0) {
+		if (0 === $counts['total_jpegs']) {
 			\WP_CLI::line('No JPEG files found in media library.');
 			return;
 		}
 
-		if ($counts['missing_avifs'] === 0) {
+		if (0 === $counts['missing_avifs']) {
 			\WP_CLI::success('All JPEG files already have AVIF versions.');
 			return;
 		}
@@ -414,7 +416,7 @@ class CLI
 				if ($size['converted'] && !$size['existed_before']) {
 					++$totalConverted;
 
-					// Calculate and display progress with time estimates
+					// Calculate and display progress with time estimates.
 					$this->printProgress($totalConverted, $totalMissing, $startTime);
 				} else {
 					++$totalSkipped;
@@ -422,7 +424,8 @@ class CLI
 			}
 		}
 
-		// Clear the progress line and print final newline
+		// Clear the progress line and print final newline.
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- WP-CLI progress output.
 		fwrite(STDERR, "\r" . str_repeat(' ', 80) . "\r");
 
 		\WP_CLI::success(sprintf('Converted %d files, skipped %d (already exist).', $totalConverted, $totalSkipped));
@@ -463,6 +466,7 @@ class CLI
 			$etaStr
 		);
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- WP-CLI progress output.
 		fwrite(STDERR, $output);
 	}
 
@@ -569,7 +573,8 @@ class CLI
 			$this->printProgress($processed, $total, $startTime);
 		}
 
-		// Clear the progress line and print final newline
+		// Clear the progress line and print final newline.
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- WP-CLI progress output.
 		fwrite(STDERR, "\r" . str_repeat(' ', 80) . "\r");
 
 		if ($totalAttempted === 0) {

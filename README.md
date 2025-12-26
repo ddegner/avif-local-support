@@ -3,7 +3,7 @@ Contributors: ddegner
 Tags: avif, images, performance, media, optimization
 Requires at least: 6.8
 Tested up to: 6.9
-Stable tag: 0.5.2
+Stable tag: 0.5.3
 Requires PHP: 8.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -197,6 +197,13 @@ LiteSpeed's open_basedir restriction prevents PHP from detecting executables out
 4. **About** — Quick reference and version info
 
 ## Changelog
+
+### 0.5.3
+
+- Fix: Added missing LQIP options to plugin activation (thumbhash_size, generate_on_upload, generate_via_schedule)
+- Fix: Added missing LQIP options to uninstall cleanup for complete data removal
+- Fix: Properly minified thumbhash-decoder.min.js (62% size reduction)
+- Fix: Excluded developer documentation from WordPress plugin distribution
 
 ### 0.5.2
 

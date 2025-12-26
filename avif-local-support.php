@@ -6,7 +6,7 @@ declare(strict_types=1);
  * Plugin Name: AVIF Local Support
  * Plugin URI: https://github.com/ddegner/avif-local-support
  * Description: Unified AVIF support and conversion. Local-first processing with a strong focus on image quality when converting JPEGs.
- * Version: 0.5.1
+ * Version: 0.5.2
  * Author: David Degner
  * Author URI: https://www.DavidDegner.com
  * License: GPL v2 or later
@@ -21,13 +21,19 @@ declare(strict_types=1);
 \defined('ABSPATH') || exit;
 
 // Define constants
-\define('AVIFLOSU_VERSION', '0.5.1');
+\define('AVIFLOSU_VERSION', '0.5.2');
 \define('AVIFLOSU_PLUGIN_FILE', __FILE__);
 \define('AVIFLOSU_PLUGIN_DIR', plugin_dir_path(__FILE__));
 \define('AVIFLOSU_PLUGIN_URL', plugin_dir_url(__FILE__));
 \define('AVIFLOSU_INC_DIR', AVIFLOSU_PLUGIN_DIR . 'includes');
 
-// Composer autoloader for third-party dependencies
+// Load bundled ThumbHash library
+$thumbhashLib = AVIFLOSU_PLUGIN_DIR . 'lib/Thumbhash/Thumbhash.php';
+if (file_exists($thumbhashLib)) {
+	require_once $thumbhashLib;
+}
+
+// Composer autoloader for other third-party dependencies (if needed)
 $composerAutoloader = AVIFLOSU_PLUGIN_DIR . 'vendor/autoload.php';
 if (file_exists($composerAutoloader)) {
 	require_once $composerAutoloader;

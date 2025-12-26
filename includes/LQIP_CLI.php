@@ -81,6 +81,12 @@ class LQIP_CLI
 	 * [--dry-run]
 	 * : Show what would be generated without actually generating
 	 *
+	 * [--limit=<number>]
+	 * : Limit the number of images to process (useful for testing)
+	 *
+	 * [--verbose]
+	 * : Show detailed output for each image being processed
+	 *
 	 * ## EXAMPLES
 	 *
 	 *     wp lqip generate --all
@@ -102,8 +108,15 @@ class LQIP_CLI
 			return;
 		}
 
+		if (!ThumbHash::isLibraryAvailable()) {
+			\WP_CLI::error('ThumbHash library not found. Please run "composer install" in the plugin directory to install dependencies.');
+			return;
+		}
+
 		$all = isset($assoc_args['all']);
 		$dryRun = isset($assoc_args['dry-run']);
+		$limit = isset($assoc_args['limit']) ? (int) $assoc_args['limit'] : 0;
+		$verbose = isset($assoc_args['verbose']);
 		$attachmentId = !empty($args[0]) ? (int) $args[0] : 0;
 
 		if (!$all && 0 === $attachmentId) {
@@ -116,7 +129,7 @@ class LQIP_CLI
 			return;
 		}
 
-		$this->generateAll($dryRun);
+		$this->generateAll($dryRun, $limit, $verbose);
 	}
 
 	/**
@@ -211,8 +224,12 @@ class LQIP_CLI
 
 	/**
 	 * Generate LQIP for all attachments missing them.
+	 *
+	 * @param bool $dryRun Whether this is a dry run.
+	 * @param int  $limit Maximum number of images to process (0 = no limit).
+	 * @param bool $verbose Show detailed output for each image.
 	 */
-	private function generateAll(bool $dryRun): void
+	private function generateAll(bool $dryRun, int $limit = 0, bool $verbose = false): void
 	{
 		$stats = ThumbHash::getStats();
 
@@ -261,16 +278,55 @@ class LQIP_CLI
 		$generated = 0;
 		$skipped = 0;
 		$failed = 0;
+		$postsToProcess = $query->posts;
+		
+		// Apply limit if specified
+		if ($limit > 0 && count($postsToProcess) > $limit) {
+			$postsToProcess = array_slice($postsToProcess, 0, $limit);
+			\WP_CLI::line(sprintf('Limiting processing to first %d images...', $limit));
+			\WP_CLI::line('');
+		}
+		
+		$totalToProcess = count($postsToProcess);
 
-		foreach ($query->posts as $attachmentId) {
+		foreach ($postsToProcess as $index => $attachmentId) {
 			// Skip if already has LQIP
 			$existing = get_post_meta($attachmentId, ThumbHash::getMetaKey(), true);
 			if (!empty($existing) && is_array($existing)) {
 				++$skipped;
+				++$processed;
+				$this->printProgress($processed, $totalMissing, $startTime);
 				continue;
 			}
 
-			ThumbHash::generateForAttachment((int) $attachmentId);
+			// Show which image we're processing (helps identify hanging images)
+			$currentNum = $index + 1;
+			if ($verbose || $currentNum % 10 === 0 || $currentNum === 1) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- WP-CLI progress output.
+				fwrite(STDERR, "\r" . str_repeat(' ', 80) . "\r");
+				\WP_CLI::line(sprintf('Processing image %d/%d (ID: %d)...', $currentNum, $totalToProcess, $attachmentId));
+			}
+
+			// Clear any previous error
+			ThumbHash::getLastError();
+
+			// Try to generate with error handling
+			try {
+				$memoryBefore = memory_get_usage(true);
+				ThumbHash::generateForAttachment((int) $attachmentId);
+				$memoryAfter = memory_get_usage(true);
+				
+				// Check for memory issues
+				if ($memoryAfter - $memoryBefore > 50 * 1024 * 1024) { // More than 50MB
+					\WP_CLI::warning(sprintf('High memory usage for attachment ID %d: %s', $attachmentId, size_format($memoryAfter - $memoryBefore)));
+				}
+			} catch (\Throwable $e) {
+				\WP_CLI::warning(sprintf('Exception generating LQIP for attachment ID %d: %s', $attachmentId, $e->getMessage()));
+				++$failed;
+				++$processed;
+				$this->printProgress($processed, $totalMissing, $startTime);
+				continue;
+			}
 
 			// Verify it was generated
 			$hash = get_post_meta($attachmentId, ThumbHash::getMetaKey(), true);
@@ -280,6 +336,17 @@ class LQIP_CLI
 				$this->printProgress($processed, $totalMissing, $startTime);
 			} else {
 				++$failed;
+				++$processed;
+				$error = ThumbHash::getLastError();
+				if ($error && ($currentNum % 10 === 0 || $currentNum <= 5)) {
+					\WP_CLI::warning(sprintf('Failed to generate LQIP for attachment ID %d: %s', $attachmentId, $error));
+				}
+				$this->printProgress($processed, $totalMissing, $startTime);
+			}
+
+			// Force garbage collection every 50 images to prevent memory buildup
+			if ($processed % 50 === 0) {
+				gc_collect_cycles();
 			}
 		}
 

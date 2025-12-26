@@ -3,7 +3,7 @@ Contributors: ddegner
 Tags: avif, images, performance, media, optimization
 Requires at least: 6.8
 Tested up to: 6.9
-Stable tag: 0.5.1
+Stable tag: 0.5.2
 Requires PHP: 8.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -197,6 +197,14 @@ LiteSpeed's open_basedir restriction prevents PHP from detecting executables out
 4. **About** — Quick reference and version info
 
 ## Changelog
+
+### 0.5.2
+
+- Feature: Bundled ThumbHash library — no Composer dependency required on deployment
+- Enhancement: Improved LQIP generation with better error handling, progress reporting, and memory management
+- Enhancement: Added `--limit` and `--verbose` options to `wp lqip generate` command
+- Fix: Resolved hanging issue in `wp lqip generate --all` command with better error handling and progress output
+- Fix: Clear error messages when ThumbHash library is unavailable
 
 ### 0.5.1
 

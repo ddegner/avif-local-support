@@ -60,6 +60,16 @@ final class ThumbHash
 	}
 
 	/**
+	 * Check if the ThumbHash library is available.
+	 *
+	 * @return bool True if the library class exists, false otherwise.
+	 */
+	public static function isLibraryAvailable(): bool
+	{
+		return class_exists('Thumbhash\Thumbhash');
+	}
+
+	/**
 	 * Generate ThumbHash string for an image file.
 	 *
 	 * @param string $imagePath Absolute path to JPEG/PNG image.
@@ -67,6 +77,18 @@ final class ThumbHash
 	 */
 	public static function generate(string $imagePath): ?string
 	{
+		// Check if the ThumbHash library is available
+		if (!self::isLibraryAvailable()) {
+			self::$lastError = 'ThumbHash library not found. Please run "composer install" in the plugin directory to install dependencies.';
+			if (class_exists(Logger::class)) {
+				(new Logger())->addLog('error', 'ThumbHash library not available', array(
+					'path' => $imagePath,
+					'error' => 'Thumbhash\Thumbhash class not found. Composer dependencies may not be installed.'
+				));
+			}
+			return null;
+		}
+
 		if (!file_exists($imagePath) || !is_readable($imagePath)) {
 			self::$lastError = "File not found or unreadable: $imagePath";
 			if (class_exists(Logger::class)) {

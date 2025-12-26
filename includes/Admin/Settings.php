@@ -16,7 +16,9 @@ final class Settings
 {
 
 
+
 	private const OPTION_GROUP = 'aviflosu_settings';
+	private const BETA_OPTION_GROUP = 'aviflosu_beta_settings';
 	private const PAGE_SLUG = 'avif-local-support';
 
 	private Diagnostics $diagnostics;
@@ -194,6 +196,51 @@ final class Settings
 				'show_in_rest' => true,
 			)
 		);
+
+		// Beta features - use separate option group to avoid form conflicts.
+		register_setting(
+			self::BETA_OPTION_GROUP,
+			'aviflosu_thumbhash_enabled',
+			array(
+				'type' => 'boolean',
+				'default' => false,
+				'sanitize_callback' => 'rest_sanitize_boolean',
+				'show_in_rest' => true,
+			)
+		);
+
+		register_setting(
+			self::BETA_OPTION_GROUP,
+			'aviflosu_lqip_generate_on_upload',
+			array(
+				'type' => 'boolean',
+				'default' => true,
+				'sanitize_callback' => 'rest_sanitize_boolean',
+				'show_in_rest' => true,
+			)
+		);
+
+		register_setting(
+			self::BETA_OPTION_GROUP,
+			'aviflosu_lqip_generate_via_schedule',
+			array(
+				'type' => 'boolean',
+				'default' => true,
+				'sanitize_callback' => 'rest_sanitize_boolean',
+				'show_in_rest' => true,
+			)
+		);
+
+		register_setting(
+			self::BETA_OPTION_GROUP,
+			'aviflosu_thumbhash_size',
+			array(
+				'type' => 'integer',
+				'default' => 100,
+				'sanitize_callback' => array($this, 'sanitizeThumbHashSize'),
+				'show_in_rest' => true,
+			)
+		);
 	}
 
 	/**
@@ -204,6 +251,8 @@ final class Settings
 		add_settings_section('aviflosu_main', '', fn() => null, self::PAGE_SLUG);
 		add_settings_section('aviflosu_conversion', '', fn() => null, self::PAGE_SLUG);
 		add_settings_section('aviflosu_engine', '', fn() => null, self::PAGE_SLUG);
+		add_settings_section('aviflosu_beta', '', fn() => null, self::PAGE_SLUG);
+		add_settings_section('aviflosu_lqip_conversion', '', fn() => null, self::PAGE_SLUG);
 	}
 
 	/**
@@ -303,43 +352,83 @@ final class Settings
 			'aviflosu_conversion',
 			array('label_for' => 'aviflosu_cli_path')
 		);
+
+		// Beta section.
+		add_settings_field(
+			'avif_local_support_thumbhash_enabled',
+			__('Serve LQIP images', 'avif-local-support'),
+			array($this, 'renderThumbHashEnabledField'),
+			self::PAGE_SLUG,
+			'aviflosu_beta',
+			array('label_for' => 'aviflosu_thumbhash_enabled')
+		);
+
+		add_settings_field(
+			'avif_local_support_lqip_generate_on_upload',
+			__('Convert on upload', 'avif-local-support'),
+			array($this, 'renderLqipGenerateOnUploadField'),
+			self::PAGE_SLUG,
+			'aviflosu_lqip_conversion',
+			array('label_for' => 'aviflosu_lqip_generate_on_upload')
+		);
+
+		add_settings_field(
+			'avif_local_support_lqip_generate_via_schedule',
+			__('Daily conversion', 'avif-local-support'),
+			array($this, 'renderLqipScheduleField'),
+			self::PAGE_SLUG,
+			'aviflosu_lqip_conversion',
+			array('label_for' => 'aviflosu_lqip_generate_via_schedule')
+		);
+
+		add_settings_field(
+			'avif_local_support_thumbhash_size',
+			__('ThumbHash size', 'avif-local-support'),
+			array($this, 'renderThumbHashSizeField'),
+			self::PAGE_SLUG,
+			'aviflosu_lqip_conversion',
+			array('label_for' => 'aviflosu_thumbhash_size')
+		);
 	}
 
 	// =========================================================================
 	// Sanitizers
 	// =========================================================================
 
-	public function sanitizeScheduleTime(string $value): string
+	public function sanitizeScheduleTime(?string $value): string
 	{
-		return preg_match('/^([01]?\d|2[0-3]):[0-5]\d$/', $value) ? $value : '01:00';
+		if ($value === null || !preg_match('/^([01]?\d|2[0-3]):[0-5]\d$/', $value)) {
+			return '01:00';
+		}
+		return $value;
 	}
 
 	public function sanitizeSpeed($value): int
 	{
-		return max(0, min(8, (int) $value));
+		return max(0, min(8, (int) ($value ?? 1)));
 	}
 
 	public function sanitizeSubsampling($value): string
 	{
-		$v = (string) $value;
+		$v = (string) ($value ?? '420');
 		return in_array($v, array('420', '422', '444'), true) ? $v : '420';
 	}
 
 	public function sanitizeBitDepth($value): string
 	{
-		$v = (string) $value;
+		$v = (string) ($value ?? '8');
 		return in_array($v, array('8', '10', '12'), true) ? $v : '8';
 	}
 
 	public function sanitizeEngineMode($value): string
 	{
-		$v = (string) $value;
+		$v = (string) ($value ?? 'auto');
 		return in_array($v, array('auto', 'cli', 'imagick', 'gd'), true) ? $v : 'auto';
 	}
 
 	public function sanitizeCliEnv($value): string
 	{
-		return trim(wp_strip_all_tags((string) $value));
+		return trim(wp_strip_all_tags((string) ($value ?? '')));
 	}
 
 	// =========================================================================
@@ -505,6 +594,53 @@ final class Settings
 		echo '<p class="description" style="margin-top:6px;">' . esc_html__('Environment variables for the CLI process (KEY=VALUE), one per line. This does not change the CLI Path; it only affects the subprocess environment.', 'avif-local-support') . '</p>';
 
 		echo '</div>';
+	}
+
+	public function renderThumbHashEnabledField(): void
+	{
+		$value = (bool) get_option('aviflosu_thumbhash_enabled', false);
+		echo '<label for="aviflosu_thumbhash_enabled">';
+		echo '<input id="aviflosu_thumbhash_enabled" type="checkbox" name="aviflosu_thumbhash_enabled" value="1" ' . checked(true, $value, false) . ' /> ';
+		echo '</label>';
+		echo '<p class="description">' . esc_html__('Low Quality Image Placeholders (LQIP) using ThumbHash. Generates ultra-compact image representations (~30 bytes) that are decoded client-side to smooth placeholders while full images load.', 'avif-local-support') . '</p>';
+	}
+
+	public function renderLqipGenerateOnUploadField(): void
+	{
+		$value = (bool) get_option('aviflosu_lqip_generate_on_upload', true);
+		echo '<label for="aviflosu_lqip_generate_on_upload">';
+		echo '<input id="aviflosu_lqip_generate_on_upload" type="checkbox" name="aviflosu_lqip_generate_on_upload" value="1" ' . checked(true, $value, false) . ' /> ';
+		echo esc_html__('Generate ThumbHash on upload', 'avif-local-support');
+		echo '</label>';
+	}
+
+	public function renderLqipScheduleField(): void
+	{
+		$enabled = (bool) get_option('aviflosu_lqip_generate_via_schedule', true);
+		echo '<label for="aviflosu_lqip_generate_via_schedule">';
+		echo '<input id="aviflosu_lqip_generate_via_schedule" type="checkbox" name="aviflosu_lqip_generate_via_schedule" value="1" ' . checked(true, $enabled, false) . ' /> ';
+		echo esc_html__('Scan daily and generate missing ThumbHashes', 'avif-local-support');
+		echo '</label>';
+		echo '<p class="description">' . esc_html__('Uses the same schedule time as AVIF conversion.', 'avif-local-support') . '</p>';
+	}
+
+	public function renderThumbHashSizeField(): void
+	{
+		$value = (int) get_option('aviflosu_thumbhash_size', 100);
+		$options = \Ddegner\AvifLocalSupport\ThumbHash::SIZE_OPTIONS;
+		echo '<select id="aviflosu_thumbhash_size" name="aviflosu_thumbhash_size">';
+		foreach ($options as $size => $label) {
+			echo '<option value="' . esc_attr((string) $size) . '" ' . selected($size, $value, false) . '>' . esc_html($label) . '</option>';
+		}
+		echo '</select>';
+		echo '<p class="description">' . esc_html__('Larger sizes preserve more detail but generate slightly larger hashes.', 'avif-local-support') . '</p>';
+	}
+
+	public function sanitizeThumbHashSize($value): int
+	{
+		$size = (int) ($value ?? 100);
+		$validSizes = array_keys(\Ddegner\AvifLocalSupport\ThumbHash::SIZE_OPTIONS);
+		return in_array($size, $validSizes, true) ? $size : 100;
 	}
 
 	/**

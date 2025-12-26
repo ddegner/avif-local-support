@@ -15,6 +15,7 @@ final class Plugin
 
 
 
+
 	private Support $support;
 	private Converter $converter;
 	private Logger $logger;
@@ -45,7 +46,10 @@ final class Plugin
 		add_action('admin_post_aviflosu_reset_defaults', array($this, 'handle_reset_defaults'));
 
 		// Features.
-		if ((bool) get_option('aviflosu_enable_support', true)) {
+		// Initialize Support if AVIF serving OR LQIP is enabled (they can work independently).
+		$avifEnabled = (bool) get_option('aviflosu_enable_support', true);
+		$lqipEnabled = ThumbHash::isEnabled();
+		if ($avifEnabled || $lqipEnabled) {
 			$this->support->init();
 		}
 		// Always init converter so schedule/on-demand are available.

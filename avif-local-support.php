@@ -6,7 +6,7 @@ declare(strict_types=1);
  * Plugin Name: AVIF Local Support
  * Plugin URI: https://github.com/ddegner/avif-local-support
  * Description: Unified AVIF support and conversion. Local-first processing with a strong focus on image quality when converting JPEGs.
- * Version: 0.4.9
+ * Version: 0.5.0
  * Author: David Degner
  * Author URI: https://www.DavidDegner.com
  * License: GPL v2 or later
@@ -21,11 +21,17 @@ declare(strict_types=1);
 \defined('ABSPATH') || exit;
 
 // Define constants
-\define('AVIFLOSU_VERSION', '0.4.9');
+\define('AVIFLOSU_VERSION', '0.5.0');
 \define('AVIFLOSU_PLUGIN_FILE', __FILE__);
 \define('AVIFLOSU_PLUGIN_DIR', plugin_dir_path(__FILE__));
 \define('AVIFLOSU_PLUGIN_URL', plugin_dir_url(__FILE__));
 \define('AVIFLOSU_INC_DIR', AVIFLOSU_PLUGIN_DIR . 'includes');
+
+// Composer autoloader for third-party dependencies
+$composerAutoloader = AVIFLOSU_PLUGIN_DIR . 'vendor/autoload.php';
+if (file_exists($composerAutoloader)) {
+	require_once $composerAutoloader;
+}
 
 // PSR-4 style autoloader for plugin classes
 spl_autoload_register(
@@ -75,6 +81,7 @@ add_action('init', 'aviflosu_init');
 // Register WP-CLI commands
 if (defined('WP_CLI') && WP_CLI) {
 	\WP_CLI::add_command('avif', \Ddegner\AvifLocalSupport\CLI::class);
+	\WP_CLI::add_command('lqip', \Ddegner\AvifLocalSupport\LQIP_CLI::class);
 }
 
 // i18n: WordPress.org will auto-load translations for plugins hosted there.
@@ -97,6 +104,8 @@ function aviflosu_activate(): void
 	// Engine selection defaults
 	add_option('aviflosu_engine_mode', 'auto');
 	add_option('aviflosu_cli_path', '');
+	// Beta features (off by default)
+	add_option('aviflosu_thumbhash_enabled', false);
 }
 
 function aviflosu_deactivate(): void

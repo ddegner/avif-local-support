@@ -11,6 +11,7 @@
     ],
     "require": {
         "php": ">=8.3",
+        "srwiez/thumbhash": "^1.0",
         "symfony/process": "^6.4"
     },
     "require-dev": {

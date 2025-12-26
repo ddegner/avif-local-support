@@ -3,7 +3,7 @@ Contributors: ddegner
 Tags: avif, images, performance, media, optimization
 Requires at least: 6.8
 Tested up to: 6.9
-Stable tag: 0.4.9
+Stable tag: 0.5.0
 Requires PHP: 8.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -21,12 +21,15 @@ Built by a [Boston photographer](https://www.daviddegner.com) who needed it for 
 - **Fully Tunable** — Control quality (0–100), speed (0–10), chroma subsampling (4:2:0, 4:2:2, 4:4:4), and bit depth (8/10/12-bit).
 - **Smart Fallback** — Serves AVIF to supported browsers, JPEG to everyone else via picture elements.
 - **Automatic Conversion** — Convert on upload or via daily scheduled background scans.
+- **LQIP Placeholders** — Generate ThumbHash-based low-quality image placeholders for smooth loading.
 
 ## How It Works
 
 **Front end:** The plugin wraps your img tags in picture elements with an AVIF source. Browsers that support AVIF load the smaller, higher-quality file — others gracefully fall back to JPEG.
 
 **Conversion:** Uses ImageMagick CLI (fastest), Imagick PHP extension (high quality), or GD Library (fallback) to convert JPEGs to AVIF on upload or via background jobs.
+
+**LQIP:** Generates compact (~30 byte) ThumbHash placeholders that display instantly while images load.
 
 ## Installation
 
@@ -97,6 +100,15 @@ Options:
 - `<attachment-id>` — Attachment ID to delete AVIF files for
 - `--all` — Delete all AVIF files in the media library
 - `--yes` — Skip confirmation prompt when using --all
+
+### LQIP Commands
+
+Manage LQIP (ThumbHash) placeholders:
+
+    wp lqip stats
+    wp lqip generate --all
+    wp lqip generate 123
+    wp lqip delete --all --yes
 
 For more information, visit [wp-cli.org](https://wp-cli.org/).
 
@@ -185,6 +197,18 @@ LiteSpeed's open_basedir restriction prevents PHP from detecting executables out
 4. **About** — Quick reference and version info
 
 ## Changelog
+
+### 0.5.0
+
+- Feature: LQIP (Low Quality Image Placeholder) using ThumbHash for smooth image loading
+- Feature: WP-CLI commands for LQIP management (`wp lqip stats`, `wp lqip generate`, `wp lqip delete`)
+- Feature: Dedicated LQIP settings tab with enable/disable toggle
+- Enhancement: Reorganized admin UI with combined AVIF Tools section
+- Enhancement: Consistent stat labels across AVIF and LQIP tools (Images/With/Without)
+- Enhancement: Renamed "Test conversion" to "Test AVIF Conversion" for clarity
+- Enhancement: Removed beta labels from LQIP feature
+- Fix: LQIP stats now correctly count all supported image types (JPEG, PNG, GIF, WebP)
+- Dev: Auto-fixed 6,152+ PHPCS issues for WordPress coding standards compliance
 
 ### 0.4.9
 

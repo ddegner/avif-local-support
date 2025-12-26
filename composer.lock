@@ -4,8 +4,62 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "e06a33b0afbada91f170ee47d2ef90cc",
+    "content-hash": "de4e56b0de2c94a49b29b606b08b8fc5",
     "packages": [
+        {
+            "name": "srwiez/thumbhash",
+            "version": "v1.5.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/SRWieZ/thumbhash.git",
+                "reference": "56f4ed1ca361ba39b243b33e5f47867a833b4973"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/SRWieZ/thumbhash/zipball/56f4ed1ca361ba39b243b33e5f47867a833b4973",
+                "reference": "56f4ed1ca361ba39b243b33e5f47867a833b4973",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^7.3 || ^8.0"
+            },
+            "require-dev": {
+                "ext-gd": "*",
+                "ext-imagick": "*",
+                "pestphp/pest": "^1.0|^2.0|^3.0|^4.0"
+            },
+            "type": "library",
+            "autoload": {
+                "files": [
+                    "src/helpers.php"
+                ],
+                "psr-4": {
+                    "Thumbhash\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Eser DENIZ",
+                    "email": "srwiez@gmail.com"
+                }
+            ],
+            "description": "A brief description of your package",
+            "support": {
+                "issues": "https://github.com/SRWieZ/thumbhash/issues",
+                "source": "https://github.com/SRWieZ/thumbhash/tree/v1.5.0"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/SRWieZ",
+                    "type": "github"
+                }
+            ],
+            "time": "2025-11-27T16:03:46+00:00"
+        },
         {
             "name": "symfony/process",
             "version": "v6.4.26",

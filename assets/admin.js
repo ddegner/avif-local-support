@@ -27,7 +27,7 @@
   }
 
   function activateTab(id) {
-    var tabs = ['settings', 'tools', 'about'];
+    var tabs = ['settings', 'lqip', 'tools', 'about'];
     tabs.forEach(function (t) {
       var link = $('#avif-local-support-tab-link-' + t);
       var panel = $('#avif-local-support-tab-' + t);
@@ -54,11 +54,11 @@
     });
     window.addEventListener('hashchange', function () {
       var id = (location.hash || '#settings').replace('#', '');
-      if (['settings', 'tools', 'about'].indexOf(id) === -1) id = 'settings';
+      if (['settings', 'lqip', 'tools', 'about'].indexOf(id) === -1) id = 'settings';
       activateTab(id);
     });
     var initial = (location.hash || '#settings').replace('#', '');
-    if (['settings', 'tools', 'about'].indexOf(initial) === -1) initial = 'settings';
+    if (['settings', 'lqip', 'tools', 'about'].indexOf(initial) === -1) initial = 'settings';
     activateTab(initial);
   }
 

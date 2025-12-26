@@ -11,6 +11,7 @@ final class Support
 {
 
 
+
 	private array $fileCache = array();
 	private array $uploadsInfo = array();
 
@@ -23,6 +24,27 @@ final class Support
 		add_filter('post_thumbnail_html', array($this, 'wrapContentImages'));
 		add_filter('render_block', array($this, 'renderBlock'), 10, 2);
 		add_action('shutdown', array($this, 'saveCache'));
+
+		// Enqueue ThumbHash decoder if enabled - inline in head for early execution.
+		if (ThumbHash::isEnabled() && !\is_admin()) {
+			add_action('wp_head', array($this, 'inlineThumbHashDecoder'), 1);
+		}
+	}
+
+	/**
+	 * Inline the ThumbHash decoder script in the head for early execution.
+	 * This ensures placeholders appear before images start loading.
+	 */
+	public function inlineThumbHashDecoder(): void
+	{
+		$scriptPath = AVIFLOSU_PLUGIN_DIR . 'assets/thumbhash-decoder.min.js';
+		if (!file_exists($scriptPath)) {
+			return;
+		}
+		$script = file_get_contents($scriptPath);
+		if ($script) {
+			echo '<script id="aviflosu-thumbhash-decoder">' . $script . '</script>' . "\n";
+		}
 	}
 
 	public function wrapAttachment(string $html, int $attachmentId, $size, bool $icon, array $attr): string
@@ -42,15 +64,16 @@ final class Support
 		}
 
 		$avifSrc = $this->avifUrlFor($imageSrc[0]);
-		if (!$avifSrc) {
-			return $html;
-		}
 
 		$srcset = \wp_get_attachment_image_srcset($attachmentId, $size);
-		$avifSrcset = $srcset ? $this->convertSrcsetToAvif($srcset) : '';
+		$avifSrcset = ($srcset && $avifSrc) ? $this->convertSrcsetToAvif($srcset) : '';
 		$sizes = \wp_get_attachment_image_sizes($attachmentId, $size) ?: '';
 
-		return $this->pictureMarkup($html, $avifSrc, $avifSrcset, $sizes);
+		// Get ThumbHash for LQIP if enabled.
+		$sizeName = is_array($size) ? 'full' : (string) $size;
+		$thumbhash = ThumbHash::getForAttachment($attachmentId, $sizeName);
+
+		return $this->pictureMarkup($html, $avifSrc, $avifSrcset, $sizes, $thumbhash);
 	}
 
 	public function wrapContentImages(string $content): string
@@ -151,14 +174,39 @@ final class Support
 		return implode(', ', $out);
 	}
 
-	private function pictureMarkup(string $originalHtml, string $avifSrc, string $avifSrcset = '', string $sizes = ''): string
+	private function pictureMarkup(string $originalHtml, ?string $avifSrc, string $avifSrcset = '', string $sizes = '', ?string $thumbhash = null): string
 	{
-		if ('' === $avifSrc || '' === $originalHtml) {
+		if ((!$avifSrc || '' === $avifSrc) && (!$thumbhash || '' === $thumbhash)) {
 			return $originalHtml;
 		}
 		$srcset = '' !== $avifSrcset ? $avifSrcset : $avifSrc;
 		$sizesAttr = '' !== $sizes ? sprintf(' sizes="%s"', \esc_attr($sizes)) : '';
-		return sprintf('<picture><source type="image/avif" srcset="%s"%s>%s</picture>', \esc_attr($srcset), $sizesAttr, $originalHtml);
+
+		// Add ThumbHash data attribute to img tag if available.
+		$imgHtml = $originalHtml;
+		if ($thumbhash !== null && $thumbhash !== '') {
+			$imgHtml = preg_replace(
+				'/<img\s/',
+				'<img data-thumbhash="' . \esc_attr($thumbhash) . '" ',
+				$originalHtml,
+				1
+			);
+			if ($imgHtml === null) {
+				$imgHtml = $originalHtml;
+			}
+		}
+
+		if (!$avifSrc || '' === $avifSrc) {
+			return $imgHtml;
+		}
+
+		// Only wrap in <picture> if AVIF serving is enabled.
+		$avifEnabled = (bool) \get_option('aviflosu_enable_support', true);
+		if (!$avifEnabled) {
+			return $imgHtml;
+		}
+
+		return sprintf('<picture><source type="image/avif" srcset="%s"%s>%s</picture>', \esc_attr($srcset), $sizesAttr, $imgHtml);
 	}
 
 	private function isInsidePicture(\DOMNode $node): bool
@@ -173,8 +221,23 @@ final class Support
 		return false;
 	}
 
-	private function wrapImgNodeToPicture(\DOMDocument $dom, \DOMElement $img, string $avifSrcset, string $sizes): void
+	private function wrapImgNodeToPicture(\DOMDocument $dom, \DOMElement $img, string $avifSrcset, string $sizes, ?string $thumbhash = null): void
 	{
+		// Add ThumbHash data attribute if available
+		if ($thumbhash !== null && $thumbhash !== '') {
+			$img->setAttribute('data-thumbhash', $thumbhash);
+		}
+
+		if ('' === $avifSrcset) {
+			return;
+		}
+
+		// Only wrap in <picture> if AVIF serving is enabled.
+		$avifEnabled = (bool) \get_option('aviflosu_enable_support', true);
+		if (!$avifEnabled) {
+			return;
+		}
+
 		$picture = $dom->createElement('picture');
 		$source = $dom->createElement('source');
 		$source->setAttribute('type', 'image/avif');
@@ -212,7 +275,18 @@ final class Support
 			}
 			$src = (string) $img->getAttribute('src');
 			$avifUrl = $this->avifUrlFor($src);
-			if (!$avifUrl) {
+
+			// Extract attachment ID from wp-image-{ID} class for ThumbHash lookup
+			$thumbhash = null;
+			if (ThumbHash::isEnabled()) {
+				$class = (string) $img->getAttribute('class');
+				if (preg_match('/wp-image-(\d+)/', $class, $matches)) {
+					$attachmentId = (int) $matches[1];
+					$thumbhash = ThumbHash::getForAttachment($attachmentId, 'full');
+				}
+			}
+
+			if (!$avifUrl && !$thumbhash) {
 				continue;
 			}
 
@@ -231,8 +305,9 @@ final class Support
 
 			$srcset = (string) $img->getAttribute('srcset');
 			$sizes = (string) $img->getAttribute('sizes');
-			$avifSrcset = '' !== $srcset ? $this->convertSrcsetToAvif($srcset) : $avifUrl;
-			$this->wrapImgNodeToPicture($dom, $img, $avifSrcset, $sizes);
+			$avifSrcset = ('' !== $srcset && $avifUrl) ? $this->convertSrcsetToAvif($srcset) : ($avifUrl ?: '');
+
+			$this->wrapImgNodeToPicture($dom, $img, $avifSrcset, $sizes, $thumbhash);
 		}
 
 		// Cleanup: Remove the XML declaration node we added to force UTF-8

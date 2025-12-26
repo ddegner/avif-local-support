@@ -18,6 +18,7 @@ final class Converter
 {
 
 
+
 	private const JPEG_MIMES = array('image/jpeg', 'image/jpg');
 
 	private ?Plugin $plugin = null;
@@ -110,8 +111,10 @@ final class Converter
 
 	public function maybe_schedule_daily(): void
 	{
-		$enabled = (bool) get_option('aviflosu_convert_via_schedule', true);
-		if (!$enabled) {
+		$avifEnabled = (bool) get_option('aviflosu_convert_via_schedule', true);
+		$lqipEnabled = (bool) get_option('aviflosu_lqip_generate_via_schedule', true);
+
+		if (!$avifEnabled && !$lqipEnabled) {
 			// Clear if exists.
 			wp_clear_scheduled_hook('aviflosu_daily_event');
 			return;
@@ -143,25 +146,35 @@ final class Converter
 
 	public function run_daily_scan(): void
 	{
-		$this->convertAllJpegsIfMissingAvif();
+		if ((bool) get_option('aviflosu_convert_via_schedule', true)) {
+			$this->convertAllJpegsIfMissingAvif();
+		}
+		if ((bool) get_option('aviflosu_lqip_generate_via_schedule', true) && ThumbHash::isEnabled()) {
+			ThumbHash::generateAll();
+		}
 	}
 
 	public function convertGeneratedSizes(array $metadata, int $attachmentId): array
 	{
-		$convertOnUpload = (bool) get_option('aviflosu_convert_on_upload', true);
-		if (!$convertOnUpload) {
-			return $metadata;
-		}
-
 		if (!$this->isJpegMime(get_post_mime_type($attachmentId))) {
 			return $metadata;
 		}
 
-		$uploadDir = wp_upload_dir();
-		$baseDir = trailingslashit($uploadDir['basedir'] ?? '');
+		$convertOnUpload = (bool) get_option('aviflosu_convert_on_upload', true);
+		$lqipGenerateOnUpload = (bool) get_option('aviflosu_lqip_generate_on_upload', true);
 
-		// De-duped: convert original and sizes via shared helper.
-		$this->convertFromMetadata($metadata, $baseDir);
+		// AVIF Conversion
+		if ($convertOnUpload) {
+			$uploadDir = wp_upload_dir();
+			$baseDir = trailingslashit($uploadDir['basedir'] ?? '');
+			// De-duped: convert original and sizes via shared helper.
+			$this->convertFromMetadata($metadata, $baseDir);
+		}
+
+		// Generate ThumbHash placeholders if enabled globally AND triggered on upload.
+		if (ThumbHash::isEnabled() && $lqipGenerateOnUpload) {
+			ThumbHash::generateForAttachment($attachmentId);
+		}
 
 		return $metadata;
 	}
@@ -642,6 +655,9 @@ final class Converter
 				}
 			}
 		}
+
+		// Also delete ThumbHash metadata for this attachment.
+		ThumbHash::deleteForAttachment($attachmentId);
 
 		return $result;
 	}

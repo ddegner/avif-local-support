@@ -19,6 +19,7 @@ final class RestController {
 
 
 
+
 	private const NAMESPACE = 'aviflosu/v1';
 
 	private Converter $converter;
@@ -135,6 +136,37 @@ final class RestController {
 				'methods'             => 'POST',
 				'permission_callback' => array( $this, 'permissionManageOptions' ),
 				'callback'            => array( $this, 'uploadTest' ),
+			)
+		);
+
+		// ThumbHash bulk operations.
+		register_rest_route(
+			self::NAMESPACE,
+			'/thumbhash/stats',
+			array(
+				'methods'             => 'GET',
+				'permission_callback' => array( $this, 'permissionManageOptions' ),
+				'callback'            => array( $this, 'thumbhashStats' ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE,
+			'/thumbhash/generate-all',
+			array(
+				'methods'             => 'POST',
+				'permission_callback' => array( $this, 'permissionManageOptions' ),
+				'callback'            => array( $this, 'thumbhashGenerateAll' ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE,
+			'/thumbhash/delete-all',
+			array(
+				'methods'             => 'POST',
+				'permission_callback' => array( $this, 'permissionManageOptions' ),
+				'callback'            => array( $this, 'thumbhashDeleteAll' ),
 			)
 		);
 	}
@@ -432,5 +464,28 @@ final class RestController {
 				'next_index'    => $nextIndex,
 			)
 		);
+	}
+
+	/**
+	 * Get ThumbHash statistics.
+	 */
+	public function thumbhashStats( \WP_REST_Request $request ): \WP_REST_Response {
+		return rest_ensure_response( \Ddegner\AvifLocalSupport\ThumbHash::getStats() );
+	}
+
+	/**
+	 * Generate ThumbHashes for all existing images.
+	 */
+	public function thumbhashGenerateAll( \WP_REST_Request $request ): \WP_REST_Response {
+		$result = \Ddegner\AvifLocalSupport\ThumbHash::generateAll();
+		return rest_ensure_response( $result );
+	}
+
+	/**
+	 * Delete all ThumbHash metadata.
+	 */
+	public function thumbhashDeleteAll( \WP_REST_Request $request ): \WP_REST_Response {
+		$deleted = \Ddegner\AvifLocalSupport\ThumbHash::deleteAll();
+		return rest_ensure_response( array( 'deleted' => $deleted ) );
 	}
 }

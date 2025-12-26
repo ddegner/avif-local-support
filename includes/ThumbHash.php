@@ -68,6 +68,10 @@ final class ThumbHash
 	public static function generate(string $imagePath): ?string
 	{
 		if (!file_exists($imagePath) || !is_readable($imagePath)) {
+			self::$lastError = "File not found or unreadable: $imagePath";
+			if (class_exists(Logger::class)) {
+				(new Logger())->addLog('error', 'ThumbHash failed: File not found', array('path' => $imagePath));
+			}
 			return null;
 		}
 
@@ -82,15 +86,24 @@ final class ThumbHash
 				return self::generateWithGd($imagePath);
 			}
 
+			self::$lastError = 'No supported image library (Imagick or GD) found.';
 			return null;
 		} catch (\Throwable $e) {
 			// Log error but don't block conversion
+			self::$lastError = $e->getMessage();
+
 			if (defined('WP_DEBUG') && WP_DEBUG) {
 				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
 				error_log('ThumbHash generation failed for ' . $imagePath . ': ' . $e->getMessage());
 			}
-			// Store last error for debugging
-			self::$lastError = $e->getMessage();
+
+			if (class_exists(Logger::class)) {
+				(new Logger())->addLog('error', 'ThumbHash generation exception', array(
+					'path' => $imagePath,
+					'error' => $e->getMessage()
+				));
+			}
+
 			return null;
 		}
 	}
@@ -279,6 +292,7 @@ final class ThumbHash
 		$uploadDir = \wp_upload_dir();
 		$baseDir = $uploadDir['basedir'] ?? '';
 		if (!$baseDir) {
+			self::$lastError = 'Upload basedir not found.';
 			return;
 		}
 
@@ -287,12 +301,27 @@ final class ThumbHash
 		// Get the directory from metadata
 		$file = $metadata['file'] ?? '';
 		if (!$file) {
+			self::$lastError = "Original file path missing in metadata for attachment $attachmentId";
 			return;
 		}
 		$fileDir = dirname($file);
 
 		// Generate for original/full image
 		$fullPath = $baseDir . '/' . $file;
+		// Some setups have 'file' as absolute path (rare but possible in offload plugins) -> usually relative
+		if (!file_exists($fullPath)) {
+			// Check if file exists relative to baseDir directly or if $file is absolute
+			if (file_exists($file)) {
+				$fullPath = $file;
+			} else {
+				self::$lastError = "File not found: $fullPath";
+				// Log primarily for the main file
+				if (class_exists(Logger::class)) {
+					(new Logger())->addLog('warning', "ThumbHash skipped: Source file missing for ID $attachmentId", array('path' => $fullPath));
+				}
+			}
+		}
+
 		if (file_exists($fullPath)) {
 			$hash = self::generate($fullPath);
 			if ($hash) {

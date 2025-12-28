@@ -26,6 +26,7 @@ $aviflosu_options = array(
 	'aviflosu_thumbhash_size',
 	'aviflosu_lqip_generate_on_upload',
 	'aviflosu_lqip_generate_via_schedule',
+	'aviflosu_lqip_fade',
 	// legacy options left behind in older versions
 	'aviflosu_preserve_metadata',
 	'aviflosu_preserve_color_profile',

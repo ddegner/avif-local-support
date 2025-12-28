@@ -200,6 +200,7 @@ LiteSpeed's open_basedir restriction prevents PHP from detecting executables out
 
 ### 0.5.4
 
+- Feature: Added optional smooth fade-in for LQIP images
 - Translations: Added German, Italian, Japanese, Portuguese (Brazil), and Russian translations
 - Enhancement: Updated translations for Spanish, French, Hindi, and Chinese
 - Fix: `wp lqip generate --all` now correctly processes all eligible images

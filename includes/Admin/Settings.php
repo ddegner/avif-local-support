@@ -233,6 +233,17 @@ final class Settings
 
 		register_setting(
 			self::BETA_OPTION_GROUP,
+			'aviflosu_lqip_fade',
+			array(
+				'type' => 'boolean',
+				'default' => true,
+				'sanitize_callback' => 'rest_sanitize_boolean',
+				'show_in_rest' => true,
+			)
+		);
+
+		register_setting(
+			self::BETA_OPTION_GROUP,
 			'aviflosu_thumbhash_size',
 			array(
 				'type' => 'integer',
@@ -379,6 +390,15 @@ final class Settings
 			self::PAGE_SLUG,
 			'aviflosu_lqip_conversion',
 			array('label_for' => 'aviflosu_lqip_generate_via_schedule')
+		);
+
+		add_settings_field(
+			'avif_local_support_lqip_fade',
+			__('Fade in images', 'avif-local-support'),
+			array($this, 'renderLqipFadeField'),
+			self::PAGE_SLUG,
+			'aviflosu_lqip_conversion',
+			array('label_for' => 'aviflosu_lqip_fade')
 		);
 
 		add_settings_field(
@@ -622,6 +642,16 @@ final class Settings
 		echo esc_html__('Scan daily and generate missing ThumbHashes', 'avif-local-support');
 		echo '</label>';
 		echo '<p class="description">' . esc_html__('Uses the same schedule time as AVIF conversion.', 'avif-local-support') . '</p>';
+	}
+
+	public function renderLqipFadeField(): void
+	{
+		$value = (bool) get_option('aviflosu_lqip_fade', true);
+		echo '<label for="aviflosu_lqip_fade">';
+		echo '<input id="aviflosu_lqip_fade" type="checkbox" name="aviflosu_lqip_fade" value="1" ' . checked(true, $value, false) . ' /> ';
+		echo esc_html__('Fade in loaded images', 'avif-local-support');
+		echo '</label>';
+		echo '<p class="description">' . esc_html__('Adds a smooth transition effect when the full image loads over the placeholder.', 'avif-local-support') . '</p>';
 	}
 
 	public function renderThumbHashSizeField(): void

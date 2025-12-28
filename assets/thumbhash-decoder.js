@@ -195,12 +195,14 @@
         s.backgroundRepeat = 'no-repeat';
         if (el.tagName === 'PICTURE') s.display = 'block';
 
-        // Add loading class for CSS targeting (e.g. blur)
         if (el.classList) el.classList.add('thumbhash-loading');
 
         function clear() {
-            s.backgroundImage = s.backgroundSize = s.backgroundPosition = s.backgroundRepeat = '';
             if (el.classList) el.classList.remove('thumbhash-loading');
+            // Delay clearing the background to allow for CSS fade transition (500ms match)
+            setTimeout(function () {
+                s.backgroundImage = s.backgroundSize = s.backgroundPosition = s.backgroundRepeat = '';
+            }, 550);
         }
 
         if (img.complete && img.naturalWidth) {

@@ -115,6 +115,7 @@ function aviflosu_activate(): void
 	add_option('aviflosu_thumbhash_size', 100);
 	add_option('aviflosu_lqip_generate_on_upload', true);
 	add_option('aviflosu_lqip_generate_via_schedule', true);
+	add_option('aviflosu_lqip_fade', true);
 }
 
 function aviflosu_deactivate(): void

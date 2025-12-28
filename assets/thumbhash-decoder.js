@@ -197,19 +197,29 @@
 
         if (el.classList) el.classList.add('thumbhash-loading');
 
-        function clear() {
+        function startFade() {
             if (el.classList) el.classList.remove('thumbhash-loading');
-            // Delay clearing the background to allow for CSS fade transition (500ms match)
+            // Delay clearing the background to allow for CSS fade transition (500ms)
             setTimeout(function () {
                 s.backgroundImage = s.backgroundSize = s.backgroundPosition = s.backgroundRepeat = '';
             }, 550);
         }
 
+        function onReady() {
+            // Use decode() to ensure image is fully decoded and ready to paint
+            // This prevents the white flash between LQIP and actual image
+            if (img.decode) {
+                img.decode().then(startFade).catch(startFade);
+            } else {
+                startFade();
+            }
+        }
+
         if (img.complete && img.naturalWidth) {
-            clear();
+            onReady();
         } else {
-            img.addEventListener('load', clear, { once: true });
-            img.addEventListener('error', clear, { once: true });
+            img.addEventListener('load', onReady, { once: true });
+            img.addEventListener('error', startFade, { once: true });
         }
     }
 

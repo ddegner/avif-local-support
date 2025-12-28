@@ -23,6 +23,9 @@
     // Reusable canvas for encoding
     var canvas, ctx;
 
+    // Track page load time - images loading within first second skip the fade
+    var pageLoadTime = Date.now();
+
     function decode(hash) {
         // Decode base64 only once
         var bin = atob(hash),
@@ -187,7 +190,8 @@
         if (!url) return;
 
         var el = img.closest('picture') || img,
-            s = el.style;
+            s = el.style,
+            applyStartTime = Date.now();
 
         s.backgroundImage = 'url(' + url + ')';
         s.backgroundSize = 'cover';
@@ -197,29 +201,47 @@
 
         if (el.classList) el.classList.add('thumbhash-loading');
 
+        function clearBackground() {
+            s.backgroundImage = s.backgroundSize = s.backgroundPosition = s.backgroundRepeat = '';
+        }
+
         function startFade() {
             if (el.classList) el.classList.remove('thumbhash-loading');
             // Delay clearing the background to allow for CSS fade transition (500ms)
-            setTimeout(function () {
-                s.backgroundImage = s.backgroundSize = s.backgroundPosition = s.backgroundRepeat = '';
-            }, 550);
+            setTimeout(clearBackground, 550);
+        }
+
+        function instantReveal() {
+            // Skip the fade - just clear immediately
+            if (el.classList) el.classList.remove('thumbhash-loading');
+            clearBackground();
         }
 
         function onReady() {
-            // Use decode() to ensure image is fully decoded and ready to paint
-            // This prevents the white flash between LQIP and actual image
-            if (img.decode) {
-                img.decode().then(startFade).catch(startFade);
+            // Check if image loaded quickly (within 1 second of page load)
+            // Quick loads don't need fade - it would feel sluggish
+            var timeSincePageLoad = Date.now() - pageLoadTime;
+            var loadDuration = Date.now() - applyStartTime;
+
+            if (timeSincePageLoad < 1000 || loadDuration < 50) {
+                // Fast load - instant reveal, no fade needed
+                instantReveal();
             } else {
-                startFade();
+                // Slow load - use smooth fade transition
+                if (img.decode) {
+                    img.decode().then(startFade).catch(startFade);
+                } else {
+                    startFade();
+                }
             }
         }
 
         if (img.complete && img.naturalWidth) {
-            onReady();
+            // Already loaded - instant reveal
+            instantReveal();
         } else {
             img.addEventListener('load', onReady, { once: true });
-            img.addEventListener('error', startFade, { once: true });
+            img.addEventListener('error', instantReveal, { once: true });
         }
     }
 

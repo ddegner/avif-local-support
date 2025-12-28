@@ -3,7 +3,7 @@ Contributors: ddegner
 Tags: avif, images, performance, media, optimization
 Requires at least: 6.8
 Tested up to: 6.9
-Stable tag: 0.5.5
+Stable tag: 0.5.6
 Requires PHP: 8.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -197,6 +197,12 @@ LiteSpeed's open_basedir restriction prevents PHP from detecting executables out
 4. **About** — Quick reference and version info
 
 ## Changelog
+
+### 0.5.6
+
+- Enhancement: Smart fade logic — only apply fade transition for slow-loading images
+- Enhancement: Images loading within 1 second of page load display instantly (no fade)
+- Enhancement: Cached/fast-loading images skip fade for snappier feel
 
 ### 0.5.5
 

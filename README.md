@@ -3,7 +3,7 @@ Contributors: ddegner
 Tags: avif, images, performance, media, optimization
 Requires at least: 6.8
 Tested up to: 6.9
-Stable tag: 0.5.4
+Stable tag: 0.5.5
 Requires PHP: 8.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -197,6 +197,12 @@ LiteSpeed's open_basedir restriction prevents PHP from detecting executables out
 4. **About** — Quick reference and version info
 
 ## Changelog
+
+### 0.5.5
+
+- Feature: Added "Fade in images" option to smoothly transition from LQIP to full image
+- Fix: Used img.decode() to prevent white flash during LQIP fade transition
+- Fix: CSS selector now correctly handles both picture wrapper and standalone img cases
 
 ### 0.5.4
 

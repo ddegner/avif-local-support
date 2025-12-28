@@ -2,22 +2,22 @@
 # This file is distributed under the GPL v2 or later.
 msgid ""
 msgstr ""
-"Project-Id-Version: AVIF Local Support 0.5.0\n"
+"Project-Id-Version: AVIF Local Support 0.5.3\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/avif-local-support\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2025-12-26T00:52:44+00:00\n"
+"POT-Creation-Date: 2025-12-27T22:15:49+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: avif-local-support\n"
 
 #. Plugin Name of the plugin
 #: avif-local-support.php
-#: includes/class-avif-suite.php:90
-#: includes/class-avif-suite.php:91
+#: includes/class-avif-suite.php:98
+#: includes/class-avif-suite.php:99
 #: templates/admin/page.php:18
 msgid "AVIF Local Support"
 msgstr ""
@@ -50,172 +50,190 @@ msgstr ""
 msgid "Only JPEG files are allowed."
 msgstr ""
 
-#: includes/Admin/Settings.php:226
+#: includes/Admin/Settings.php:266
 msgid "Serve AVIF images"
 msgstr ""
 
-#: includes/Admin/Settings.php:236
+#: includes/Admin/Settings.php:276
+#: includes/Admin/Settings.php:368
 #: templates/admin/tab-tools.php:338
 msgid "Convert on upload"
 msgstr ""
 
-#: includes/Admin/Settings.php:245
+#: includes/Admin/Settings.php:285
+#: includes/Admin/Settings.php:377
 msgid "Daily conversion"
 msgstr ""
 
-#: includes/Admin/Settings.php:254
+#: includes/Admin/Settings.php:294
 msgid "Quality (0–100)"
 msgstr ""
 
-#: includes/Admin/Settings.php:263
+#: includes/Admin/Settings.php:303
 msgid "Speed (0–8)"
 msgstr ""
 
-#: includes/Admin/Settings.php:272
+#: includes/Admin/Settings.php:312
 msgid "Chroma subsampling"
 msgstr ""
 
-#: includes/Admin/Settings.php:281
+#: includes/Admin/Settings.php:321
 msgid "Bit depth"
 msgstr ""
 
-#: includes/Admin/Settings.php:290
+#: includes/Admin/Settings.php:330
 msgid "Disable memory check"
 msgstr ""
 
-#: includes/Admin/Settings.php:300
+#: includes/Admin/Settings.php:340
 msgid "Engine selection"
 msgstr ""
 
-#: includes/Admin/Settings.php:309
+#: includes/Admin/Settings.php:349
 msgid "ImageMagick CLI"
 msgstr ""
 
-#: includes/Admin/Settings.php:319
-msgid "Enable ThumbHash LQIP"
-msgstr ""
-
-#: includes/Admin/Settings.php:369
-msgid "Add AVIF sources to JPEG images on the front end"
-msgstr ""
-
-#: includes/Admin/Settings.php:377
-msgid "Recommended; may slow uploads on some servers"
+#: includes/Admin/Settings.php:359
+msgid "Serve LQIP images"
 msgstr ""
 
 #: includes/Admin/Settings.php:386
+msgid "ThumbHash size"
+msgstr ""
+
+#: includes/Admin/Settings.php:443
+msgid "Add AVIF sources to JPEG images on the front end"
+msgstr ""
+
+#: includes/Admin/Settings.php:452
+msgid "Recommended; may slow uploads on some servers"
+msgstr ""
+
+#: includes/Admin/Settings.php:462
 msgid "Scan daily and convert missing AVIFs"
 msgstr ""
 
-#: includes/Admin/Settings.php:388
+#: includes/Admin/Settings.php:464
 msgid "Time"
 msgstr ""
 
-#: includes/Admin/Settings.php:395
+#: includes/Admin/Settings.php:472
 msgid "Higher = better quality and larger files."
 msgstr ""
 
-#: includes/Admin/Settings.php:402
+#: includes/Admin/Settings.php:480
 msgid "Lower = smaller files (slower). Higher = faster (larger files)."
 msgstr ""
 
-#: includes/Admin/Settings.php:420
+#: includes/Admin/Settings.php:499
 msgid "4:2:0 is most compatible and smallest; 4:4:4 preserves more color detail."
 msgstr ""
 
-#: includes/Admin/Settings.php:438
+#: includes/Admin/Settings.php:518
 msgid "8-bit is standard; higher bit depths may increase file size and require broader support."
 msgstr ""
 
-#: includes/Admin/Settings.php:445
+#: includes/Admin/Settings.php:526
 msgid "Skip pre-conversion memory availability check (not recommended)"
 msgstr ""
 
-#: includes/Admin/Settings.php:447
+#: includes/Admin/Settings.php:528
 msgid "Useful if the memory estimator is too conservative, but may cause fatal errors on large images."
 msgstr ""
 
-#: includes/Admin/Settings.php:453
+#: includes/Admin/Settings.php:535
 msgid "Auto (CLI → Imagick → GD)"
 msgstr ""
 
-#: includes/Admin/Settings.php:454
+#: includes/Admin/Settings.php:536
 msgid "Force ImageMagick CLI"
 msgstr ""
 
-#: includes/Admin/Settings.php:455
+#: includes/Admin/Settings.php:537
 msgid "Force ImageMagick (Imagick PHP)"
 msgstr ""
 
-#: includes/Admin/Settings.php:456
+#: includes/Admin/Settings.php:538
 msgid "Force GD"
 msgstr ""
 
-#: includes/Admin/Settings.php:482
+#: includes/Admin/Settings.php:565
 msgid "CLI Path"
 msgstr ""
 
-#: includes/Admin/Settings.php:492
+#: includes/Admin/Settings.php:575
 msgid "Select a detected binary or enter a custom path."
 msgstr ""
 
-#: includes/Admin/Settings.php:495
+#: includes/Admin/Settings.php:578
 msgid "Extra CLI Arguments"
 msgstr ""
 
 #. translators: %s: Suggested CLI arguments.
-#: includes/Admin/Settings.php:499
+#: includes/Admin/Settings.php:582
 #, php-format
 msgid "Suggested: %s"
 msgstr ""
 
-#: includes/Admin/Settings.php:500
-#: includes/Admin/Settings.php:509
+#: includes/Admin/Settings.php:583
+#: includes/Admin/Settings.php:592
 msgid "Apply"
 msgstr ""
 
-#: includes/Admin/Settings.php:502
+#: includes/Admin/Settings.php:585
 msgid "Additional flags passed to ImageMagick (e.g. -define avif:my-flag=1)."
 msgstr ""
 
-#: includes/Admin/Settings.php:505
+#: includes/Admin/Settings.php:588
 msgid "CLI Environment Variables"
 msgstr ""
 
-#: includes/Admin/Settings.php:508
+#: includes/Admin/Settings.php:591
 msgid "Suggested environment:"
 msgstr ""
 
-#: includes/Admin/Settings.php:511
+#: includes/Admin/Settings.php:594
 msgid "Environment variables for the CLI process (KEY=VALUE), one per line. This does not change the CLI Path; it only affects the subprocess environment."
 msgstr ""
 
-#: includes/Admin/Settings.php:520
-msgid "Generate ThumbHash placeholders for images"
+#: includes/Admin/Settings.php:605
+msgid "Low Quality Image Placeholders (LQIP) using ThumbHash. Generates ultra-compact image representations (~30 bytes) that are decoded client-side to smooth placeholders while full images load."
 msgstr ""
 
-#: includes/Admin/Settings.php:522
-msgid "Creates ultra-compact (~30 byte) image placeholders displayed instantly while full images load."
+#: includes/Admin/Settings.php:613
+msgid "Generate ThumbHash on upload"
 msgstr ""
 
-#: includes/class-avif-suite.php:100
+#: includes/Admin/Settings.php:622
+msgid "Scan daily and generate missing ThumbHashes"
+msgstr ""
+
+#: includes/Admin/Settings.php:624
+msgid "Uses the same schedule time as AVIF conversion."
+msgstr ""
+
+#: includes/Admin/Settings.php:636
+msgid "Larger sizes preserve more detail but generate slightly larger hashes."
+msgstr ""
+
+#: includes/class-avif-suite.php:109
 msgid "You do not have permission to access this page."
 msgstr ""
 
-#: includes/class-avif-suite.php:180
-#: includes/class-avif-suite.php:260
+#: includes/class-avif-suite.php:191
+#: includes/class-avif-suite.php:272
 msgid "You do not have permission to do this."
 msgstr ""
 
-#: includes/class-avif-suite.php:295
+#: includes/class-avif-suite.php:308
 msgid "Settings"
 msgstr ""
 
-#: includes/class-converter.php:716
+#: includes/class-converter.php:747
 msgid "Source file not found"
 msgstr ""
 
-#: includes/class-converter.php:731
+#: includes/class-converter.php:762
 msgid "Unknown error (conversion skipped)"
 msgstr ""
 
@@ -407,11 +425,12 @@ msgid "GitHub Repository"
 msgstr ""
 
 #: templates/admin/tab-lqip.php:18
-msgid "ThumbHash LQIP"
+msgid "Serve LQIP files"
 msgstr ""
 
-#: templates/admin/tab-lqip.php:21
-msgid "Low Quality Image Placeholders (LQIP) using ThumbHash. Generates ultra-compact image representations (~30 bytes) that are decoded client-side to smooth placeholders while full images load."
+#: templates/admin/tab-lqip.php:29
+#: templates/admin/tab-settings.php:37
+msgid "Conversion Settings"
 msgstr ""
 
 #: templates/admin/tab-settings.php:17
@@ -420,10 +439,6 @@ msgstr ""
 
 #: templates/admin/tab-settings.php:27
 msgid "Engine Selection"
-msgstr ""
-
-#: templates/admin/tab-settings.php:37
-msgid "Conversion Settings"
 msgstr ""
 
 #: templates/admin/tab-settings.php:53

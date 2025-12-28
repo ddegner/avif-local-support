@@ -5,10 +5,10 @@ declare(strict_types=1);
 /**
  * Plugin Name: AVIF Local Support
  * Plugin URI: https://github.com/ddegner/avif-local-support
- * Description: Unified AVIF support and conversion. Local-first processing with a strong focus on image quality when converting JPEGs.
- * Version: 0.5.3
- * Author: David Degner
- * Author URI: https://www.DavidDegner.com
+ * Description: High-quality AVIF image conversion for WordPress — local, quality-first.
+ * Version: 0.5.4
+ * Author: ddegner
+ * Author URI: https://www.daviddegner.com
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Requires at least: 6.8

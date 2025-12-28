@@ -3,7 +3,7 @@ Contributors: ddegner
 Tags: avif, images, performance, media, optimization
 Requires at least: 6.8
 Tested up to: 6.9
-Stable tag: 0.5.3
+Stable tag: 0.5.4
 Requires PHP: 8.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -197,6 +197,15 @@ LiteSpeed's open_basedir restriction prevents PHP from detecting executables out
 4. **About** — Quick reference and version info
 
 ## Changelog
+
+### 0.5.4
+
+- Translations: Added German, Italian, Japanese, Portuguese (Brazil), and Russian translations
+- Enhancement: Updated translations for Spanish, French, Hindi, and Chinese
+- Fix: `wp lqip generate --all` now correctly processes all eligible images
+- Fix: `wp lqip stats` accurately counts all supported image types
+- Fix: LQIP JavaScript is now correctly excluded when feature is disabled
+- Fix: Improved error logging for LQIP generation failures
 
 ### 0.5.3
 

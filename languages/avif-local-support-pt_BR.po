@@ -7,124 +7,110 @@ msgstr ""
 "POT-Creation-Date: 2025-12-27T22:00:00+00:00\n"
 "PO-Revision-Date: 2025-12-27 22:00+0000\n"
 "Last-Translator: David Degner\n"
-"Language-Team: Spanish\n"
-"Language: es_ES\n"
+"Language-Team: Portuguese (Brazil)\n"
+"Language: pt_BR\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: Antigravity AI\n"
 "X-Domain: avif-local-support\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
-#. Plugin Name of the plugin
 msgid "AVIF Local Support"
 msgstr "AVIF Local Support"
 
-#. Plugin URI of the plugin
-msgid "https://github.com/ddegner/avif-local-support"
-msgstr "https://github.com/ddegner/avif-local-support"
-
-#. Description of the plugin
 msgid "Unified AVIF support and conversion. Local-first processing with a strong focus on image quality when converting JPEGs."
-msgstr "Compatibilidad y conversión AVIF unificadas. Procesamiento local prioritario con gran enfoque en la calidad de imagen al convertir JPEG."
-
-#. Author of the plugin
-msgid "David Degner"
-msgstr "David Degner"
-
-#. Author URI of the plugin
-msgid "https://www.DavidDegner.com"
-msgstr "https://www.DavidDegner.com"
+msgstr "Suporte e conversão AVIF unificados. Processamento local prioritário com forte foco na qualidade de imagem ao converter JPEGs."
 
 msgid "No file uploaded."
-msgstr "No se ha subido ningún archivo."
+msgstr "Nenhum arquivo enviado."
 
 msgid "Only JPEG files are allowed."
-msgstr "Solo se permiten archivos JPEG."
+msgstr "Apenas arquivos JPEG são permitidos."
 
 msgid "Serve AVIF images"
-msgstr "Servir imágenes AVIF"
+msgstr "Servir imagens AVIF"
 
 msgid "Convert on upload"
-msgstr "Convertir al subir"
+msgstr "Converter ao enviar"
 
 msgid "Daily conversion"
-msgstr "Conversión diaria"
+msgstr "Conversão diária"
 
 msgid "Quality (0–100)"
-msgstr "Calidad (0–100)"
+msgstr "Qualidade (0–100)"
 
 msgid "Speed (0–8)"
-msgstr "Velocidad (0–8)"
+msgstr "Velocidade (0–8)"
 
 msgid "Chroma subsampling"
-msgstr "Submuestreo de croma"
+msgstr "Subamostragem de croma"
 
 msgid "Bit depth"
-msgstr "Profundidad de bits"
+msgstr "Profundidade de bits"
 
 msgid "Disable memory check"
-msgstr "Desactivar verificación de memoria"
+msgstr "Desativar verificação de memória"
 
 msgid "Engine selection"
-msgstr "Selección de motor"
+msgstr "Seleção de engine"
 
 msgid "ImageMagick CLI"
 msgstr "ImageMagick CLI"
 
 msgid "Enable ThumbHash LQIP"
-msgstr "Activar ThumbHash LQIP"
+msgstr "Ativar ThumbHash LQIP"
 
 msgid "Add AVIF sources to JPEG images on the front end"
-msgstr "Añadir fuentes AVIF a las imágenes JPEG en el frontend"
+msgstr "Adicionar fontes AVIF às imagens JPEG no frontend"
 
 msgid "Recommended; may slow uploads on some servers"
-msgstr "Recomendado; puede ralentizar las subidas en algunos servidores"
+msgstr "Recomendado; pode lentificar uploads em alguns servidores"
 
 msgid "Scan daily and convert missing AVIFs"
-msgstr "Analizar diariamente y convertir los AVIF faltantes"
+msgstr "Verificar diariamente e converter AVIFs faltantes"
 
 msgid "Time"
 msgstr "Hora"
 
 msgid "Higher = better quality and larger files."
-msgstr "Más alto = mayor calidad y archivos más grandes."
+msgstr "Maior = melhor qualidade e arquivos maiores."
 
 msgid "Lower = smaller files (slower). Higher = faster (larger files)."
-msgstr "Más bajo = archivos más pequeños (más lento). Más alto = más rápido (archivos más grandes)."
+msgstr "Menor = arquivos menores (mais lento). Maior = mais rápido (arquivos maiores)."
 
 msgid "4:2:0 is most compatible and smallest; 4:4:4 preserves more color detail."
-msgstr "4:2:0 es el más compatible y pequeño; 4:4:4 conserva más detalle de color."
+msgstr "4:2:0 é o mais compatível e menor; 4:4:4 preserva mais detalhes de cor."
 
 msgid "8-bit is standard; higher bit depths may increase file size and require broader support."
-msgstr "8 bits es el estándar; mayor profundidad puede aumentar el tamaño y requerir compatibilidad más amplia."
+msgstr "8 bits é padrão; profundidades maiores podem aumentar o tamanho e exigir suporte mais amplo."
 
 msgid "Skip pre-conversion memory availability check (not recommended)"
-msgstr "Omitir verificación de memoria antes de la conversión (no recomendado)"
+msgstr "Pular verificação de memória antes da conversão (não recomendado)"
 
 msgid "Useful if the memory estimator is too conservative, but may cause fatal errors on large images."
-msgstr "Útil si el estimador de memoria es demasiado conservador, pero puede causar errores fatales en imágenes grandes."
+msgstr "Útil se o estimador de memória for muito conservador, mas pode causar erros fatais em imagens grandes."
 
 msgid "Auto (CLI → Imagick → GD)"
 msgstr "Auto (CLI → Imagick → GD)"
 
 msgid "Force ImageMagick CLI"
-msgstr "Forzar ImageMagick CLI"
+msgstr "Forçar ImageMagick CLI"
 
 msgid "Force ImageMagick (Imagick PHP)"
-msgstr "Forzar ImageMagick (Imagick PHP)"
+msgstr "Forçar ImageMagick (Imagick PHP)"
 
 msgid "Force GD"
-msgstr "Forzar GD"
+msgstr "Forçar GD"
 
 msgid "CLI Path"
-msgstr "Ruta CLI"
+msgstr "Caminho CLI"
 
 msgid "Select a detected binary or enter a custom path."
-msgstr "Selecciona un binario detectado o introduce una ruta personalizada."
+msgstr "Selecione um binário detectado ou insira um caminho personalizado."
 
 msgid "Extra CLI Arguments"
-msgstr "Argumentos CLI adicionales"
+msgstr "Argumentos CLI extras"
 
 #, php-format
 msgid "Suggested: %s"
@@ -134,52 +120,52 @@ msgid "Apply"
 msgstr "Aplicar"
 
 msgid "Additional flags passed to ImageMagick (e.g. -define avif:my-flag=1)."
-msgstr "Parámetros adicionales para ImageMagick (ej. -define avif:mi-parametro=1)."
+msgstr "Parâmetros adicionais para ImageMagick (ex. -define avif:meu-param=1)."
 
 msgid "CLI Environment Variables"
-msgstr "Variables de entorno CLI"
+msgstr "Variáveis de ambiente CLI"
 
 msgid "Suggested environment:"
-msgstr "Entorno sugerido:"
+msgstr "Ambiente sugerido:"
 
 msgid "Environment variables for the CLI process (KEY=VALUE), one per line. This does not change the CLI Path; it only affects the subprocess environment."
-msgstr "Variables de entorno para el proceso CLI (CLAVE=VALOR), una por línea. Esto no cambia la ruta CLI; solo afecta el entorno del subproceso."
+msgstr "Variáveis de ambiente para o processo CLI (CHAVE=VALOR), uma por linha. Isso não altera o caminho CLI; afeta apenas o ambiente do subprocesso."
 
 msgid "Generate ThumbHash placeholders for images"
-msgstr "Generar marcadores ThumbHash para imágenes"
+msgstr "Gerar marcadores ThumbHash para imagens"
 
 msgid "Creates ultra-compact (~30 byte) image placeholders displayed instantly while full images load."
-msgstr "Crea marcadores de imagen ultracompactos (~30 bytes) que se muestran instantáneamente mientras las imágenes completas cargan."
+msgstr "Cria marcadores de imagem ultracompactos (~30 bytes) exibidos instantaneamente enquanto as imagens completas carregam."
 
 msgid "You do not have permission to access this page."
-msgstr "No tienes permisos para acceder a esta página."
+msgstr "Você não tem permissão para acessar esta página."
 
 msgid "You do not have permission to do this."
-msgstr "No tienes permisos para hacer esto."
+msgstr "Você não tem permissão para fazer isso."
 
 msgid "Settings"
-msgstr "Ajustes"
+msgstr "Configurações"
 
 msgid "Source file not found"
-msgstr "Archivo de origen no encontrado"
+msgstr "Arquivo de origem não encontrado"
 
 msgid "Unknown error (conversion skipped)"
-msgstr "Error desconocido (conversión omitida)"
+msgstr "Erro desconhecido (conversão pulada)"
 
 msgid "No logs available."
-msgstr "No hay registros disponibles."
+msgstr "Nenhum registro disponível."
 
 msgid "AVIF support not available!"
-msgstr "¡Compatibilidad con AVIF no disponible!"
+msgstr "Suporte AVIF não disponível!"
 
 msgid "This plugin requires either GD with AVIF support (imageavif) or ImageMagick with AVIF format support."
-msgstr "Este plugin requiere GD con compatibilidad AVIF (imageavif) o ImageMagick con compatibilidad para el formato AVIF."
+msgstr "Este plugin requer GD com suporte AVIF (imageavif) ou ImageMagick com suporte ao formato AVIF."
 
 msgid "AVIF support is unconfirmed."
-msgstr "La compatibilidad con AVIF no está confirmada."
+msgstr "O suporte AVIF não foi confirmado."
 
 msgid "The plugin can attempt conversion (usually via CLI), but AVIF capability could not be confirmed. Try the Tools → Upload Test and check Logs for details."
-msgstr "El plugin puede intentar la conversión (normalmente vía CLI), pero no se pudo confirmar la capacidad AVIF. Prueba Herramientas → Prueba de subida y revisa los registros para más detalles."
+msgstr "O plugin pode tentar a conversão (geralmente via CLI), mas a capacidade AVIF não pôde ser confirmada. Tente Ferramentas → Teste de Upload e verifique os Registros para detalhes."
 
 msgid "AVIF"
 msgstr "AVIF"
@@ -188,326 +174,326 @@ msgid "LQIP"
 msgstr "LQIP"
 
 msgid "Tools"
-msgstr "Herramientas"
+msgstr "Ferramentas"
 
 msgid "About"
-msgstr "Acerca de"
+msgstr "Sobre"
 
 msgid "Attempting"
-msgstr "Intentando"
+msgstr "Tentando"
 
 msgid "Skipped"
-msgstr "Omitido"
+msgstr "Pulado"
 
 msgid "forced"
-msgstr "forzado"
+msgstr "forçado"
 
 msgid "CLI (ImageMagick command-line)"
-msgstr "CLI (línea de comandos ImageMagick)"
+msgstr "CLI (linha de comando ImageMagick)"
 
 msgid "Used for conversion via proc_open() (no shell). This is usually fastest and most reliable if ImageMagick is installed with AVIF support."
-msgstr "Usado para conversión vía proc_open() (sin shell). Normalmente es el más rápido y fiable si ImageMagick tiene compatibilidad AVIF."
+msgstr "Usado para conversão via proc_open() (sem shell). Geralmente é o mais rápido e confiável se o ImageMagick tiver suporte AVIF."
 
 msgid "proc_open available"
-msgstr "proc_open disponible"
+msgstr "proc_open disponível"
 
 msgid "Usable in Auto mode"
-msgstr "Utilizable en modo Auto"
+msgstr "Utilizável em modo Auto"
 
 msgid "Configured CLI path"
-msgstr "Ruta CLI configurada"
+msgstr "Caminho CLI configurado"
 
 msgid "Auto-detected CLI path"
-msgstr "Ruta CLI autodetectada"
+msgstr "Caminho CLI auto-detectado"
 
 msgid "Effective CLI path"
-msgstr "Ruta CLI efectiva"
+msgstr "Caminho CLI efetivo"
 
 msgid "Binary exists"
-msgstr "El binario existe"
+msgstr "Binário existe"
 
 msgid "Binary executable"
-msgstr "Binario ejecutable"
+msgstr "Binário executável"
 
 msgid "AVIF-capable CLI detected"
-msgstr "CLI con capacidad AVIF detectado"
+msgstr "CLI com capacidade AVIF detectada"
 
 msgid "This is a best-effort probe. A custom path might still work."
-msgstr "Esta es una detección aproximada. Una ruta personalizada podría funcionar."
+msgstr "Esta é uma detecção aproximada. Um caminho personalizado ainda pode funcionar."
 
 msgid "Detected ImageMagick binaries"
-msgstr "Binarios ImageMagick detectados"
+msgstr "Binários ImageMagick detectados"
 
 msgid "AVIF: yes"
-msgstr "AVIF: sí"
+msgstr "AVIF: sim"
 
 msgid "AVIF: no"
-msgstr "AVIF: no"
+msgstr "AVIF: não"
 
 msgid "Run ImageMagick test"
-msgstr "Ejecutar prueba de ImageMagick"
+msgstr "Executar teste ImageMagick"
 
 msgid "Note:"
 msgstr "Nota:"
 
 msgid "Your PHP has exec disabled. The test button uses exec, but conversions use proc_open—so conversion may still work."
-msgstr "Tu PHP tiene exec desactivado. El botón de prueba usa exec, pero las conversiones usan proc_open—así que la conversión podría funcionar."
+msgstr "Seu PHP tem exec desativado. O botão de teste usa exec, mas as conversões usam proc_open—então a conversão ainda pode funcionar."
 
 msgid "Imagick (PHP extension)"
-msgstr "Imagick (extensión PHP)"
+msgstr "Imagick (extensão PHP)"
 
 msgid "Used for conversion inside PHP. Great quality and better profile/metadata handling when ImageMagick has AVIF support."
-msgstr "Usado para conversión dentro de PHP. Gran calidad y mejor manejo de perfiles/metadatos cuando ImageMagick tiene compatibilidad AVIF."
+msgstr "Usado para conversão dentro do PHP. Ótima qualidade e melhor manipulação de perfis/metadados quando o ImageMagick tem suporte AVIF."
 
 msgid "Imagick extension loaded"
-msgstr "Extensión Imagick cargada"
+msgstr "Extensão Imagick carregada"
 
 msgid "ImageMagick library version"
-msgstr "Versión de librería ImageMagick"
+msgstr "Versão da biblioteca ImageMagick"
 
 msgid "AVIF support (queryFormats)"
-msgstr "Compatibilidad AVIF (queryFormats)"
+msgstr "Suporte AVIF (queryFormats)"
 
 msgid "GD (imageavif)"
 msgstr "GD (imageavif)"
 
 msgid "Used as a fallback when imageavif() is available. Fast, but does not perform color management and may not preserve metadata."
-msgstr "Usado como respaldo cuando imageavif() está disponible. Rápido, pero no gestiona el color y puede no conservar los metadatos."
+msgstr "Usado como fallback quando imageavif() está disponível. Rápido, mas não gerencia cores e pode não preservar metadados."
 
 msgid "GD extension loaded"
-msgstr "Extensión GD cargada"
+msgstr "Extensão GD carregada"
 
 msgid "imageavif() available"
-msgstr "imageavif() disponible"
+msgstr "imageavif() disponível"
 
 msgid "gd_info(): AVIF Support"
-msgstr "gd_info(): Compatibilidad AVIF"
+msgstr "gd_info(): Suporte AVIF"
 
 msgid "Color management note:"
-msgstr "Nota sobre gestión de color:"
+msgstr "Nota sobre gerenciamento de cores:"
 
 msgid "GD does not perform color management; non‑sRGB JPEGs may appear desaturated. For accurate color, enable Imagick."
-msgstr "GD no gestiona el color; los JPEG no sRGB pueden aparecer desaturados. Para colores precisos, activa Imagick."
+msgstr "GD não gerencia cores; JPEGs não-sRGB podem parecer dessaturados. Para cores precisas, ative o Imagick."
 
 msgid "Unable to read README file."
-msgstr "No se puede leer el archivo README."
+msgstr "Não foi possível ler o arquivo README."
 
 msgid "View on WordPress.org"
-msgstr "Ver en WordPress.org"
+msgstr "Ver no WordPress.org"
 
 msgid "GitHub Repository"
-msgstr "Repositorio GitHub"
+msgstr "Repositório GitHub"
 
 msgid "ThumbHash LQIP"
 msgstr "ThumbHash LQIP"
 
 msgid "Low Quality Image Placeholders (LQIP) using ThumbHash. Generates ultra-compact image representations (~30 bytes) that are decoded client-side to smooth placeholders while full images load."
-msgstr "Marcadores de imagen de baja calidad (LQIP) usando ThumbHash. Genera representaciones de imagen ultracompactas (~30 bytes) que se decodifican en el cliente como marcadores suaves mientras las imágenes completas cargan."
+msgstr "Marcadores de imagem de baixa qualidade (LQIP) usando ThumbHash. Gera representações de imagem ultracompactas (~30 bytes) que são decodificadas no cliente como marcadores suaves enquanto as imagens completas carregam."
 
 msgid "Serve AVIF files"
-msgstr "Servir archivos AVIF"
+msgstr "Servir arquivos AVIF"
 
 msgid "Engine Selection"
-msgstr "Selección de motor"
+msgstr "Seleção de Engine"
 
 msgid "Conversion Settings"
-msgstr "Ajustes de conversión"
+msgstr "Configurações de Conversão"
 
 msgid "Reset all settings to defaults?"
-msgstr "¿Restablecer todos los ajustes a los valores predeterminados?"
+msgstr "Redefinir todas as configurações para padrão?"
 
 msgid "Restore defaults"
-msgstr "Restaurar valores predeterminados"
+msgstr "Restaurar padrões"
 
 msgid "AVIF Tools"
-msgstr "Herramientas AVIF"
+msgstr "Ferramentas AVIF"
 
 msgid "Manage AVIF conversion for existing images."
-msgstr "Gestionar conversión AVIF para imágenes existentes."
+msgstr "Gerenciar conversão AVIF para imagens existentes."
 
 msgid "Images"
-msgstr "Imágenes"
+msgstr "Imagens"
 
 msgid "With AVIF"
-msgstr "Con AVIF"
+msgstr "Com AVIF"
 
 msgid "Without"
-msgstr "Sin"
+msgstr "Sem"
 
 msgid "Generate All"
-msgstr "Generar todo"
+msgstr "Gerar Tudo"
 
 msgid "Stop"
-msgstr "Detener"
+msgstr "Parar"
 
 msgid "Delete All"
-msgstr "Eliminar todo"
+msgstr "Excluir Tudo"
 
 msgid "Progress:"
-msgstr "Progreso:"
+msgstr "Progresso:"
 
 msgid "AVIFs"
 msgstr "AVIFs"
 
 msgid "Test AVIF Conversion"
-msgstr "Probar conversión AVIF"
+msgstr "Testar Conversão AVIF"
 
 msgid "Upload a JPEG to preview resized images and the AVIFs generated by your current settings. The file is added to the Media Library."
-msgstr "Sube un JPEG para previsualizar las imágenes redimensionadas y los AVIF generados por tus ajustes actuales. El archivo se añade a la Biblioteca de medios."
+msgstr "Envie um JPEG para visualizar as imagens redimensionadas e os AVIFs gerados pelas suas configurações atuais. O arquivo é adicionado à Biblioteca de Mídia."
 
 msgid "Upload & test"
-msgstr "Subir y probar"
+msgstr "Enviar e testar"
 
 msgid "LQIP Tools"
-msgstr "Herramientas LQIP"
+msgstr "Ferramentas LQIP"
 
 msgid "Manage LQIP placeholders for existing images."
-msgstr "Gestionar marcadores LQIP para imágenes existentes."
+msgstr "Gerenciar marcadores LQIP para imagens existentes."
 
 msgid "Loading statistics..."
-msgstr "Cargando estadísticas..."
+msgstr "Carregando estatísticas..."
 
 msgid "With LQIP"
-msgstr "Con LQIP"
+msgstr "Com LQIP"
 
 msgid "Failed to load statistics."
-msgstr "Error al cargar estadísticas."
+msgstr "Falha ao carregar estatísticas."
 
 msgid "Generate ThumbHashes for all images without them? This may take a while for large media libraries."
-msgstr "¿Generar ThumbHashes para todas las imágenes sin ellos? Puede tardar un rato en bibliotecas de medios grandes."
+msgstr "Gerar ThumbHashes para todas as imagens sem eles? Pode demorar um pouco para bibliotecas de mídia grandes."
 
 msgid "Generating ThumbHashes..."
-msgstr "Generando ThumbHashes..."
+msgstr "Gerando ThumbHashes..."
 
 msgid "Done!"
-msgstr "¡Hecho!"
+msgstr "Concluído!"
 
 msgid "Generated:"
-msgstr "Generados:"
+msgstr "Gerados:"
 
 msgid "Skipped:"
-msgstr "Omitidos:"
+msgstr "Pulados:"
 
 msgid "Failed:"
-msgstr "Fallidos:"
+msgstr "Falharam:"
 
 msgid "Error:"
-msgstr "Error:"
+msgstr "Erro:"
 
 msgid "File:"
-msgstr "Archivo:"
+msgstr "Arquivo:"
 
 msgid "Failed to generate ThumbHashes."
-msgstr "Error al generar ThumbHashes."
+msgstr "Falha ao gerar ThumbHashes."
 
 msgid "Delete ALL ThumbHash data? This cannot be undone."
-msgstr "¿Eliminar TODOS los datos de ThumbHash? Esta acción no se puede deshacer."
+msgstr "Excluir TODOS os dados ThumbHash? Isso não pode ser desfeito."
 
 msgid "Deleting ThumbHashes..."
-msgstr "Eliminando ThumbHashes..."
+msgstr "Excluindo ThumbHashes..."
 
 msgid "Deleted:"
-msgstr "Eliminados:"
+msgstr "Excluídos:"
 
 msgid "entries"
 msgstr "entradas"
 
 msgid "Failed to delete ThumbHashes."
-msgstr "Error al eliminar ThumbHashes."
+msgstr "Falha ao excluir ThumbHashes."
 
 msgid "Logs"
 msgstr "Registros"
 
 msgid "View recent conversion logs including errors, settings used, and performance metrics."
-msgstr "Ver registros de conversión recientes incluyendo errores, ajustes usados y métricas de rendimiento."
+msgstr "Ver registros de conversão recentes incluindo erros, configurações usadas e métricas de desempenho."
 
 msgid "Refresh logs"
-msgstr "Actualizar registros"
+msgstr "Atualizar registros"
 
 msgid "Copy logs"
 msgstr "Copiar registros"
 
 msgid "Clear logs"
-msgstr "Borrar registros"
+msgstr "Limpar registros"
 
 msgid "Only failed/errored"
-msgstr "Solo fallidos/con errores"
+msgstr "Apenas falhas/erros"
 
 msgid "Copied!"
-msgstr "¡Copiado!"
+msgstr "Copiado!"
 
 msgid "Server support"
-msgstr "Compatibilidad del servidor"
+msgstr "Suporte do servidor"
 
 msgid "Copy diagnostics as text"
 msgstr "Copiar diagnóstico como texto"
 
 msgid "This panel explains what your server supports, what AVIF Local Support will do, and what to check when something is unexpected."
-msgstr "Este panel explica qué soporta tu servidor, qué hará AVIF Local Support y qué comprobar cuando algo es inesperado."
+msgstr "Este painel explica o que seu servidor suporta, o que o AVIF Local Support fará e o que verificar quando algo for inesperado."
 
 msgid "Summary"
-msgstr "Resumen"
+msgstr "Resumo"
 
 msgid "Auto: the plugin will try engines in order (CLI → Imagick → GD) until one succeeds."
-msgstr "Auto: el plugin probará los motores en orden (CLI → Imagick → GD) hasta que uno funcione."
+msgstr "Auto: o plugin tentará as engines em ordem (CLI → Imagick → GD) até uma ter sucesso."
 
 msgid "Forced: the plugin will use only the selected engine (no fallback)."
-msgstr "Forzado: el plugin usará solo el motor seleccionado (sin respaldo)."
+msgstr "Forçado: o plugin usará apenas a engine selecionada (sem fallback)."
 
 msgid "AVIF conversion available"
-msgstr "Conversión AVIF disponible"
+msgstr "Conversão AVIF disponível"
 
 msgid "Engine setting"
-msgstr "Configuración del motor"
+msgstr "Configuração da engine"
 
 msgid "None"
-msgstr "Ninguno"
+msgstr "Nenhum"
 
 msgid "Auto mode: first attempt"
-msgstr "Modo auto: primer intento"
+msgstr "Modo auto: primeira tentativa"
 
 msgid "fallbacks available"
-msgstr "respaldos disponibles"
+msgstr "fallbacks disponíveis"
 
 msgid "Fallback behavior"
-msgstr "Comportamiento de respaldo"
+msgstr "Comportamento de fallback"
 
 msgid "No fallback in forced mode."
-msgstr "Sin respaldo en modo forzado."
+msgstr "Sem fallback no modo forçado."
 
 msgid "Daily scan for missing AVIFs"
-msgstr "Análisis diario de AVIFs faltantes"
+msgstr "Varredura diária de AVIFs faltantes"
 
 #, php-format
 msgid "scheduled around %s"
-msgstr "programado alrededor de las %s"
+msgstr "agendado por volta das %s"
 
 msgid "Front-end AVIF serving"
-msgstr "Servicio de AVIF en frontend"
+msgstr "Servir AVIF no frontend"
 
 msgid "When enabled, the plugin wraps JPEG outputs in a <picture> tag with an AVIF <source> first."
-msgstr "Cuando está activado, el plugin envuelve las salidas JPEG en una etiqueta <picture> con un <source> AVIF primero."
+msgstr "Quando ativado, o plugin envolve as saídas JPEG em uma tag <picture> com um <source> AVIF primeiro."
 
 msgid "Engine details"
-msgstr "Detalles del motor"
+msgstr "Detalhes da engine"
 
 msgid "Environment"
-msgstr "Entorno"
+msgstr "Ambiente"
 
 msgid "PHP Version"
-msgstr "Versión de PHP"
+msgstr "Versão do PHP"
 
 msgid "WordPress Version"
-msgstr "Versión de WordPress"
+msgstr "Versão do WordPress"
 
 msgid "PHP SAPI"
 msgstr "PHP SAPI"
 
 msgid "Current user"
-msgstr "Usuario actual"
+msgstr "Usuário atual"
 
 msgid "This is the OS user PHP runs as; it must have write access to wp-content/uploads."
-msgstr "Este es el usuario del sistema con el que PHP se ejecuta; debe tener acceso de escritura a wp-content/uploads."
+msgstr "Este é o usuário do SO sob o qual o PHP roda; deve ter acesso de escrita em wp-content/uploads."
 
 msgid "open_basedir"
 msgstr "open_basedir"
@@ -516,31 +502,31 @@ msgid "disable_functions"
 msgstr "disable_functions"
 
 msgid "ThumbHash size"
-msgstr "Tamaño de ThumbHash"
+msgstr "Tamanho do ThumbHash"
 
 msgid "Extra Small (16px)"
-msgstr "Extra pequeño (16px)"
+msgstr "Extra pequeno (16px)"
 
 msgid "Small (32px)"
-msgstr "Pequeño (32px)"
+msgstr "Pequeno (32px)"
 
 msgid "Medium (64px)"
-msgstr "Mediano (64px)"
+msgstr "Médio (64px)"
 
 msgid "Large (100px)"
 msgstr "Grande (100px)"
 
 msgid "Smaller = faster decode, less detail. 100px max for ThumbHash algorithm."
-msgstr "Más pequeño = decodificación más rápida, menos detalle. 100px máximo para el algoritmo ThumbHash."
+msgstr "Menor = decodificação mais rápida, menos detalhes. 100px máximo para o algoritmo ThumbHash."
 
 msgid "Generate on upload"
-msgstr "Generar al subir"
+msgstr "Gerar ao enviar"
 
 msgid "Generate LQIP when images are uploaded"
-msgstr "Generar LQIP cuando se suben imágenes"
+msgstr "Gerar LQIP quando imagens são enviadas"
 
 msgid "Daily generation"
-msgstr "Generación diaria"
+msgstr "Geração diária"
 
 msgid "Generate missing LQIPs during daily scan"
-msgstr "Generar LQIPs faltantes durante el análisis diario"
+msgstr "Gerar LQIPs faltantes durante a varredura diária"

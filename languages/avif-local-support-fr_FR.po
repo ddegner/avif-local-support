@@ -2,875 +2,533 @@
 # This file is distributed under the GPL v2 or later.
 msgid ""
 msgstr ""
-"Project-Id-Version: AVIF Local Support 0.2.0\n"
-"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/avif-local-"
-"support\n"
-"POT-Creation-Date: 2025-12-26T00:52:44+00:00\n"
-"PO-Revision-Date: 2025-08-10 00:00+0000\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Project-Id-Version: AVIF Local Support 0.5.4\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/avif-local-support\n"
+"POT-Creation-Date: 2025-12-27T22:00:00+00:00\n"
+"PO-Revision-Date: 2025-12-27 22:00+0000\n"
+"Last-Translator: David Degner\n"
 "Language-Team: French\n"
 "Language: fr_FR\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: Cursor\n"
+"X-Generator: Antigravity AI\n"
 "X-Domain: avif-local-support\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
 #. Plugin Name of the plugin
-#: avif-local-support.php includes/class-avif-suite.php:90
-#: includes/class-avif-suite.php:91 templates/admin/page.php:18
 msgid "AVIF Local Support"
-msgstr ""
-
-#. Plugin URI of the plugin
-#: avif-local-support.php
-msgid "https://github.com/ddegner/avif-local-support"
-msgstr ""
+msgstr "AVIF Local Support"
 
 #. Description of the plugin
-#: avif-local-support.php
-msgid ""
-"Unified AVIF support and conversion. Local-first processing with a strong "
-"focus on image quality when converting JPEGs."
-msgstr ""
-"Prise en charge et conversion AVIF unifiées. Traitement local en priorité, "
-"avec un fort accent sur la qualité d’image lors de la conversion des JPEG."
+msgid "Unified AVIF support and conversion. Local-first processing with a strong focus on image quality when converting JPEGs."
+msgstr "Support et conversion AVIF unifiés. Traitement local prioritaire avec une forte attention à la qualité d'image lors de la conversion des JPEG."
 
-#. Author of the plugin
-#: avif-local-support.php
-msgid "David Degner"
-msgstr "David Degner"
-
-#. Author URI of the plugin
-#: avif-local-support.php
-msgid "https://www.DavidDegner.com"
-msgstr "https://www.DavidDegner.com"
-
-#: includes/Admin/RestController.php:330
 msgid "No file uploaded."
-msgstr ""
+msgstr "Aucun fichier téléversé."
 
-#: includes/Admin/RestController.php:343
 msgid "Only JPEG files are allowed."
-msgstr ""
+msgstr "Seuls les fichiers JPEG sont autorisés."
 
-#: includes/Admin/Settings.php:226
 msgid "Serve AVIF images"
-msgstr "Servir des images AVIF"
+msgstr "Servir les images AVIF"
 
-#: includes/Admin/Settings.php:236 templates/admin/tab-tools.php:338
 msgid "Convert on upload"
-msgstr "Convertir lors de l’envoi"
+msgstr "Convertir au téléversement"
 
-#: includes/Admin/Settings.php:245
 msgid "Daily conversion"
 msgstr "Conversion quotidienne"
 
-#: includes/Admin/Settings.php:254
 msgid "Quality (0–100)"
 msgstr "Qualité (0–100)"
 
-#: includes/Admin/Settings.php:263
 msgid "Speed (0–8)"
-msgstr ""
+msgstr "Vitesse (0–8)"
 
-#: includes/Admin/Settings.php:272
 msgid "Chroma subsampling"
-msgstr ""
+msgstr "Sous-échantillonnage chroma"
 
-#: includes/Admin/Settings.php:281
 msgid "Bit depth"
-msgstr ""
+msgstr "Profondeur de bits"
 
-#: includes/Admin/Settings.php:290
 msgid "Disable memory check"
-msgstr ""
+msgstr "Désactiver la vérification mémoire"
 
-#: includes/Admin/Settings.php:300
 msgid "Engine selection"
-msgstr ""
+msgstr "Sélection du moteur"
 
-#: includes/Admin/Settings.php:309
 msgid "ImageMagick CLI"
-msgstr ""
+msgstr "ImageMagick CLI"
 
-#: includes/Admin/Settings.php:319
 msgid "Enable ThumbHash LQIP"
-msgstr ""
+msgstr "Activer ThumbHash LQIP"
 
-#: includes/Admin/Settings.php:369
 msgid "Add AVIF sources to JPEG images on the front end"
-msgstr "Ajouter des sources AVIF aux images JPEG sur le frontal"
+msgstr "Ajouter des sources AVIF aux images JPEG sur le frontend"
 
-#: includes/Admin/Settings.php:377
 msgid "Recommended; may slow uploads on some servers"
-msgstr "Recommandé ; peut ralentir les envois sur certains serveurs"
+msgstr "Recommandé ; peut ralentir les téléversements sur certains serveurs"
 
-#: includes/Admin/Settings.php:386
 msgid "Scan daily and convert missing AVIFs"
-msgstr "Analyser chaque jour et convertir les AVIF manquants"
+msgstr "Analyser quotidiennement et convertir les AVIF manquants"
 
-#: includes/Admin/Settings.php:388
 msgid "Time"
-msgstr ""
+msgstr "Heure"
 
-#: includes/Admin/Settings.php:395
 msgid "Higher = better quality and larger files."
 msgstr "Plus élevé = meilleure qualité et fichiers plus volumineux."
 
-#: includes/Admin/Settings.php:402
 msgid "Lower = smaller files (slower). Higher = faster (larger files)."
-msgstr ""
-"Plus bas = fichiers plus petits (plus lent). Plus haut = plus rapide "
-"(fichiers plus gros)."
+msgstr "Plus bas = fichiers plus petits (plus lent). Plus haut = plus rapide (fichiers plus gros)."
 
-#: includes/Admin/Settings.php:420
-msgid ""
-"4:2:0 is most compatible and smallest; 4:4:4 preserves more color detail."
-msgstr ""
+msgid "4:2:0 is most compatible and smallest; 4:4:4 preserves more color detail."
+msgstr "4:2:0 est le plus compatible et le plus petit ; 4:4:4 préserve plus de détails de couleur."
 
-#: includes/Admin/Settings.php:438
-msgid ""
-"8-bit is standard; higher bit depths may increase file size and require "
-"broader support."
-msgstr ""
+msgid "8-bit is standard; higher bit depths may increase file size and require broader support."
+msgstr "8 bits est standard ; une profondeur plus élevée peut augmenter la taille et nécessiter un support plus large."
 
-#: includes/Admin/Settings.php:445
 msgid "Skip pre-conversion memory availability check (not recommended)"
-msgstr ""
+msgstr "Ignorer la vérification de mémoire avant conversion (non recommandé)"
 
-#: includes/Admin/Settings.php:447
-msgid ""
-"Useful if the memory estimator is too conservative, but may cause fatal "
-"errors on large images."
-msgstr ""
+msgid "Useful if the memory estimator is too conservative, but may cause fatal errors on large images."
+msgstr "Utile si l'estimateur de mémoire est trop conservateur, mais peut causer des erreurs fatales sur les grandes images."
 
-#: includes/Admin/Settings.php:453
 msgid "Auto (CLI → Imagick → GD)"
-msgstr ""
+msgstr "Auto (CLI → Imagick → GD)"
 
-#: includes/Admin/Settings.php:454
 msgid "Force ImageMagick CLI"
-msgstr ""
+msgstr "Forcer ImageMagick CLI"
 
-#: includes/Admin/Settings.php:455
 msgid "Force ImageMagick (Imagick PHP)"
-msgstr ""
+msgstr "Forcer ImageMagick (Imagick PHP)"
 
-#: includes/Admin/Settings.php:456
 msgid "Force GD"
-msgstr ""
+msgstr "Forcer GD"
 
-#: includes/Admin/Settings.php:482
 msgid "CLI Path"
-msgstr ""
+msgstr "Chemin CLI"
 
-#: includes/Admin/Settings.php:492
 msgid "Select a detected binary or enter a custom path."
-msgstr ""
+msgstr "Sélectionnez un binaire détecté ou entrez un chemin personnalisé."
 
-#: includes/Admin/Settings.php:495
 msgid "Extra CLI Arguments"
-msgstr ""
+msgstr "Arguments CLI supplémentaires"
 
-#. translators: %s: Suggested CLI arguments.
-#: includes/Admin/Settings.php:499
 #, php-format
 msgid "Suggested: %s"
-msgstr ""
+msgstr "Suggéré : %s"
 
-#: includes/Admin/Settings.php:500 includes/Admin/Settings.php:509
 msgid "Apply"
-msgstr ""
+msgstr "Appliquer"
 
-#: includes/Admin/Settings.php:502
 msgid "Additional flags passed to ImageMagick (e.g. -define avif:my-flag=1)."
-msgstr ""
+msgstr "Paramètres supplémentaires passés à ImageMagick (ex. -define avif:mon-param=1)."
 
-#: includes/Admin/Settings.php:505
 msgid "CLI Environment Variables"
-msgstr ""
+msgstr "Variables d'environnement CLI"
 
-#: includes/Admin/Settings.php:508
 msgid "Suggested environment:"
-msgstr ""
+msgstr "Environnement suggéré :"
 
-#: includes/Admin/Settings.php:511
-msgid ""
-"Environment variables for the CLI process (KEY=VALUE), one per line. This "
-"does not change the CLI Path; it only affects the subprocess environment."
-msgstr ""
+msgid "Environment variables for the CLI process (KEY=VALUE), one per line. This does not change the CLI Path; it only affects the subprocess environment."
+msgstr "Variables d'environnement pour le processus CLI (CLÉ=VALEUR), une par ligne. Cela ne change pas le chemin CLI ; cela affecte uniquement l'environnement du sous-processus."
 
-#: includes/Admin/Settings.php:520
 msgid "Generate ThumbHash placeholders for images"
-msgstr ""
+msgstr "Générer des espaces réservés ThumbHash pour les images"
 
-#: includes/Admin/Settings.php:522
-msgid ""
-"Creates ultra-compact (~30 byte) image placeholders displayed instantly "
-"while full images load."
-msgstr ""
+msgid "Creates ultra-compact (~30 byte) image placeholders displayed instantly while full images load."
+msgstr "Crée des espaces réservés d'image ultra-compacts (~30 octets) affichés instantanément pendant le chargement des images complètes."
 
-#: includes/class-avif-suite.php:100
 msgid "You do not have permission to access this page."
-msgstr "Vous n’avez pas l’autorisation d’accéder à cette page."
+msgstr "Vous n'avez pas la permission d'accéder à cette page."
 
-#: includes/class-avif-suite.php:180 includes/class-avif-suite.php:260
 msgid "You do not have permission to do this."
-msgstr "Vous n’avez pas l’autorisation d’effectuer cette action."
+msgstr "Vous n'avez pas la permission de faire cela."
 
-#: includes/class-avif-suite.php:295
 msgid "Settings"
 msgstr "Réglages"
 
-#: includes/class-converter.php:716
 msgid "Source file not found"
-msgstr ""
+msgstr "Fichier source introuvable"
 
-#: includes/class-converter.php:731
 msgid "Unknown error (conversion skipped)"
-msgstr ""
+msgstr "Erreur inconnue (conversion ignorée)"
 
-#: includes/Logger.php:77
 msgid "No logs available."
-msgstr ""
+msgstr "Aucun journal disponible."
 
-#: templates/admin/page.php:22
 msgid "AVIF support not available!"
-msgstr "Prise en charge AVIF indisponible !"
+msgstr "Support AVIF non disponible !"
 
-#: templates/admin/page.php:23
-msgid ""
-"This plugin requires either GD with AVIF support (imageavif) or ImageMagick "
-"with AVIF format support."
-msgstr ""
-"Cette extension nécessite GD avec prise en charge AVIF (imageavif) ou "
-"ImageMagick avec prise en charge du format AVIF."
+msgid "This plugin requires either GD with AVIF support (imageavif) or ImageMagick with AVIF format support."
+msgstr "Cette extension nécessite soit GD avec support AVIF (imageavif), soit ImageMagick avec support du format AVIF."
 
-#: templates/admin/page.php:28
 msgid "AVIF support is unconfirmed."
-msgstr ""
+msgstr "Le support AVIF n'est pas confirmé."
 
-#: templates/admin/page.php:29
-msgid ""
-"The plugin can attempt conversion (usually via CLI), but AVIF capability "
-"could not be confirmed. Try the Tools → Upload Test and check Logs for "
-"details."
-msgstr ""
+msgid "The plugin can attempt conversion (usually via CLI), but AVIF capability could not be confirmed. Try the Tools → Upload Test and check Logs for details."
+msgstr "L'extension peut tenter la conversion (généralement via CLI), mais la capacité AVIF n'a pas pu être confirmée. Essayez Outils → Test de téléversement et consultez les journaux pour plus de détails."
 
-#: templates/admin/page.php:36
 msgid "AVIF"
 msgstr "AVIF"
 
-#: templates/admin/page.php:38
 msgid "LQIP"
-msgstr ""
+msgstr "LQIP"
 
-#: templates/admin/page.php:40
 msgid "Tools"
 msgstr "Outils"
 
-#: templates/admin/page.php:42
 msgid "About"
 msgstr "À propos"
 
-#: templates/admin/partials/engine-details.php:31
-#: templates/admin/partials/engine-details.php:132
-#: templates/admin/partials/engine-details.php:180
 msgid "Attempting"
-msgstr ""
+msgstr "En cours"
 
-#: templates/admin/partials/engine-details.php:31
-#: templates/admin/partials/engine-details.php:132
-#: templates/admin/partials/engine-details.php:180
 msgid "Skipped"
-msgstr ""
+msgstr "Ignoré"
 
-#: templates/admin/partials/engine-details.php:33
-#: templates/admin/partials/engine-details.php:134
-#: templates/admin/partials/engine-details.php:182
 msgid "forced"
-msgstr ""
+msgstr "forcé"
 
-#: templates/admin/partials/engine-details.php:39
-#: templates/admin/tab-tools.php:313
 msgid "CLI (ImageMagick command-line)"
-msgstr ""
+msgstr "CLI (ligne de commande ImageMagick)"
 
-#: templates/admin/partials/engine-details.php:44
-msgid ""
-"Used for conversion via proc_open() (no shell). This is usually fastest and "
-"most reliable if ImageMagick is installed with AVIF support."
-msgstr ""
+msgid "Used for conversion via proc_open() (no shell). This is usually fastest and most reliable if ImageMagick is installed with AVIF support."
+msgstr "Utilisé pour la conversion via proc_open() (sans shell). C'est généralement le plus rapide et fiable si ImageMagick a le support AVIF."
 
-#: templates/admin/partials/engine-details.php:50
 msgid "proc_open available"
-msgstr ""
+msgstr "proc_open disponible"
 
-#: templates/admin/partials/engine-details.php:55
-#: templates/admin/partials/engine-details.php:168
-#: templates/admin/partials/engine-details.php:213
 msgid "Usable in Auto mode"
-msgstr ""
+msgstr "Utilisable en mode Auto"
 
-#: templates/admin/partials/engine-details.php:59
 msgid "Configured CLI path"
-msgstr ""
+msgstr "Chemin CLI configuré"
 
-#: templates/admin/partials/engine-details.php:64
 msgid "Auto-detected CLI path"
-msgstr ""
+msgstr "Chemin CLI auto-détecté"
 
-#: templates/admin/partials/engine-details.php:68
 msgid "Effective CLI path"
-msgstr ""
+msgstr "Chemin CLI effectif"
 
-#: templates/admin/partials/engine-details.php:74
 msgid "Binary exists"
-msgstr ""
+msgstr "Le binaire existe"
 
-#: templates/admin/partials/engine-details.php:78
 msgid "Binary executable"
-msgstr ""
+msgstr "Binaire exécutable"
 
-#: templates/admin/partials/engine-details.php:83
 msgid "AVIF-capable CLI detected"
-msgstr ""
+msgstr "CLI compatible AVIF détecté"
 
-#: templates/admin/partials/engine-details.php:87
 msgid "This is a best-effort probe. A custom path might still work."
-msgstr ""
+msgstr "Ceci est une détection approximative. Un chemin personnalisé pourrait fonctionner."
 
-#: templates/admin/partials/engine-details.php:96
 msgid "Detected ImageMagick binaries"
-msgstr ""
+msgstr "Binaires ImageMagick détectés"
 
-#: templates/admin/partials/engine-details.php:102
 msgid "AVIF: yes"
-msgstr ""
+msgstr "AVIF : oui"
 
-#: templates/admin/partials/engine-details.php:102
 msgid "AVIF: no"
-msgstr ""
+msgstr "AVIF : non"
 
-#: templates/admin/partials/engine-details.php:113
 msgid "Run ImageMagick test"
-msgstr ""
+msgstr "Exécuter le test ImageMagick"
 
-#: templates/admin/partials/engine-details.php:122
 msgid "Note:"
-msgstr ""
+msgstr "Note :"
 
-#: templates/admin/partials/engine-details.php:123
-msgid ""
-"Your PHP has exec disabled. The test button uses exec, but conversions use "
-"proc_open—so conversion may still work."
-msgstr ""
+msgid "Your PHP has exec disabled. The test button uses exec, but conversions use proc_open—so conversion may still work."
+msgstr "Votre PHP a exec désactivé. Le bouton de test utilise exec, mais les conversions utilisent proc_open—la conversion peut donc fonctionner."
 
-#: templates/admin/partials/engine-details.php:138
-#: templates/admin/tab-tools.php:314
 msgid "Imagick (PHP extension)"
-msgstr ""
+msgstr "Imagick (extension PHP)"
 
-#: templates/admin/partials/engine-details.php:143
-msgid ""
-"Used for conversion inside PHP. Great quality and better profile/metadata "
-"handling when ImageMagick has AVIF support."
-msgstr ""
+msgid "Used for conversion inside PHP. Great quality and better profile/metadata handling when ImageMagick has AVIF support."
+msgstr "Utilisé pour la conversion dans PHP. Excellente qualité et meilleure gestion des profils/métadonnées quand ImageMagick a le support AVIF."
 
-#: templates/admin/partials/engine-details.php:149
 msgid "Imagick extension loaded"
-msgstr ""
+msgstr "Extension Imagick chargée"
 
-#: templates/admin/partials/engine-details.php:156
 msgid "ImageMagick library version"
-msgstr ""
+msgstr "Version de la bibliothèque ImageMagick"
 
-#: templates/admin/partials/engine-details.php:162
 msgid "AVIF support (queryFormats)"
-msgstr ""
+msgstr "Support AVIF (queryFormats)"
 
-#: templates/admin/partials/engine-details.php:186
-#: templates/admin/tab-tools.php:315
 msgid "GD (imageavif)"
-msgstr ""
+msgstr "GD (imageavif)"
 
-#: templates/admin/partials/engine-details.php:191
-msgid ""
-"Used as a fallback when imageavif() is available. Fast, but does not perform "
-"color management and may not preserve metadata."
-msgstr ""
+msgid "Used as a fallback when imageavif() is available. Fast, but does not perform color management and may not preserve metadata."
+msgstr "Utilisé en secours quand imageavif() est disponible. Rapide, mais ne gère pas les couleurs et peut ne pas préserver les métadonnées."
 
-#: templates/admin/partials/engine-details.php:197
 msgid "GD extension loaded"
-msgstr ""
+msgstr "Extension GD chargée"
 
-#: templates/admin/partials/engine-details.php:203
 msgid "imageavif() available"
-msgstr ""
+msgstr "imageavif() disponible"
 
-#: templates/admin/partials/engine-details.php:208
 msgid "gd_info(): AVIF Support"
-msgstr ""
+msgstr "gd_info() : Support AVIF"
 
-#: templates/admin/partials/engine-details.php:220
 msgid "Color management note:"
-msgstr ""
+msgstr "Note sur la gestion des couleurs :"
 
-#: templates/admin/partials/engine-details.php:221
-msgid ""
-"GD does not perform color management; non‑sRGB JPEGs may appear desaturated. "
-"For accurate color, enable Imagick."
-msgstr ""
+msgid "GD does not perform color management; non‑sRGB JPEGs may appear desaturated. For accurate color, enable Imagick."
+msgstr "GD ne gère pas les couleurs ; les JPEG non sRGB peuvent apparaître désaturés. Pour des couleurs précises, activez Imagick."
 
-#: templates/admin/tab-about.php:92
 msgid "Unable to read README file."
-msgstr ""
+msgstr "Impossible de lire le fichier README."
 
-#: templates/admin/tab-about.php:106
 msgid "View on WordPress.org"
-msgstr ""
+msgstr "Voir sur WordPress.org"
 
-#: templates/admin/tab-about.php:110
 msgid "GitHub Repository"
-msgstr ""
+msgstr "Dépôt GitHub"
 
-#: templates/admin/tab-lqip.php:18
 msgid "ThumbHash LQIP"
-msgstr ""
+msgstr "ThumbHash LQIP"
 
-#: templates/admin/tab-lqip.php:21
-msgid ""
-"Low Quality Image Placeholders (LQIP) using ThumbHash. Generates ultra-"
-"compact image representations (~30 bytes) that are decoded client-side to "
-"smooth placeholders while full images load."
-msgstr ""
+msgid "Low Quality Image Placeholders (LQIP) using ThumbHash. Generates ultra-compact image representations (~30 bytes) that are decoded client-side to smooth placeholders while full images load."
+msgstr "Espaces réservés d'image basse qualité (LQIP) utilisant ThumbHash. Génère des représentations d'image ultra-compactes (~30 octets) décodées côté client en espaces réservés fluides pendant le chargement des images complètes."
 
-#: templates/admin/tab-settings.php:17
 msgid "Serve AVIF files"
-msgstr ""
+msgstr "Servir les fichiers AVIF"
 
-#: templates/admin/tab-settings.php:27
 msgid "Engine Selection"
-msgstr ""
+msgstr "Sélection du moteur"
 
-#: templates/admin/tab-settings.php:37
 msgid "Conversion Settings"
-msgstr ""
+msgstr "Paramètres de conversion"
 
-#: templates/admin/tab-settings.php:53
 msgid "Reset all settings to defaults?"
-msgstr ""
+msgstr "Réinitialiser tous les paramètres aux valeurs par défaut ?"
 
-#: templates/admin/tab-settings.php:57
 msgid "Restore defaults"
-msgstr ""
+msgstr "Restaurer les valeurs par défaut"
 
-#: templates/admin/tab-tools.php:45
 msgid "AVIF Tools"
-msgstr ""
+msgstr "Outils AVIF"
 
-#: templates/admin/tab-tools.php:48
 msgid "Manage AVIF conversion for existing images."
-msgstr ""
+msgstr "Gérer la conversion AVIF pour les images existantes."
 
-#: templates/admin/tab-tools.php:53 templates/admin/tab-tools.php:161
 msgid "Images"
-msgstr ""
+msgstr "Images"
 
-#: templates/admin/tab-tools.php:56
 msgid "With AVIF"
-msgstr ""
+msgstr "Avec AVIF"
 
-#: templates/admin/tab-tools.php:59 templates/admin/tab-tools.php:163
 msgid "Without"
-msgstr ""
+msgstr "Sans"
 
-#: templates/admin/tab-tools.php:66 templates/admin/tab-tools.php:133
 msgid "Generate All"
-msgstr ""
+msgstr "Tout générer"
 
-#: templates/admin/tab-tools.php:68
 msgid "Stop"
-msgstr ""
+msgstr "Arrêter"
 
-#: templates/admin/tab-tools.php:70 templates/admin/tab-tools.php:136
 msgid "Delete All"
-msgstr ""
+msgstr "Tout supprimer"
 
-#: templates/admin/tab-tools.php:78
 msgid "Progress:"
-msgstr ""
+msgstr "Progression :"
 
-#: templates/admin/tab-tools.php:81
 msgid "AVIFs"
-msgstr ""
+msgstr "AVIFs"
 
-#: templates/admin/tab-tools.php:92
 msgid "Test AVIF Conversion"
-msgstr "Test de conversion"
+msgstr "Tester la conversion AVIF"
 
-#: templates/admin/tab-tools.php:95
-msgid ""
-"Upload a JPEG to preview resized images and the AVIFs generated by your "
-"current settings. The file is added to the Media Library."
-msgstr ""
-"Téléversez un JPEG pour prévisualiser les images redimensionnées et les AVIF "
-"générés par vos réglages actuels. Le fichier est ajouté à la bibliothèque de "
-"médias."
+msgid "Upload a JPEG to preview resized images and the AVIFs generated by your current settings. The file is added to the Media Library."
+msgstr "Téléversez un JPEG pour prévisualiser les images redimensionnées et les AVIF générés par vos paramètres actuels. Le fichier est ajouté à la bibliothèque de médias."
 
-#: templates/admin/tab-tools.php:106
 msgid "Upload & test"
-msgstr ""
+msgstr "Téléverser et tester"
 
-#: templates/admin/tab-tools.php:119
 msgid "LQIP Tools"
-msgstr ""
+msgstr "Outils LQIP"
 
-#: templates/admin/tab-tools.php:122
 msgid "Manage LQIP placeholders for existing images."
-msgstr ""
+msgstr "Gérer les espaces réservés LQIP pour les images existantes."
 
-#: templates/admin/tab-tools.php:128 templates/admin/tab-tools.php:153
 msgid "Loading statistics..."
-msgstr ""
+msgstr "Chargement des statistiques..."
 
-#: templates/admin/tab-tools.php:162
 msgid "With LQIP"
-msgstr ""
+msgstr "Avec LQIP"
 
-#: templates/admin/tab-tools.php:168
 msgid "Failed to load statistics."
-msgstr ""
+msgstr "Échec du chargement des statistiques."
 
-#: templates/admin/tab-tools.php:173
-msgid ""
-"Generate ThumbHashes for all images without them? This may take a while for "
-"large media libraries."
-msgstr ""
+msgid "Generate ThumbHashes for all images without them? This may take a while for large media libraries."
+msgstr "Générer les ThumbHashes pour toutes les images sans ? Cela peut prendre du temps pour les grandes bibliothèques de médias."
 
-#: templates/admin/tab-tools.php:179
 msgid "Generating ThumbHashes..."
-msgstr ""
+msgstr "Génération des ThumbHashes..."
 
-#: templates/admin/tab-tools.php:187 templates/admin/tab-tools.php:223
 msgid "Done!"
-msgstr ""
+msgstr "Terminé !"
 
-#: templates/admin/tab-tools.php:188
 msgid "Generated:"
-msgstr ""
+msgstr "Générés :"
 
-#: templates/admin/tab-tools.php:189
 msgid "Skipped:"
-msgstr ""
+msgstr "Ignorés :"
 
-#: templates/admin/tab-tools.php:190
 msgid "Failed:"
-msgstr ""
+msgstr "Échoués :"
 
-#: templates/admin/tab-tools.php:192
 msgid "Error:"
-msgstr ""
+msgstr "Erreur :"
 
-#: templates/admin/tab-tools.php:194
 msgid "File:"
-msgstr ""
+msgstr "Fichier :"
 
-#: templates/admin/tab-tools.php:202
 msgid "Failed to generate ThumbHashes."
-msgstr ""
+msgstr "Échec de la génération des ThumbHashes."
 
-#: templates/admin/tab-tools.php:209
 msgid "Delete ALL ThumbHash data? This cannot be undone."
-msgstr ""
+msgstr "Supprimer TOUTES les données ThumbHash ? Cette action est irréversible."
 
-#: templates/admin/tab-tools.php:215
 msgid "Deleting ThumbHashes..."
-msgstr ""
+msgstr "Suppression des ThumbHashes..."
 
-#: templates/admin/tab-tools.php:224
 msgid "Deleted:"
-msgstr ""
+msgstr "Supprimés :"
 
-#: templates/admin/tab-tools.php:224
 msgid "entries"
-msgstr ""
+msgstr "entrées"
 
-#: templates/admin/tab-tools.php:228
 msgid "Failed to delete ThumbHashes."
-msgstr ""
+msgstr "Échec de la suppression des ThumbHashes."
 
-#: templates/admin/tab-tools.php:241
 msgid "Logs"
-msgstr ""
+msgstr "Journaux"
 
-#: templates/admin/tab-tools.php:244
-msgid ""
-"View recent conversion logs including errors, settings used, and performance "
-"metrics."
-msgstr ""
+msgid "View recent conversion logs including errors, settings used, and performance metrics."
+msgstr "Voir les journaux de conversion récents incluant les erreurs, paramètres utilisés et métriques de performance."
 
-#: templates/admin/tab-tools.php:248
 msgid "Refresh logs"
-msgstr ""
+msgstr "Actualiser les journaux"
 
-#: templates/admin/tab-tools.php:250
 msgid "Copy logs"
-msgstr ""
+msgstr "Copier les journaux"
 
-#: templates/admin/tab-tools.php:252
 msgid "Clear logs"
-msgstr ""
+msgstr "Effacer les journaux"
 
-#: templates/admin/tab-tools.php:254
 msgid "Only failed/errored"
-msgstr ""
+msgstr "Uniquement les erreurs"
 
-#: templates/admin/tab-tools.php:257 templates/admin/tab-tools.php:278
 msgid "Copied!"
-msgstr ""
+msgstr "Copié !"
 
-#: templates/admin/tab-tools.php:272
 msgid "Server support"
-msgstr "Prise en charge du serveur"
+msgstr "Support serveur"
 
-#: templates/admin/tab-tools.php:276
 msgid "Copy diagnostics as text"
-msgstr ""
+msgstr "Copier le diagnostic en texte"
 
-#: templates/admin/tab-tools.php:282
-msgid ""
-"This panel explains what your server supports, what AVIF Local Support will "
-"do, and what to check when something is unexpected."
-msgstr ""
+msgid "This panel explains what your server supports, what AVIF Local Support will do, and what to check when something is unexpected."
+msgstr "Ce panneau explique ce que votre serveur supporte, ce que AVIF Local Support fera et ce qu'il faut vérifier en cas de problème."
 
-#: templates/admin/tab-tools.php:287
 msgid "Summary"
-msgstr ""
+msgstr "Résumé"
 
-#: templates/admin/tab-tools.php:290
-msgid ""
-"Auto: the plugin will try engines in order (CLI → Imagick → GD) until one "
-"succeeds."
-msgstr ""
+msgid "Auto: the plugin will try engines in order (CLI → Imagick → GD) until one succeeds."
+msgstr "Auto : l'extension essaiera les moteurs dans l'ordre (CLI → Imagick → GD) jusqu'à ce qu'un réussisse."
 
-#: templates/admin/tab-tools.php:291
 msgid "Forced: the plugin will use only the selected engine (no fallback)."
-msgstr ""
+msgstr "Forcé : l'extension utilisera uniquement le moteur sélectionné (pas de secours)."
 
-#: templates/admin/tab-tools.php:297
 msgid "AVIF conversion available"
-msgstr ""
+msgstr "Conversion AVIF disponible"
 
-#: templates/admin/tab-tools.php:303
 msgid "Engine setting"
-msgstr ""
+msgstr "Paramètre du moteur"
 
-#: templates/admin/tab-tools.php:316
 msgid "None"
-msgstr ""
+msgstr "Aucun"
 
-#: templates/admin/tab-tools.php:320
 msgid "Auto mode: first attempt"
-msgstr ""
+msgstr "Mode auto : première tentative"
 
-#: templates/admin/tab-tools.php:327
 msgid "fallbacks available"
-msgstr ""
+msgstr "secours disponibles"
 
-#: templates/admin/tab-tools.php:332
 msgid "Fallback behavior"
-msgstr ""
+msgstr "Comportement de secours"
 
-#: templates/admin/tab-tools.php:334
 msgid "No fallback in forced mode."
-msgstr ""
+msgstr "Pas de secours en mode forcé."
 
-#: templates/admin/tab-tools.php:344
 msgid "Daily scan for missing AVIFs"
-msgstr ""
+msgstr "Analyse quotidienne des AVIF manquants"
 
-#. translators: %s: Schedule time (e.g., "01:00")
-#: templates/admin/tab-tools.php:352
 #, php-format
 msgid "scheduled around %s"
-msgstr ""
+msgstr "programmé vers %s"
 
-#: templates/admin/tab-tools.php:359
 msgid "Front-end AVIF serving"
-msgstr ""
+msgstr "Service AVIF en frontend"
 
-#: templates/admin/tab-tools.php:364
-msgid ""
-"When enabled, the plugin wraps JPEG outputs in a <picture> tag with an AVIF "
-"<source> first."
-msgstr ""
+msgid "When enabled, the plugin wraps JPEG outputs in a <picture> tag with an AVIF <source> first."
+msgstr "Lorsqu'activé, l'extension encapsule les sorties JPEG dans une balise <picture> avec un <source> AVIF en premier."
 
-#: templates/admin/tab-tools.php:373
 msgid "Engine details"
-msgstr ""
+msgstr "Détails du moteur"
 
-#: templates/admin/tab-tools.php:378
 msgid "Environment"
-msgstr ""
+msgstr "Environnement"
 
-#: templates/admin/tab-tools.php:389
 msgid "PHP Version"
-msgstr "Version de PHP"
+msgstr "Version PHP"
 
-#: templates/admin/tab-tools.php:394
 msgid "WordPress Version"
-msgstr "Version de WordPress"
+msgstr "Version WordPress"
 
-#: templates/admin/tab-tools.php:399
 msgid "PHP SAPI"
-msgstr ""
+msgstr "PHP SAPI"
 
-#: templates/admin/tab-tools.php:405
 msgid "Current user"
-msgstr ""
+msgstr "Utilisateur actuel"
 
-#: templates/admin/tab-tools.php:410
-msgid ""
-"This is the OS user PHP runs as; it must have write access to wp-content/"
-"uploads."
-msgstr ""
+msgid "This is the OS user PHP runs as; it must have write access to wp-content/uploads."
+msgstr "C'est l'utilisateur système sous lequel PHP s'exécute ; il doit avoir un accès en écriture à wp-content/uploads."
 
-#: templates/admin/tab-tools.php:415
 msgid "open_basedir"
-msgstr ""
+msgstr "open_basedir"
 
-#: templates/admin/tab-tools.php:421
 msgid "disable_functions"
-msgstr ""
+msgstr "disable_functions"
 
-#~ msgid "AVIF Support"
-#~ msgstr "AVIF Support"
+msgid "ThumbHash size"
+msgstr "Taille ThumbHash"
 
-#~ msgid "https://github.com/daviddegner"
-#~ msgstr "https://github.com/daviddegner"
+msgid "Extra Small (16px)"
+msgstr "Très petit (16px)"
 
-#~ msgid "Time (24h):"
-#~ msgstr "Heure (24 h) :"
+msgid "Small (32px)"
+msgstr "Petit (32px)"
 
-#~ msgid "Speed (0–10)"
-#~ msgstr "Vitesse (0–10)"
+msgid "Medium (64px)"
+msgstr "Moyen (64px)"
 
-#~ msgid "Keep metadata (EXIF/XMP/IPTC)"
-#~ msgstr "Conserver les métadonnées (EXIF/XMP/IPTC)"
+msgid "Large (100px)"
+msgstr "Grand (100px)"
 
-#~ msgid "When possible (ImageMagick required)."
-#~ msgstr "Si possible (ImageMagick requis)."
+msgid "Smaller = faster decode, less detail. 100px max for ThumbHash algorithm."
+msgstr "Plus petit = décodage plus rapide, moins de détails. 100px max pour l'algorithme ThumbHash."
 
-#~ msgid "Keep color profile (ICC)"
-#~ msgstr "Conserver le profil colorimétrique (ICC)"
+msgid "Generate on upload"
+msgstr "Générer au téléversement"
 
-#~ msgid "Avoid double-resizing"
-#~ msgstr "Éviter le double redimensionnement"
+msgid "Generate LQIP when images are uploaded"
+msgstr "Générer les LQIP lors du téléversement des images"
 
-#~ msgid "Use original/-scaled as the source when converting resized JPEGs."
-#~ msgstr ""
-#~ "Utiliser l’original/-scaled comme source lors de la conversion des JPEG "
-#~ "redimensionnés."
+msgid "Daily generation"
+msgstr "Génération quotidienne"
 
-#~ msgid "Status"
-#~ msgstr "État"
-
-#~ msgid "Convert missing AVIFs"
-#~ msgstr "Convertir les AVIF manquants"
-
-#~ msgid "Scan the Media Library and convert JPEGs that are missing AVIFs."
-#~ msgstr ""
-#~ "Analyser la bibliothèque de médias et convertir les JPEG dépourvus d’AVIF."
-
-#~ msgid "Convert now"
-#~ msgstr "Convertir maintenant"
-
-#~ msgid "JPEG files"
-#~ msgstr "Fichiers JPEG"
-
-#~ msgid "AVIF files"
-#~ msgstr "Fichiers AVIF"
-
-#~ msgid "Missing AVIFs"
-#~ msgstr "AVIF manquants"
-
-#~ msgid "Convert"
-#~ msgstr "Convertir"
-
-#~ msgid "Test results for attachment:"
-#~ msgstr "Résultats du test pour le fichier :"
-
-#~ msgid "Size"
-#~ msgstr "Taille"
-
-#~ msgid "Dimensions"
-#~ msgstr "Dimensions"
-
-#~ msgid "JPEG"
-#~ msgstr "JPEG"
-
-#~ msgid "JPEG size"
-#~ msgstr "Taille JPEG"
-
-#~ msgid "AVIF size"
-#~ msgstr "Taille AVIF"
-
-#~ msgid "Converted"
-#~ msgstr "Converti"
-
-#~ msgid "Not created"
-#~ msgstr "Non créé"
-
-#~ msgid "View"
-#~ msgstr "Voir"
-
-#~ msgid "Library AVIF coverage"
-#~ msgstr "Couverture AVIF de la bibliothèque"
-
-#~ msgid "Overview of JPEGs with and without AVIFs."
-#~ msgstr "Vue d’ensemble des JPEG avec et sans AVIF."
-
-#~ msgid "Rescan"
-#~ msgstr "Analyser de nouveau"
-
-#~ msgid "Server capabilities for AVIF conversion."
-#~ msgstr "Capacités du serveur pour la conversion AVIF."
-
-#~ msgid "GD Extension"
-#~ msgstr "Extension GD"
-
-#~ msgid "Available"
-#~ msgstr "Disponible"
-
-#~ msgid "Not available"
-#~ msgstr "Indisponible"
-
-#~ msgid "GD AVIF Support"
-#~ msgstr "Prise en charge AVIF de GD"
-
-#~ msgid "ImageMagick (Imagick)"
-#~ msgstr "ImageMagick (Imagick)"
-
-#~ msgid "ImageMagick AVIF Support"
-#~ msgstr "Prise en charge AVIF d’ImageMagick"
-
-#~ msgid "Preferred method"
-#~ msgstr "Méthode préférée"
-
-#~ msgid "AVIF supported"
-#~ msgstr "AVIF pris en charge"
-
-#~ msgid "Yes"
-#~ msgstr "Oui"
-
-#~ msgid "No"
-#~ msgstr "Non"
-
-#~ msgid "Unable to read readme.txt."
-#~ msgstr "Impossible de lire readme.txt."
-
-#~ msgid "README not found."
-#~ msgstr "Fichier README introuvable."
+msgid "Generate missing LQIPs during daily scan"
+msgstr "Générer les LQIP manquants lors de l'analyse quotidienne"

@@ -7,165 +7,165 @@ msgstr ""
 "POT-Creation-Date: 2025-12-27T22:00:00+00:00\n"
 "PO-Revision-Date: 2025-12-27 22:00+0000\n"
 "Last-Translator: David Degner\n"
-"Language-Team: Chinese (Simplified)\n"
-"Language: zh_CN\n"
+"Language-Team: Italian\n"
+"Language: it_IT\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: Antigravity AI\n"
 "X-Domain: avif-local-support\n"
-"Plural-Forms: nplurals=1; plural=0;\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 msgid "AVIF Local Support"
 msgstr "AVIF Local Support"
 
 msgid "Unified AVIF support and conversion. Local-first processing with a strong focus on image quality when converting JPEGs."
-msgstr "统一的AVIF支持和转换。本地优先处理，专注于JPEG转换时的图像质量。"
+msgstr "Supporto e conversione AVIF unificati. Elaborazione locale prioritaria con forte attenzione alla qualità dell'immagine durante la conversione dei JPEG."
 
 msgid "No file uploaded."
-msgstr "未上传文件。"
+msgstr "Nessun file caricato."
 
 msgid "Only JPEG files are allowed."
-msgstr "只允许JPEG文件。"
+msgstr "Sono consentiti solo file JPEG."
 
 msgid "Serve AVIF images"
-msgstr "提供AVIF图片"
+msgstr "Servi immagini AVIF"
 
 msgid "Convert on upload"
-msgstr "上传时转换"
+msgstr "Converti al caricamento"
 
 msgid "Daily conversion"
-msgstr "每日转换"
+msgstr "Conversione giornaliera"
 
 msgid "Quality (0–100)"
-msgstr "质量 (0–100)"
+msgstr "Qualità (0–100)"
 
 msgid "Speed (0–8)"
-msgstr "速度 (0–8)"
+msgstr "Velocità (0–8)"
 
 msgid "Chroma subsampling"
-msgstr "色度二次采样"
+msgstr "Sottocampionamento cromatico"
 
 msgid "Bit depth"
-msgstr "位深度"
+msgstr "Profondità di bit"
 
 msgid "Disable memory check"
-msgstr "禁用内存检查"
+msgstr "Disabilita controllo memoria"
 
 msgid "Engine selection"
-msgstr "引擎选择"
+msgstr "Selezione motore"
 
 msgid "ImageMagick CLI"
 msgstr "ImageMagick CLI"
 
 msgid "Enable ThumbHash LQIP"
-msgstr "启用ThumbHash LQIP"
+msgstr "Abilita ThumbHash LQIP"
 
 msgid "Add AVIF sources to JPEG images on the front end"
-msgstr "在前端为JPEG图片添加AVIF源"
+msgstr "Aggiungi sorgenti AVIF alle immagini JPEG nel frontend"
 
 msgid "Recommended; may slow uploads on some servers"
-msgstr "推荐；可能会在某些服务器上减慢上传速度"
+msgstr "Consigliato; potrebbe rallentare i caricamenti su alcuni server"
 
 msgid "Scan daily and convert missing AVIFs"
-msgstr "每日扫描并转换缺失的AVIF"
+msgstr "Scansiona giornalmente e converti gli AVIF mancanti"
 
 msgid "Time"
-msgstr "时间"
+msgstr "Ora"
 
 msgid "Higher = better quality and larger files."
-msgstr "越高 = 质量越好，文件越大。"
+msgstr "Più alto = migliore qualità e file più grandi."
 
 msgid "Lower = smaller files (slower). Higher = faster (larger files)."
-msgstr "越低 = 文件越小（较慢）。越高 = 越快（文件更大）。"
+msgstr "Più basso = file più piccoli (più lento). Più alto = più veloce (file più grandi)."
 
 msgid "4:2:0 is most compatible and smallest; 4:4:4 preserves more color detail."
-msgstr "4:2:0兼容性最好且最小；4:4:4保留更多颜色细节。"
+msgstr "4:2:0 è il più compatibile e piccolo; 4:4:4 preserva più dettagli di colore."
 
 msgid "8-bit is standard; higher bit depths may increase file size and require broader support."
-msgstr "8位是标准；更高位深可能增加文件大小并需要更广泛的支持。"
+msgstr "8 bit è standard; profondità maggiori possono aumentare la dimensione e richiedere supporto più ampio."
 
 msgid "Skip pre-conversion memory availability check (not recommended)"
-msgstr "跳过转换前内存可用性检查（不推荐）"
+msgstr "Salta controllo memoria pre-conversione (non consigliato)"
 
 msgid "Useful if the memory estimator is too conservative, but may cause fatal errors on large images."
-msgstr "如果内存估算过于保守则有用，但可能在大图片上导致致命错误。"
+msgstr "Utile se lo stimatore di memoria è troppo conservativo, ma può causare errori fatali su immagini grandi."
 
 msgid "Auto (CLI → Imagick → GD)"
-msgstr "自动 (CLI → Imagick → GD)"
+msgstr "Auto (CLI → Imagick → GD)"
 
 msgid "Force ImageMagick CLI"
-msgstr "强制ImageMagick CLI"
+msgstr "Forza ImageMagick CLI"
 
 msgid "Force ImageMagick (Imagick PHP)"
-msgstr "强制ImageMagick (Imagick PHP)"
+msgstr "Forza ImageMagick (Imagick PHP)"
 
 msgid "Force GD"
-msgstr "强制GD"
+msgstr "Forza GD"
 
 msgid "CLI Path"
-msgstr "CLI路径"
+msgstr "Percorso CLI"
 
 msgid "Select a detected binary or enter a custom path."
-msgstr "选择检测到的二进制文件或输入自定义路径。"
+msgstr "Seleziona un binario rilevato o inserisci un percorso personalizzato."
 
 msgid "Extra CLI Arguments"
-msgstr "额外CLI参数"
+msgstr "Argomenti CLI extra"
 
 #, php-format
 msgid "Suggested: %s"
-msgstr "建议：%s"
+msgstr "Suggerito: %s"
 
 msgid "Apply"
-msgstr "应用"
+msgstr "Applica"
 
 msgid "Additional flags passed to ImageMagick (e.g. -define avif:my-flag=1)."
-msgstr "传递给ImageMagick的额外标志（例如 -define avif:my-flag=1）。"
+msgstr "Parametri aggiuntivi per ImageMagick (es. -define avif:mio-param=1)."
 
 msgid "CLI Environment Variables"
-msgstr "CLI环境变量"
+msgstr "Variabili d'ambiente CLI"
 
 msgid "Suggested environment:"
-msgstr "建议的环境："
+msgstr "Ambiente suggerito:"
 
 msgid "Environment variables for the CLI process (KEY=VALUE), one per line. This does not change the CLI Path; it only affects the subprocess environment."
-msgstr "CLI进程的环境变量（KEY=VALUE），每行一个。这不会更改CLI路径；仅影响子进程环境。"
+msgstr "Variabili d'ambiente per il processo CLI (CHIAVE=VALORE), una per riga. Questo non cambia il percorso CLI; influisce solo sull'ambiente del sottoprocesso."
 
 msgid "Generate ThumbHash placeholders for images"
-msgstr "为图片生成ThumbHash占位符"
+msgstr "Genera segnaposto ThumbHash per le immagini"
 
 msgid "Creates ultra-compact (~30 byte) image placeholders displayed instantly while full images load."
-msgstr "创建超紧凑（~30字节）的图片占位符，在完整图片加载时即时显示。"
+msgstr "Crea segnaposto immagine ultra-compatti (~30 byte) visualizzati istantaneamente mentre le immagini complete caricano."
 
 msgid "You do not have permission to access this page."
-msgstr "您没有权限访问此页面。"
+msgstr "Non hai i permessi per accedere a questa pagina."
 
 msgid "You do not have permission to do this."
-msgstr "您没有权限执行此操作。"
+msgstr "Non hai i permessi per fare questo."
 
 msgid "Settings"
-msgstr "设置"
+msgstr "Impostazioni"
 
 msgid "Source file not found"
-msgstr "源文件未找到"
+msgstr "File sorgente non trovato"
 
 msgid "Unknown error (conversion skipped)"
-msgstr "未知错误（跳过转换）"
+msgstr "Errore sconosciuto (conversione saltata)"
 
 msgid "No logs available."
-msgstr "无可用日志。"
+msgstr "Nessun registro disponibile."
 
 msgid "AVIF support not available!"
-msgstr "AVIF支持不可用！"
+msgstr "Supporto AVIF non disponibile!"
 
 msgid "This plugin requires either GD with AVIF support (imageavif) or ImageMagick with AVIF format support."
-msgstr "此插件需要带有AVIF支持的GD（imageavif）或带有AVIF格式支持的ImageMagick。"
+msgstr "Questo plugin richiede GD con supporto AVIF (imageavif) o ImageMagick con supporto formato AVIF."
 
 msgid "AVIF support is unconfirmed."
-msgstr "AVIF支持未确认。"
+msgstr "Il supporto AVIF non è confermato."
 
 msgid "The plugin can attempt conversion (usually via CLI), but AVIF capability could not be confirmed. Try the Tools → Upload Test and check Logs for details."
-msgstr "插件可以尝试转换（通常通过CLI），但AVIF功能无法确认。尝试工具 → 上传测试并查看日志获取详情。"
+msgstr "Il plugin può tentare la conversione (di solito via CLI), ma la capacità AVIF non è stata confermata. Prova Strumenti → Test Caricamento e controlla i Registri per dettagli."
 
 msgid "AVIF"
 msgstr "AVIF"
@@ -174,326 +174,326 @@ msgid "LQIP"
 msgstr "LQIP"
 
 msgid "Tools"
-msgstr "工具"
+msgstr "Strumenti"
 
 msgid "About"
-msgstr "关于"
+msgstr "Informazioni"
 
 msgid "Attempting"
-msgstr "尝试中"
+msgstr "Tentativo"
 
 msgid "Skipped"
-msgstr "已跳过"
+msgstr "Saltato"
 
 msgid "forced"
-msgstr "强制"
+msgstr "forzato"
 
 msgid "CLI (ImageMagick command-line)"
-msgstr "CLI（ImageMagick命令行）"
+msgstr "CLI (riga di comando ImageMagick)"
 
 msgid "Used for conversion via proc_open() (no shell). This is usually fastest and most reliable if ImageMagick is installed with AVIF support."
-msgstr "通过proc_open()（无shell）用于转换。如果ImageMagick安装了AVIF支持，通常最快最可靠。"
+msgstr "Usato per conversione via proc_open() (senza shell). Di solito è il più veloce e affidabile se ImageMagick ha supporto AVIF."
 
 msgid "proc_open available"
-msgstr "proc_open可用"
+msgstr "proc_open disponibile"
 
 msgid "Usable in Auto mode"
-msgstr "可在自动模式下使用"
+msgstr "Utilizzabile in modalità Auto"
 
 msgid "Configured CLI path"
-msgstr "已配置的CLI路径"
+msgstr "Percorso CLI configurato"
 
 msgid "Auto-detected CLI path"
-msgstr "自动检测的CLI路径"
+msgstr "Percorso CLI auto-rilevato"
 
 msgid "Effective CLI path"
-msgstr "有效CLI路径"
+msgstr "Percorso CLI effettivo"
 
 msgid "Binary exists"
-msgstr "二进制文件存在"
+msgstr "Il binario esiste"
 
 msgid "Binary executable"
-msgstr "二进制文件可执行"
+msgstr "Binario eseguibile"
 
 msgid "AVIF-capable CLI detected"
-msgstr "检测到支持AVIF的CLI"
+msgstr "CLI con capacità AVIF rilevato"
 
 msgid "This is a best-effort probe. A custom path might still work."
-msgstr "这是最佳努力检测。自定义路径可能仍然有效。"
+msgstr "Questo è un rilevamento approssimativo. Un percorso personalizzato potrebbe comunque funzionare."
 
 msgid "Detected ImageMagick binaries"
-msgstr "检测到的ImageMagick二进制文件"
+msgstr "Binari ImageMagick rilevati"
 
 msgid "AVIF: yes"
-msgstr "AVIF：是"
+msgstr "AVIF: sì"
 
 msgid "AVIF: no"
-msgstr "AVIF：否"
+msgstr "AVIF: no"
 
 msgid "Run ImageMagick test"
-msgstr "运行ImageMagick测试"
+msgstr "Esegui test ImageMagick"
 
 msgid "Note:"
-msgstr "注意："
+msgstr "Nota:"
 
 msgid "Your PHP has exec disabled. The test button uses exec, but conversions use proc_open—so conversion may still work."
-msgstr "您的PHP禁用了exec。测试按钮使用exec，但转换使用proc_open——因此转换可能仍然有效。"
+msgstr "Il tuo PHP ha exec disabilitato. Il pulsante test usa exec, ma le conversioni usano proc_open—quindi la conversione potrebbe funzionare."
 
 msgid "Imagick (PHP extension)"
-msgstr "Imagick（PHP扩展）"
+msgstr "Imagick (estensione PHP)"
 
 msgid "Used for conversion inside PHP. Great quality and better profile/metadata handling when ImageMagick has AVIF support."
-msgstr "在PHP内部用于转换。当ImageMagick支持AVIF时，质量更好，配置文件/元数据处理更佳。"
+msgstr "Usato per conversione in PHP. Ottima qualità e migliore gestione profili/metadati quando ImageMagick ha supporto AVIF."
 
 msgid "Imagick extension loaded"
-msgstr "Imagick扩展已加载"
+msgstr "Estensione Imagick caricata"
 
 msgid "ImageMagick library version"
-msgstr "ImageMagick库版本"
+msgstr "Versione libreria ImageMagick"
 
 msgid "AVIF support (queryFormats)"
-msgstr "AVIF支持（queryFormats）"
+msgstr "Supporto AVIF (queryFormats)"
 
 msgid "GD (imageavif)"
-msgstr "GD（imageavif）"
+msgstr "GD (imageavif)"
 
 msgid "Used as a fallback when imageavif() is available. Fast, but does not perform color management and may not preserve metadata."
-msgstr "当imageavif()可用时用作后备。速度快，但不执行颜色管理，可能不保留元数据。"
+msgstr "Usato come fallback quando imageavif() è disponibile. Veloce, ma non gestisce i colori e potrebbe non preservare i metadati."
 
 msgid "GD extension loaded"
-msgstr "GD扩展已加载"
+msgstr "Estensione GD caricata"
 
 msgid "imageavif() available"
-msgstr "imageavif()可用"
+msgstr "imageavif() disponibile"
 
 msgid "gd_info(): AVIF Support"
-msgstr "gd_info()：AVIF支持"
+msgstr "gd_info(): Supporto AVIF"
 
 msgid "Color management note:"
-msgstr "颜色管理说明："
+msgstr "Nota gestione colori:"
 
 msgid "GD does not perform color management; non‑sRGB JPEGs may appear desaturated. For accurate color, enable Imagick."
-msgstr "GD不执行颜色管理；非sRGB JPEG可能看起来不饱和。要获得准确的颜色，请启用Imagick。"
+msgstr "GD non gestisce i colori; i JPEG non-sRGB potrebbero apparire desaturati. Per colori precisi, abilita Imagick."
 
 msgid "Unable to read README file."
-msgstr "无法读取README文件。"
+msgstr "Impossibile leggere il file README."
 
 msgid "View on WordPress.org"
-msgstr "在WordPress.org上查看"
+msgstr "Visualizza su WordPress.org"
 
 msgid "GitHub Repository"
-msgstr "GitHub仓库"
+msgstr "Repository GitHub"
 
 msgid "ThumbHash LQIP"
 msgstr "ThumbHash LQIP"
 
 msgid "Low Quality Image Placeholders (LQIP) using ThumbHash. Generates ultra-compact image representations (~30 bytes) that are decoded client-side to smooth placeholders while full images load."
-msgstr "使用ThumbHash的低质量图片占位符（LQIP）。生成超紧凑的图片表示（~30字节），在完整图片加载时在客户端解码为平滑的占位符。"
+msgstr "Segnaposto immagine di bassa qualità (LQIP) usando ThumbHash. Genera rappresentazioni immagine ultra-compatte (~30 byte) decodificate lato client in segnaposto fluidi mentre le immagini complete caricano."
 
 msgid "Serve AVIF files"
-msgstr "提供AVIF文件"
+msgstr "Servi file AVIF"
 
 msgid "Engine Selection"
-msgstr "引擎选择"
+msgstr "Selezione Motore"
 
 msgid "Conversion Settings"
-msgstr "转换设置"
+msgstr "Impostazioni Conversione"
 
 msgid "Reset all settings to defaults?"
-msgstr "将所有设置重置为默认值？"
+msgstr "Ripristinare tutte le impostazioni ai valori predefiniti?"
 
 msgid "Restore defaults"
-msgstr "恢复默认值"
+msgstr "Ripristina predefiniti"
 
 msgid "AVIF Tools"
-msgstr "AVIF工具"
+msgstr "Strumenti AVIF"
 
 msgid "Manage AVIF conversion for existing images."
-msgstr "管理现有图片的AVIF转换。"
+msgstr "Gestisci conversione AVIF per immagini esistenti."
 
 msgid "Images"
-msgstr "图片"
+msgstr "Immagini"
 
 msgid "With AVIF"
-msgstr "有AVIF"
+msgstr "Con AVIF"
 
 msgid "Without"
-msgstr "无"
+msgstr "Senza"
 
 msgid "Generate All"
-msgstr "全部生成"
+msgstr "Genera tutto"
 
 msgid "Stop"
-msgstr "停止"
+msgstr "Ferma"
 
 msgid "Delete All"
-msgstr "全部删除"
+msgstr "Elimina tutto"
 
 msgid "Progress:"
-msgstr "进度："
+msgstr "Progresso:"
 
 msgid "AVIFs"
 msgstr "AVIFs"
 
 msgid "Test AVIF Conversion"
-msgstr "测试AVIF转换"
+msgstr "Test Conversione AVIF"
 
 msgid "Upload a JPEG to preview resized images and the AVIFs generated by your current settings. The file is added to the Media Library."
-msgstr "上传JPEG以预览调整大小的图片和当前设置生成的AVIF。文件将添加到媒体库。"
+msgstr "Carica un JPEG per visualizzare le immagini ridimensionate e gli AVIF generati dalle tue impostazioni attuali. Il file viene aggiunto alla Libreria Media."
 
 msgid "Upload & test"
-msgstr "上传并测试"
+msgstr "Carica e testa"
 
 msgid "LQIP Tools"
-msgstr "LQIP工具"
+msgstr "Strumenti LQIP"
 
 msgid "Manage LQIP placeholders for existing images."
-msgstr "管理现有图片的LQIP占位符。"
+msgstr "Gestisci segnaposto LQIP per immagini esistenti."
 
 msgid "Loading statistics..."
-msgstr "加载统计数据..."
+msgstr "Caricamento statistiche..."
 
 msgid "With LQIP"
-msgstr "有LQIP"
+msgstr "Con LQIP"
 
 msgid "Failed to load statistics."
-msgstr "加载统计数据失败。"
+msgstr "Caricamento statistiche fallito."
 
 msgid "Generate ThumbHashes for all images without them? This may take a while for large media libraries."
-msgstr "为所有没有ThumbHash的图片生成ThumbHash？对于大型媒体库可能需要一段时间。"
+msgstr "Generare ThumbHash per tutte le immagini senza? Potrebbe richiedere tempo per librerie media grandi."
 
 msgid "Generating ThumbHashes..."
-msgstr "正在生成ThumbHash..."
+msgstr "Generazione ThumbHash..."
 
 msgid "Done!"
-msgstr "完成！"
+msgstr "Fatto!"
 
 msgid "Generated:"
-msgstr "已生成："
+msgstr "Generati:"
 
 msgid "Skipped:"
-msgstr "已跳过："
+msgstr "Saltati:"
 
 msgid "Failed:"
-msgstr "失败："
+msgstr "Falliti:"
 
 msgid "Error:"
-msgstr "错误："
+msgstr "Errore:"
 
 msgid "File:"
-msgstr "文件："
+msgstr "File:"
 
 msgid "Failed to generate ThumbHashes."
-msgstr "生成ThumbHash失败。"
+msgstr "Generazione ThumbHash fallita."
 
 msgid "Delete ALL ThumbHash data? This cannot be undone."
-msgstr "删除所有ThumbHash数据？此操作无法撤消。"
+msgstr "Eliminare TUTTI i dati ThumbHash? Questa azione non può essere annullata."
 
 msgid "Deleting ThumbHashes..."
-msgstr "正在删除ThumbHash..."
+msgstr "Eliminazione ThumbHash..."
 
 msgid "Deleted:"
-msgstr "已删除："
+msgstr "Eliminati:"
 
 msgid "entries"
-msgstr "条目"
+msgstr "voci"
 
 msgid "Failed to delete ThumbHashes."
-msgstr "删除ThumbHash失败。"
+msgstr "Eliminazione ThumbHash fallita."
 
 msgid "Logs"
-msgstr "日志"
+msgstr "Registri"
 
 msgid "View recent conversion logs including errors, settings used, and performance metrics."
-msgstr "查看最近的转换日志，包括错误、使用的设置和性能指标。"
+msgstr "Visualizza registri conversione recenti inclusi errori, impostazioni usate e metriche prestazioni."
 
 msgid "Refresh logs"
-msgstr "刷新日志"
+msgstr "Aggiorna registri"
 
 msgid "Copy logs"
-msgstr "复制日志"
+msgstr "Copia registri"
 
 msgid "Clear logs"
-msgstr "清除日志"
+msgstr "Cancella registri"
 
 msgid "Only failed/errored"
-msgstr "仅失败/错误"
+msgstr "Solo falliti/errori"
 
 msgid "Copied!"
-msgstr "已复制！"
+msgstr "Copiato!"
 
 msgid "Server support"
-msgstr "服务器支持"
+msgstr "Supporto server"
 
 msgid "Copy diagnostics as text"
-msgstr "复制诊断信息为文本"
+msgstr "Copia diagnostica come testo"
 
 msgid "This panel explains what your server supports, what AVIF Local Support will do, and what to check when something is unexpected."
-msgstr "此面板说明您的服务器支持什么、AVIF Local Support将做什么以及出现意外情况时应检查什么。"
+msgstr "Questo pannello spiega cosa supporta il tuo server, cosa farà AVIF Local Support e cosa controllare quando qualcosa è inaspettato."
 
 msgid "Summary"
-msgstr "摘要"
+msgstr "Riepilogo"
 
 msgid "Auto: the plugin will try engines in order (CLI → Imagick → GD) until one succeeds."
-msgstr "自动：插件将按顺序尝试引擎（CLI → Imagick → GD）直到一个成功。"
+msgstr "Auto: il plugin proverà i motori in ordine (CLI → Imagick → GD) finché uno non ha successo."
 
 msgid "Forced: the plugin will use only the selected engine (no fallback)."
-msgstr "强制：插件将仅使用选定的引擎（无后备）。"
+msgstr "Forzato: il plugin userà solo il motore selezionato (nessun fallback)."
 
 msgid "AVIF conversion available"
-msgstr "AVIF转换可用"
+msgstr "Conversione AVIF disponibile"
 
 msgid "Engine setting"
-msgstr "引擎设置"
+msgstr "Impostazione motore"
 
 msgid "None"
-msgstr "无"
+msgstr "Nessuno"
 
 msgid "Auto mode: first attempt"
-msgstr "自动模式：首次尝试"
+msgstr "Modalità auto: primo tentativo"
 
 msgid "fallbacks available"
-msgstr "可用后备"
+msgstr "fallback disponibili"
 
 msgid "Fallback behavior"
-msgstr "后备行为"
+msgstr "Comportamento fallback"
 
 msgid "No fallback in forced mode."
-msgstr "强制模式下无后备。"
+msgstr "Nessun fallback in modalità forzata."
 
 msgid "Daily scan for missing AVIFs"
-msgstr "每日扫描缺失的AVIF"
+msgstr "Scansione giornaliera AVIF mancanti"
 
 #, php-format
 msgid "scheduled around %s"
-msgstr "计划在%s左右"
+msgstr "programmato intorno alle %s"
 
 msgid "Front-end AVIF serving"
-msgstr "前端AVIF服务"
+msgstr "Servizio AVIF frontend"
 
 msgid "When enabled, the plugin wraps JPEG outputs in a <picture> tag with an AVIF <source> first."
-msgstr "启用后，插件将JPEG输出包装在带有AVIF <source>的<picture>标签中。"
+msgstr "Quando abilitato, il plugin avvolge le uscite JPEG in un tag <picture> con un <source> AVIF per primo."
 
 msgid "Engine details"
-msgstr "引擎详情"
+msgstr "Dettagli motore"
 
 msgid "Environment"
-msgstr "环境"
+msgstr "Ambiente"
 
 msgid "PHP Version"
-msgstr "PHP版本"
+msgstr "Versione PHP"
 
 msgid "WordPress Version"
-msgstr "WordPress版本"
+msgstr "Versione WordPress"
 
 msgid "PHP SAPI"
 msgstr "PHP SAPI"
 
 msgid "Current user"
-msgstr "当前用户"
+msgstr "Utente attuale"
 
 msgid "This is the OS user PHP runs as; it must have write access to wp-content/uploads."
-msgstr "这是PHP运行的操作系统用户；它必须对wp-content/uploads有写入权限。"
+msgstr "Questo è l'utente del SO con cui PHP gira; deve avere accesso in scrittura a wp-content/uploads."
 
 msgid "open_basedir"
 msgstr "open_basedir"
@@ -502,31 +502,31 @@ msgid "disable_functions"
 msgstr "disable_functions"
 
 msgid "ThumbHash size"
-msgstr "ThumbHash大小"
+msgstr "Dimensione ThumbHash"
 
 msgid "Extra Small (16px)"
-msgstr "超小（16px）"
+msgstr "Extra piccolo (16px)"
 
 msgid "Small (32px)"
-msgstr "小（32px）"
+msgstr "Piccolo (32px)"
 
 msgid "Medium (64px)"
-msgstr "中（64px）"
+msgstr "Medio (64px)"
 
 msgid "Large (100px)"
-msgstr "大（100px）"
+msgstr "Grande (100px)"
 
 msgid "Smaller = faster decode, less detail. 100px max for ThumbHash algorithm."
-msgstr "越小 = 解码越快，细节越少。ThumbHash算法最大100px。"
+msgstr "Più piccolo = decodifica più veloce, meno dettagli. 100px max per algoritmo ThumbHash."
 
 msgid "Generate on upload"
-msgstr "上传时生成"
+msgstr "Genera al caricamento"
 
 msgid "Generate LQIP when images are uploaded"
-msgstr "上传图片时生成LQIP"
+msgstr "Genera LQIP quando le immagini vengono caricate"
 
 msgid "Daily generation"
-msgstr "每日生成"
+msgstr "Generazione giornaliera"
 
 msgid "Generate missing LQIPs during daily scan"
-msgstr "在每日扫描期间生成缺失的LQIP"
+msgstr "Genera LQIP mancanti durante la scansione giornaliera"

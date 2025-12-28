@@ -196,10 +196,10 @@ class LQIP_CLI
 			return;
 		}
 
-		// Check if already has LQIP
+		// Check if already has valid LQIP (with proper 'full' entry)
 		$existing = get_post_meta($attachmentId, ThumbHash::getMetaKey(), true);
-		if (!empty($existing) && is_array($existing)) {
-			\WP_CLI::line("Attachment ID {$attachmentId} already has LQIP data.");
+		if (is_array($existing) && isset($existing['full']) && is_string($existing['full']) && strlen($existing['full']) > 10) {
+			\WP_CLI::line("Attachment ID {$attachmentId} already has valid LQIP data.");
 			return;
 		}
 
@@ -211,9 +211,9 @@ class LQIP_CLI
 		\WP_CLI::line("Generating LQIP for attachment ID {$attachmentId}...");
 		ThumbHash::generateForAttachment($attachmentId);
 
-		// Verify it was generated
+		// Verify it was generated with valid 'full' entry
 		$hash = get_post_meta($attachmentId, ThumbHash::getMetaKey(), true);
-		if (!empty($hash) && is_array($hash)) {
+		if (is_array($hash) && isset($hash['full']) && is_string($hash['full']) && strlen($hash['full']) > 10) {
 			$count = count($hash);
 			\WP_CLI::success("Generated LQIP for {$count} size(s).");
 		} else {
@@ -279,20 +279,20 @@ class LQIP_CLI
 		$skipped = 0;
 		$failed = 0;
 		$postsToProcess = $query->posts;
-		
+
 		// Apply limit if specified
 		if ($limit > 0 && count($postsToProcess) > $limit) {
 			$postsToProcess = array_slice($postsToProcess, 0, $limit);
 			\WP_CLI::line(sprintf('Limiting processing to first %d images...', $limit));
 			\WP_CLI::line('');
 		}
-		
+
 		$totalToProcess = count($postsToProcess);
 
 		foreach ($postsToProcess as $index => $attachmentId) {
-			// Skip if already has LQIP
+			// Skip if already has valid LQIP (check for 'full' key with proper hash)
 			$existing = get_post_meta($attachmentId, ThumbHash::getMetaKey(), true);
-			if (!empty($existing) && is_array($existing)) {
+			if (is_array($existing) && isset($existing['full']) && is_string($existing['full']) && strlen($existing['full']) > 10) {
 				++$skipped;
 				++$processed;
 				$this->printProgress($processed, $totalMissing, $startTime);
@@ -315,7 +315,7 @@ class LQIP_CLI
 				$memoryBefore = memory_get_usage(true);
 				ThumbHash::generateForAttachment((int) $attachmentId);
 				$memoryAfter = memory_get_usage(true);
-				
+
 				// Check for memory issues
 				if ($memoryAfter - $memoryBefore > 50 * 1024 * 1024) { // More than 50MB
 					\WP_CLI::warning(sprintf('High memory usage for attachment ID %d: %s', $attachmentId, size_format($memoryAfter - $memoryBefore)));
@@ -328,9 +328,9 @@ class LQIP_CLI
 				continue;
 			}
 
-			// Verify it was generated
+			// Verify it was generated with valid 'full' entry
 			$hash = get_post_meta($attachmentId, ThumbHash::getMetaKey(), true);
-			if (!empty($hash) && is_array($hash)) {
+			if (is_array($hash) && isset($hash['full']) && is_string($hash['full']) && strlen($hash['full']) > 10) {
 				++$generated;
 				++$processed;
 				$this->printProgress($processed, $totalMissing, $startTime);

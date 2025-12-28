@@ -1,0 +1,532 @@
+# Copyright (C) 2025 David Degner
+# This file is distributed under the GPL v2 or later.
+msgid ""
+msgstr ""
+"Project-Id-Version: AVIF Local Support 0.5.4\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/avif-local-support\n"
+"POT-Creation-Date: 2025-12-27T22:00:00+00:00\n"
+"PO-Revision-Date: 2025-12-27 22:00+0000\n"
+"Last-Translator: David Degner\n"
+"Language-Team: Japanese\n"
+"Language: ja\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Antigravity AI\n"
+"X-Domain: avif-local-support\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgid "AVIF Local Support"
+msgstr "AVIF Local Support"
+
+msgid "Unified AVIF support and conversion. Local-first processing with a strong focus on image quality when converting JPEGs."
+msgstr "統一されたAVIFサポートと変換。JPEGを変換する際の画質に重点を置いたローカル優先処理。"
+
+msgid "No file uploaded."
+msgstr "ファイルがアップロードされていません。"
+
+msgid "Only JPEG files are allowed."
+msgstr "JPEGファイルのみ許可されています。"
+
+msgid "Serve AVIF images"
+msgstr "AVIF画像を配信"
+
+msgid "Convert on upload"
+msgstr "アップロード時に変換"
+
+msgid "Daily conversion"
+msgstr "毎日の変換"
+
+msgid "Quality (0–100)"
+msgstr "品質 (0–100)"
+
+msgid "Speed (0–8)"
+msgstr "速度 (0–8)"
+
+msgid "Chroma subsampling"
+msgstr "クロマサブサンプリング"
+
+msgid "Bit depth"
+msgstr "ビット深度"
+
+msgid "Disable memory check"
+msgstr "メモリチェックを無効化"
+
+msgid "Engine selection"
+msgstr "エンジン選択"
+
+msgid "ImageMagick CLI"
+msgstr "ImageMagick CLI"
+
+msgid "Enable ThumbHash LQIP"
+msgstr "ThumbHash LQIPを有効化"
+
+msgid "Add AVIF sources to JPEG images on the front end"
+msgstr "フロントエンドでJPEG画像にAVIFソースを追加"
+
+msgid "Recommended; may slow uploads on some servers"
+msgstr "推奨；一部のサーバーでアップロードが遅くなる可能性があります"
+
+msgid "Scan daily and convert missing AVIFs"
+msgstr "毎日スキャンして不足しているAVIFを変換"
+
+msgid "Time"
+msgstr "時間"
+
+msgid "Higher = better quality and larger files."
+msgstr "高い = 品質向上、ファイルサイズ増加。"
+
+msgid "Lower = smaller files (slower). Higher = faster (larger files)."
+msgstr "低い = ファイルが小さい（遅い）。高い = 速い（ファイルが大きい）。"
+
+msgid "4:2:0 is most compatible and smallest; 4:4:4 preserves more color detail."
+msgstr "4:2:0は最も互換性が高く最小；4:4:4はより多くの色詳細を保持。"
+
+msgid "8-bit is standard; higher bit depths may increase file size and require broader support."
+msgstr "8ビットが標準；より高いビット深度はファイルサイズを増加させ、より広いサポートが必要になる可能性があります。"
+
+msgid "Skip pre-conversion memory availability check (not recommended)"
+msgstr "変換前のメモリ可用性チェックをスキップ（非推奨）"
+
+msgid "Useful if the memory estimator is too conservative, but may cause fatal errors on large images."
+msgstr "メモリ推定が保守的すぎる場合に有用ですが、大きな画像で致命的なエラーを引き起こす可能性があります。"
+
+msgid "Auto (CLI → Imagick → GD)"
+msgstr "自動 (CLI → Imagick → GD)"
+
+msgid "Force ImageMagick CLI"
+msgstr "ImageMagick CLIを強制"
+
+msgid "Force ImageMagick (Imagick PHP)"
+msgstr "ImageMagick (Imagick PHP)を強制"
+
+msgid "Force GD"
+msgstr "GDを強制"
+
+msgid "CLI Path"
+msgstr "CLIパス"
+
+msgid "Select a detected binary or enter a custom path."
+msgstr "検出されたバイナリを選択するか、カスタムパスを入力してください。"
+
+msgid "Extra CLI Arguments"
+msgstr "追加のCLI引数"
+
+#, php-format
+msgid "Suggested: %s"
+msgstr "推奨: %s"
+
+msgid "Apply"
+msgstr "適用"
+
+msgid "Additional flags passed to ImageMagick (e.g. -define avif:my-flag=1)."
+msgstr "ImageMagickに渡す追加フラグ（例：-define avif:my-flag=1）。"
+
+msgid "CLI Environment Variables"
+msgstr "CLI環境変数"
+
+msgid "Suggested environment:"
+msgstr "推奨環境："
+
+msgid "Environment variables for the CLI process (KEY=VALUE), one per line. This does not change the CLI Path; it only affects the subprocess environment."
+msgstr "CLIプロセスの環境変数（KEY=VALUE）、1行に1つ。これはCLIパスを変更しません；サブプロセス環境にのみ影響します。"
+
+msgid "Generate ThumbHash placeholders for images"
+msgstr "画像のThumbHashプレースホルダーを生成"
+
+msgid "Creates ultra-compact (~30 byte) image placeholders displayed instantly while full images load."
+msgstr "完全な画像の読み込み中に即座に表示される超コンパクト（約30バイト）の画像プレースホルダーを作成。"
+
+msgid "You do not have permission to access this page."
+msgstr "このページにアクセスする権限がありません。"
+
+msgid "You do not have permission to do this."
+msgstr "この操作を行う権限がありません。"
+
+msgid "Settings"
+msgstr "設定"
+
+msgid "Source file not found"
+msgstr "ソースファイルが見つかりません"
+
+msgid "Unknown error (conversion skipped)"
+msgstr "不明なエラー（変換スキップ）"
+
+msgid "No logs available."
+msgstr "ログがありません。"
+
+msgid "AVIF support not available!"
+msgstr "AVIFサポートが利用できません！"
+
+msgid "This plugin requires either GD with AVIF support (imageavif) or ImageMagick with AVIF format support."
+msgstr "このプラグインはAVIFサポート付きのGD（imageavif）またはAVIF形式サポート付きのImageMagickが必要です。"
+
+msgid "AVIF support is unconfirmed."
+msgstr "AVIFサポートが確認されていません。"
+
+msgid "The plugin can attempt conversion (usually via CLI), but AVIF capability could not be confirmed. Try the Tools → Upload Test and check Logs for details."
+msgstr "プラグインは変換を試みることができます（通常CLIを介して）が、AVIF機能を確認できませんでした。ツール→アップロードテストを試し、詳細はログを確認してください。"
+
+msgid "AVIF"
+msgstr "AVIF"
+
+msgid "LQIP"
+msgstr "LQIP"
+
+msgid "Tools"
+msgstr "ツール"
+
+msgid "About"
+msgstr "情報"
+
+msgid "Attempting"
+msgstr "試行中"
+
+msgid "Skipped"
+msgstr "スキップ"
+
+msgid "forced"
+msgstr "強制"
+
+msgid "CLI (ImageMagick command-line)"
+msgstr "CLI (ImageMagickコマンドライン)"
+
+msgid "Used for conversion via proc_open() (no shell). This is usually fastest and most reliable if ImageMagick is installed with AVIF support."
+msgstr "proc_open()を介した変換に使用（シェルなし）。ImageMagickにAVIFサポートがある場合、通常最速で最も信頼性があります。"
+
+msgid "proc_open available"
+msgstr "proc_open使用可能"
+
+msgid "Usable in Auto mode"
+msgstr "自動モードで使用可能"
+
+msgid "Configured CLI path"
+msgstr "設定済みCLIパス"
+
+msgid "Auto-detected CLI path"
+msgstr "自動検出CLIパス"
+
+msgid "Effective CLI path"
+msgstr "有効なCLIパス"
+
+msgid "Binary exists"
+msgstr "バイナリが存在"
+
+msgid "Binary executable"
+msgstr "バイナリ実行可能"
+
+msgid "AVIF-capable CLI detected"
+msgstr "AVIF対応CLI検出"
+
+msgid "This is a best-effort probe. A custom path might still work."
+msgstr "これは最善の検出です。カスタムパスでも機能する可能性があります。"
+
+msgid "Detected ImageMagick binaries"
+msgstr "検出されたImageMagickバイナリ"
+
+msgid "AVIF: yes"
+msgstr "AVIF: はい"
+
+msgid "AVIF: no"
+msgstr "AVIF: いいえ"
+
+msgid "Run ImageMagick test"
+msgstr "ImageMagickテストを実行"
+
+msgid "Note:"
+msgstr "注意："
+
+msgid "Your PHP has exec disabled. The test button uses exec, but conversions use proc_open—so conversion may still work."
+msgstr "あなたのPHPはexecが無効です。テストボタンはexecを使用しますが、変換はproc_openを使用するため、変換は機能する可能性があります。"
+
+msgid "Imagick (PHP extension)"
+msgstr "Imagick (PHP拡張)"
+
+msgid "Used for conversion inside PHP. Great quality and better profile/metadata handling when ImageMagick has AVIF support."
+msgstr "PHP内での変換に使用。ImageMagickにAVIFサポートがある場合、高品質でプロファイル/メタデータの処理が向上します。"
+
+msgid "Imagick extension loaded"
+msgstr "Imagick拡張機能読み込み済み"
+
+msgid "ImageMagick library version"
+msgstr "ImageMagickライブラリバージョン"
+
+msgid "AVIF support (queryFormats)"
+msgstr "AVIFサポート (queryFormats)"
+
+msgid "GD (imageavif)"
+msgstr "GD (imageavif)"
+
+msgid "Used as a fallback when imageavif() is available. Fast, but does not perform color management and may not preserve metadata."
+msgstr "imageavif()が使用可能な場合のフォールバックとして使用。高速ですが、カラー管理を行わず、メタデータを保持しない可能性があります。"
+
+msgid "GD extension loaded"
+msgstr "GD拡張機能読み込み済み"
+
+msgid "imageavif() available"
+msgstr "imageavif()使用可能"
+
+msgid "gd_info(): AVIF Support"
+msgstr "gd_info(): AVIFサポート"
+
+msgid "Color management note:"
+msgstr "カラー管理に関する注意："
+
+msgid "GD does not perform color management; non‑sRGB JPEGs may appear desaturated. For accurate color, enable Imagick."
+msgstr "GDはカラー管理を行いません；非sRGBのJPEGは彩度が低下して見える場合があります。正確な色のためにImagickを有効にしてください。"
+
+msgid "Unable to read README file."
+msgstr "READMEファイルを読み取れません。"
+
+msgid "View on WordPress.org"
+msgstr "WordPress.orgで見る"
+
+msgid "GitHub Repository"
+msgstr "GitHubリポジトリ"
+
+msgid "ThumbHash LQIP"
+msgstr "ThumbHash LQIP"
+
+msgid "Low Quality Image Placeholders (LQIP) using ThumbHash. Generates ultra-compact image representations (~30 bytes) that are decoded client-side to smooth placeholders while full images load."
+msgstr "ThumbHashを使用した低品質画像プレースホルダー（LQIP）。完全な画像の読み込み中にクライアント側でデコードされる超コンパクト画像表現（約30バイト）を生成します。"
+
+msgid "Serve AVIF files"
+msgstr "AVIFファイルを配信"
+
+msgid "Engine Selection"
+msgstr "エンジン選択"
+
+msgid "Conversion Settings"
+msgstr "変換設定"
+
+msgid "Reset all settings to defaults?"
+msgstr "すべての設定をデフォルトにリセットしますか？"
+
+msgid "Restore defaults"
+msgstr "デフォルトに戻す"
+
+msgid "AVIF Tools"
+msgstr "AVIFツール"
+
+msgid "Manage AVIF conversion for existing images."
+msgstr "既存画像のAVIF変換を管理。"
+
+msgid "Images"
+msgstr "画像"
+
+msgid "With AVIF"
+msgstr "AVIFあり"
+
+msgid "Without"
+msgstr "なし"
+
+msgid "Generate All"
+msgstr "すべて生成"
+
+msgid "Stop"
+msgstr "停止"
+
+msgid "Delete All"
+msgstr "すべて削除"
+
+msgid "Progress:"
+msgstr "進捗："
+
+msgid "AVIFs"
+msgstr "AVIFs"
+
+msgid "Test AVIF Conversion"
+msgstr "AVIF変換テスト"
+
+msgid "Upload a JPEG to preview resized images and the AVIFs generated by your current settings. The file is added to the Media Library."
+msgstr "JPEGをアップロードして、現在の設定で生成されたリサイズ画像とAVIFをプレビューします。ファイルはメディアライブラリに追加されます。"
+
+msgid "Upload & test"
+msgstr "アップロード＆テスト"
+
+msgid "LQIP Tools"
+msgstr "LQIPツール"
+
+msgid "Manage LQIP placeholders for existing images."
+msgstr "既存画像のLQIPプレースホルダーを管理。"
+
+msgid "Loading statistics..."
+msgstr "統計を読み込み中..."
+
+msgid "With LQIP"
+msgstr "LQIPあり"
+
+msgid "Failed to load statistics."
+msgstr "統計の読み込みに失敗しました。"
+
+msgid "Generate ThumbHashes for all images without them? This may take a while for large media libraries."
+msgstr "ThumbHashのないすべての画像にThumbHashを生成しますか？大規模なメディアライブラリでは時間がかかる場合があります。"
+
+msgid "Generating ThumbHashes..."
+msgstr "ThumbHashを生成中..."
+
+msgid "Done!"
+msgstr "完了！"
+
+msgid "Generated:"
+msgstr "生成済み："
+
+msgid "Skipped:"
+msgstr "スキップ："
+
+msgid "Failed:"
+msgstr "失敗："
+
+msgid "Error:"
+msgstr "エラー："
+
+msgid "File:"
+msgstr "ファイル："
+
+msgid "Failed to generate ThumbHashes."
+msgstr "ThumbHashの生成に失敗しました。"
+
+msgid "Delete ALL ThumbHash data? This cannot be undone."
+msgstr "すべてのThumbHashデータを削除しますか？この操作は元に戻せません。"
+
+msgid "Deleting ThumbHashes..."
+msgstr "ThumbHashを削除中..."
+
+msgid "Deleted:"
+msgstr "削除済み："
+
+msgid "entries"
+msgstr "エントリ"
+
+msgid "Failed to delete ThumbHashes."
+msgstr "ThumbHashの削除に失敗しました。"
+
+msgid "Logs"
+msgstr "ログ"
+
+msgid "View recent conversion logs including errors, settings used, and performance metrics."
+msgstr "エラー、使用した設定、パフォーマンスメトリクスを含む最近の変換ログを表示。"
+
+msgid "Refresh logs"
+msgstr "ログを更新"
+
+msgid "Copy logs"
+msgstr "ログをコピー"
+
+msgid "Clear logs"
+msgstr "ログをクリア"
+
+msgid "Only failed/errored"
+msgstr "失敗/エラーのみ"
+
+msgid "Copied!"
+msgstr "コピーしました！"
+
+msgid "Server support"
+msgstr "サーバーサポート"
+
+msgid "Copy diagnostics as text"
+msgstr "診断をテキストとしてコピー"
+
+msgid "This panel explains what your server supports, what AVIF Local Support will do, and what to check when something is unexpected."
+msgstr "このパネルは、サーバーがサポートするもの、AVIF Local Supportが行うこと、予期しない問題が発生した場合に確認することを説明します。"
+
+msgid "Summary"
+msgstr "概要"
+
+msgid "Auto: the plugin will try engines in order (CLI → Imagick → GD) until one succeeds."
+msgstr "自動：プラグインは成功するまで順番にエンジンを試します（CLI → Imagick → GD）。"
+
+msgid "Forced: the plugin will use only the selected engine (no fallback)."
+msgstr "強制：プラグインは選択したエンジンのみを使用します（フォールバックなし）。"
+
+msgid "AVIF conversion available"
+msgstr "AVIF変換可能"
+
+msgid "Engine setting"
+msgstr "エンジン設定"
+
+msgid "None"
+msgstr "なし"
+
+msgid "Auto mode: first attempt"
+msgstr "自動モード：初回試行"
+
+msgid "fallbacks available"
+msgstr "フォールバック利用可能"
+
+msgid "Fallback behavior"
+msgstr "フォールバック動作"
+
+msgid "No fallback in forced mode."
+msgstr "強制モードではフォールバックなし。"
+
+msgid "Daily scan for missing AVIFs"
+msgstr "不足AVIFの毎日スキャン"
+
+#, php-format
+msgid "scheduled around %s"
+msgstr "%s頃に予定"
+
+msgid "Front-end AVIF serving"
+msgstr "フロントエンドAVIF配信"
+
+msgid "When enabled, the plugin wraps JPEG outputs in a <picture> tag with an AVIF <source> first."
+msgstr "有効にすると、プラグインはJPEG出力をAVIF <source>を先頭に持つ<picture>タグでラップします。"
+
+msgid "Engine details"
+msgstr "エンジン詳細"
+
+msgid "Environment"
+msgstr "環境"
+
+msgid "PHP Version"
+msgstr "PHPバージョン"
+
+msgid "WordPress Version"
+msgstr "WordPressバージョン"
+
+msgid "PHP SAPI"
+msgstr "PHP SAPI"
+
+msgid "Current user"
+msgstr "現在のユーザー"
+
+msgid "This is the OS user PHP runs as; it must have write access to wp-content/uploads."
+msgstr "これはPHPが実行されるOSユーザーです；wp-content/uploadsへの書き込みアクセスが必要です。"
+
+msgid "open_basedir"
+msgstr "open_basedir"
+
+msgid "disable_functions"
+msgstr "disable_functions"
+
+msgid "ThumbHash size"
+msgstr "ThumbHashサイズ"
+
+msgid "Extra Small (16px)"
+msgstr "極小 (16px)"
+
+msgid "Small (32px)"
+msgstr "小 (32px)"
+
+msgid "Medium (64px)"
+msgstr "中 (64px)"
+
+msgid "Large (100px)"
+msgstr "大 (100px)"
+
+msgid "Smaller = faster decode, less detail. 100px max for ThumbHash algorithm."
+msgstr "小さい = デコードが速い、詳細が少ない。ThumbHashアルゴリズムの最大は100px。"
+
+msgid "Generate on upload"
+msgstr "アップロード時に生成"
+
+msgid "Generate LQIP when images are uploaded"
+msgstr "画像がアップロードされたときにLQIPを生成"
+
+msgid "Daily generation"
+msgstr "毎日の生成"
+
+msgid "Generate missing LQIPs during daily scan"
+msgstr "毎日のスキャン中に不足しているLQIPを生成"

@@ -393,11 +393,12 @@ final class ThumbHash
 	}
 
 	/**
-	 * Generate ThumbHashes for all JPEG attachments that don't have them yet.
+	 * Generate ThumbHashes for all image attachments that don't have them yet.
 	 *
+	 * @param bool $force If true, regenerate even if ThumbHash already exists.
 	 * @return array{generated: int, skipped: int, failed: int}
 	 */
-	public static function generateAll(): array
+	public static function generateAll(bool $force = false): array
 	{
 		$result = array(
 			'generated' => 0,
@@ -413,17 +414,20 @@ final class ThumbHash
 				'posts_per_page' => -1,
 				'fields' => 'ids',
 				'no_found_rows' => true,
-				'update_post_meta_cache' => true,
+				'update_post_meta_cache' => false, // Avoid potential caching issues
 				'update_post_term_cache' => false,
 			)
 		);
 
 		foreach ($query->posts as $attachmentId) {
-			// Skip if already has ThumbHash
-			$existing = \get_post_meta($attachmentId, self::META_KEY, true);
-			if (!empty($existing) && is_array($existing)) {
-				++$result['skipped'];
-				continue;
+			// Skip if already has valid ThumbHash (unless forcing regeneration)
+			if (!$force) {
+				$existing = \get_post_meta($attachmentId, self::META_KEY, true);
+				// Verify it's a valid ThumbHash array with at least a 'full' entry
+				if (is_array($existing) && isset($existing['full']) && is_string($existing['full']) && strlen($existing['full']) > 10) {
+					++$result['skipped'];
+					continue;
+				}
 			}
 
 			$metadata = \wp_get_attachment_metadata($attachmentId);

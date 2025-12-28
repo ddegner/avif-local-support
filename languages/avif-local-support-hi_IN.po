@@ -2,871 +2,531 @@
 # This file is distributed under the GPL v2 or later.
 msgid ""
 msgstr ""
-"Project-Id-Version: AVIF Local Support 0.2.0\n"
-"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/avif-local-"
-"support\n"
-"POT-Creation-Date: 2025-12-26T00:52:44+00:00\n"
-"PO-Revision-Date: 2025-08-10 00:00+0000\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Project-Id-Version: AVIF Local Support 0.5.4\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/avif-local-support\n"
+"POT-Creation-Date: 2025-12-27T22:00:00+00:00\n"
+"PO-Revision-Date: 2025-12-27 22:00+0000\n"
+"Last-Translator: David Degner\n"
 "Language-Team: Hindi\n"
 "Language: hi_IN\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: Cursor\n"
+"X-Generator: Antigravity AI\n"
 "X-Domain: avif-local-support\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#. Plugin Name of the plugin
-#: avif-local-support.php includes/class-avif-suite.php:90
-#: includes/class-avif-suite.php:91 templates/admin/page.php:18
 msgid "AVIF Local Support"
-msgstr ""
+msgstr "AVIF Local Support"
 
-#. Plugin URI of the plugin
-#: avif-local-support.php
-msgid "https://github.com/ddegner/avif-local-support"
-msgstr ""
+msgid "Unified AVIF support and conversion. Local-first processing with a strong focus on image quality when converting JPEGs."
+msgstr "एकीकृत AVIF समर्थन और रूपांतरण। JPEG रूपांतरण में छवि गुणवत्ता पर विशेष ध्यान के साथ स्थानीय-प्रथम प्रोसेसिंग।"
 
-#. Description of the plugin
-#: avif-local-support.php
-msgid ""
-"Unified AVIF support and conversion. Local-first processing with a strong "
-"focus on image quality when converting JPEGs."
-msgstr ""
-"एकीकृत AVIF समर्थन और कन्वर्शन। JPEG कन्वर्शन के समय चित्र-गुणवत्ता पर विशेष ध्यान के साथ "
-"स्थानीय-प्राथमिक प्रसंस्करण।"
-
-#. Author of the plugin
-#: avif-local-support.php
-msgid "David Degner"
-msgstr "David Degner"
-
-#. Author URI of the plugin
-#: avif-local-support.php
-msgid "https://www.DavidDegner.com"
-msgstr "https://www.DavidDegner.com"
-
-#: includes/Admin/RestController.php:330
 msgid "No file uploaded."
-msgstr ""
+msgstr "कोई फ़ाइल अपलोड नहीं की गई।"
 
-#: includes/Admin/RestController.php:343
 msgid "Only JPEG files are allowed."
-msgstr ""
+msgstr "केवल JPEG फ़ाइलें ही अनुमत हैं।"
 
-#: includes/Admin/Settings.php:226
 msgid "Serve AVIF images"
-msgstr "AVIF छवियाँ परोसें"
+msgstr "AVIF छवियाँ प्रदान करें"
 
-#: includes/Admin/Settings.php:236 templates/admin/tab-tools.php:338
 msgid "Convert on upload"
-msgstr "अपलोड पर कन्वर्ट करें"
+msgstr "अपलोड पर कनवर्ट करें"
 
-#: includes/Admin/Settings.php:245
 msgid "Daily conversion"
-msgstr "दैनिक कन्वर्शन"
+msgstr "दैनिक रूपांतरण"
 
-#: includes/Admin/Settings.php:254
 msgid "Quality (0–100)"
 msgstr "गुणवत्ता (0–100)"
 
-#: includes/Admin/Settings.php:263
 msgid "Speed (0–8)"
-msgstr ""
+msgstr "गति (0–8)"
 
-#: includes/Admin/Settings.php:272
 msgid "Chroma subsampling"
-msgstr ""
+msgstr "क्रोमा सबसैंपलिंग"
 
-#: includes/Admin/Settings.php:281
 msgid "Bit depth"
-msgstr ""
+msgstr "बिट गहराई"
 
-#: includes/Admin/Settings.php:290
 msgid "Disable memory check"
-msgstr ""
+msgstr "मेमोरी जाँच अक्षम करें"
 
-#: includes/Admin/Settings.php:300
 msgid "Engine selection"
-msgstr ""
+msgstr "इंजन चयन"
 
-#: includes/Admin/Settings.php:309
 msgid "ImageMagick CLI"
-msgstr ""
+msgstr "ImageMagick CLI"
 
-#: includes/Admin/Settings.php:319
 msgid "Enable ThumbHash LQIP"
-msgstr ""
+msgstr "ThumbHash LQIP सक्षम करें"
 
-#: includes/Admin/Settings.php:369
 msgid "Add AVIF sources to JPEG images on the front end"
-msgstr "फ्रंटएंड पर JPEG छवियों में AVIF स्रोत जोड़ें"
+msgstr "फ्रंट एंड पर JPEG छवियों में AVIF स्रोत जोड़ें"
 
-#: includes/Admin/Settings.php:377
 msgid "Recommended; may slow uploads on some servers"
-msgstr "अनुशंसित; कुछ सर्वरों पर अपलोड धीमे हो सकते हैं"
+msgstr "अनुशंसित; कुछ सर्वरों पर अपलोड धीमा हो सकता है"
 
-#: includes/Admin/Settings.php:386
 msgid "Scan daily and convert missing AVIFs"
-msgstr "दैनिक स्कैन करें और गायब AVIF को कन्वर्ट करें"
+msgstr "दैनिक स्कैन करें और लापता AVIF कनवर्ट करें"
 
-#: includes/Admin/Settings.php:388
 msgid "Time"
-msgstr ""
+msgstr "समय"
 
-#: includes/Admin/Settings.php:395
 msgid "Higher = better quality and larger files."
-msgstr "अधिक मान = बेहतर गुणवत्ता और बड़े फ़ाइल आकार।"
+msgstr "उच्च = बेहतर गुणवत्ता और बड़ी फ़ाइलें।"
 
-#: includes/Admin/Settings.php:402
 msgid "Lower = smaller files (slower). Higher = faster (larger files)."
-msgstr "कम मान = छोटे फ़ाइल (धीमा)। अधिक मान = तेज (बड़े फ़ाइल)।"
+msgstr "कम = छोटी फ़ाइलें (धीमी)। उच्च = तेज़ (बड़ी फ़ाइलें)।"
 
-#: includes/Admin/Settings.php:420
-msgid ""
-"4:2:0 is most compatible and smallest; 4:4:4 preserves more color detail."
-msgstr ""
+msgid "4:2:0 is most compatible and smallest; 4:4:4 preserves more color detail."
+msgstr "4:2:0 सबसे संगत और सबसे छोटा; 4:4:4 अधिक रंग विवरण संरक्षित करता है।"
 
-#: includes/Admin/Settings.php:438
-msgid ""
-"8-bit is standard; higher bit depths may increase file size and require "
-"broader support."
-msgstr ""
+msgid "8-bit is standard; higher bit depths may increase file size and require broader support."
+msgstr "8-बिट मानक है; उच्च बिट गहराई फ़ाइल आकार बढ़ा सकती है और व्यापक समर्थन की आवश्यकता हो सकती है।"
 
-#: includes/Admin/Settings.php:445
 msgid "Skip pre-conversion memory availability check (not recommended)"
-msgstr ""
+msgstr "रूपांतरण से पहले मेमोरी उपलब्धता जाँच छोड़ें (अनुशंसित नहीं)"
 
-#: includes/Admin/Settings.php:447
-msgid ""
-"Useful if the memory estimator is too conservative, but may cause fatal "
-"errors on large images."
-msgstr ""
+msgid "Useful if the memory estimator is too conservative, but may cause fatal errors on large images."
+msgstr "यदि मेमोरी अनुमानक बहुत रूढ़िवादी है तो उपयोगी, लेकिन बड़ी छवियों पर घातक त्रुटियाँ हो सकती हैं।"
 
-#: includes/Admin/Settings.php:453
 msgid "Auto (CLI → Imagick → GD)"
-msgstr ""
+msgstr "स्वचालित (CLI → Imagick → GD)"
 
-#: includes/Admin/Settings.php:454
 msgid "Force ImageMagick CLI"
-msgstr ""
+msgstr "ImageMagick CLI को बाध्य करें"
 
-#: includes/Admin/Settings.php:455
 msgid "Force ImageMagick (Imagick PHP)"
-msgstr ""
+msgstr "ImageMagick (Imagick PHP) को बाध्य करें"
 
-#: includes/Admin/Settings.php:456
 msgid "Force GD"
-msgstr ""
+msgstr "GD को बाध्य करें"
 
-#: includes/Admin/Settings.php:482
 msgid "CLI Path"
-msgstr ""
+msgstr "CLI पथ"
 
-#: includes/Admin/Settings.php:492
 msgid "Select a detected binary or enter a custom path."
-msgstr ""
+msgstr "एक पता लगाया गया बाइनरी चुनें या कस्टम पथ दर्ज करें।"
 
-#: includes/Admin/Settings.php:495
 msgid "Extra CLI Arguments"
-msgstr ""
+msgstr "अतिरिक्त CLI तर्क"
 
-#. translators: %s: Suggested CLI arguments.
-#: includes/Admin/Settings.php:499
 #, php-format
 msgid "Suggested: %s"
-msgstr ""
+msgstr "सुझाव: %s"
 
-#: includes/Admin/Settings.php:500 includes/Admin/Settings.php:509
 msgid "Apply"
-msgstr ""
+msgstr "लागू करें"
 
-#: includes/Admin/Settings.php:502
 msgid "Additional flags passed to ImageMagick (e.g. -define avif:my-flag=1)."
-msgstr ""
+msgstr "ImageMagick को पास किए गए अतिरिक्त फ्लैग (जैसे -define avif:my-flag=1)।"
 
-#: includes/Admin/Settings.php:505
 msgid "CLI Environment Variables"
-msgstr ""
+msgstr "CLI पर्यावरण चर"
 
-#: includes/Admin/Settings.php:508
 msgid "Suggested environment:"
-msgstr ""
+msgstr "सुझाई गई पर्यावरण:"
 
-#: includes/Admin/Settings.php:511
-msgid ""
-"Environment variables for the CLI process (KEY=VALUE), one per line. This "
-"does not change the CLI Path; it only affects the subprocess environment."
-msgstr ""
+msgid "Environment variables for the CLI process (KEY=VALUE), one per line. This does not change the CLI Path; it only affects the subprocess environment."
+msgstr "CLI प्रक्रिया के लिए पर्यावरण चर (KEY=VALUE), प्रति पंक्ति एक। यह CLI पथ नहीं बदलता; केवल उपप्रक्रिया पर्यावरण को प्रभावित करता है।"
 
-#: includes/Admin/Settings.php:520
 msgid "Generate ThumbHash placeholders for images"
-msgstr ""
+msgstr "छवियों के लिए ThumbHash प्लेसहोल्डर जेनरेट करें"
 
-#: includes/Admin/Settings.php:522
-msgid ""
-"Creates ultra-compact (~30 byte) image placeholders displayed instantly "
-"while full images load."
-msgstr ""
+msgid "Creates ultra-compact (~30 byte) image placeholders displayed instantly while full images load."
+msgstr "पूर्ण छवियां लोड होने के दौरान तुरंत प्रदर्शित अल्ट्रा-कॉम्पैक्ट (~30 बाइट) छवि प्लेसहोल्डर बनाता है।"
 
-#: includes/class-avif-suite.php:100
 msgid "You do not have permission to access this page."
 msgstr "आपको इस पृष्ठ तक पहुँचने की अनुमति नहीं है।"
 
-#: includes/class-avif-suite.php:180 includes/class-avif-suite.php:260
 msgid "You do not have permission to do this."
 msgstr "आपको यह करने की अनुमति नहीं है।"
 
-#: includes/class-avif-suite.php:295
 msgid "Settings"
 msgstr "सेटिंग्स"
 
-#: includes/class-converter.php:716
 msgid "Source file not found"
-msgstr ""
+msgstr "स्रोत फ़ाइल नहीं मिली"
 
-#: includes/class-converter.php:731
 msgid "Unknown error (conversion skipped)"
-msgstr ""
+msgstr "अज्ञात त्रुटि (रूपांतरण छोड़ा गया)"
 
-#: includes/Logger.php:77
 msgid "No logs available."
-msgstr ""
+msgstr "कोई लॉग उपलब्ध नहीं।"
 
-#: templates/admin/page.php:22
 msgid "AVIF support not available!"
-msgstr "AVIF सपोर्ट उपलब्ध नहीं!"
+msgstr "AVIF समर्थन उपलब्ध नहीं!"
 
-#: templates/admin/page.php:23
-msgid ""
-"This plugin requires either GD with AVIF support (imageavif) or ImageMagick "
-"with AVIF format support."
-msgstr ""
-"इस प्लगइन के लिए AVIF सपोर्ट वाले GD (imageavif) या AVIF फ़ॉर्मेट सपोर्ट वाले "
-"ImageMagick की आवश्यकता है।"
+msgid "This plugin requires either GD with AVIF support (imageavif) or ImageMagick with AVIF format support."
+msgstr "इस प्लगइन के लिए AVIF समर्थन के साथ GD (imageavif) या AVIF प्रारूप समर्थन के साथ ImageMagick आवश्यक है।"
 
-#: templates/admin/page.php:28
 msgid "AVIF support is unconfirmed."
-msgstr ""
+msgstr "AVIF समर्थन की पुष्टि नहीं हुई।"
 
-#: templates/admin/page.php:29
-msgid ""
-"The plugin can attempt conversion (usually via CLI), but AVIF capability "
-"could not be confirmed. Try the Tools → Upload Test and check Logs for "
-"details."
-msgstr ""
+msgid "The plugin can attempt conversion (usually via CLI), but AVIF capability could not be confirmed. Try the Tools → Upload Test and check Logs for details."
+msgstr "प्लगइन रूपांतरण का प्रयास कर सकता है (आमतौर पर CLI के माध्यम से), लेकिन AVIF क्षमता की पुष्टि नहीं हो सकी। टूल्स → अपलोड टेस्ट आज़माएं और विवरण के लिए लॉग देखें।"
 
-#: templates/admin/page.php:36
 msgid "AVIF"
 msgstr "AVIF"
 
-#: templates/admin/page.php:38
 msgid "LQIP"
-msgstr ""
+msgstr "LQIP"
 
-#: templates/admin/page.php:40
 msgid "Tools"
 msgstr "टूल्स"
 
-#: templates/admin/page.php:42
 msgid "About"
-msgstr "परिचय"
+msgstr "जानकारी"
 
-#: templates/admin/partials/engine-details.php:31
-#: templates/admin/partials/engine-details.php:132
-#: templates/admin/partials/engine-details.php:180
 msgid "Attempting"
-msgstr ""
+msgstr "प्रयास"
 
-#: templates/admin/partials/engine-details.php:31
-#: templates/admin/partials/engine-details.php:132
-#: templates/admin/partials/engine-details.php:180
 msgid "Skipped"
-msgstr ""
+msgstr "छोड़ा गया"
 
-#: templates/admin/partials/engine-details.php:33
-#: templates/admin/partials/engine-details.php:134
-#: templates/admin/partials/engine-details.php:182
 msgid "forced"
-msgstr ""
+msgstr "बाध्य"
 
-#: templates/admin/partials/engine-details.php:39
-#: templates/admin/tab-tools.php:313
 msgid "CLI (ImageMagick command-line)"
-msgstr ""
+msgstr "CLI (ImageMagick कमांड-लाइन)"
 
-#: templates/admin/partials/engine-details.php:44
-msgid ""
-"Used for conversion via proc_open() (no shell). This is usually fastest and "
-"most reliable if ImageMagick is installed with AVIF support."
-msgstr ""
+msgid "Used for conversion via proc_open() (no shell). This is usually fastest and most reliable if ImageMagick is installed with AVIF support."
+msgstr "proc_open() (कोई शेल नहीं) के माध्यम से रूपांतरण के लिए उपयोग। यदि ImageMagick AVIF समर्थन के साथ स्थापित है तो आमतौर पर सबसे तेज़ और विश्वसनीय।"
 
-#: templates/admin/partials/engine-details.php:50
 msgid "proc_open available"
-msgstr ""
+msgstr "proc_open उपलब्ध"
 
-#: templates/admin/partials/engine-details.php:55
-#: templates/admin/partials/engine-details.php:168
-#: templates/admin/partials/engine-details.php:213
 msgid "Usable in Auto mode"
-msgstr ""
+msgstr "स्वचालित मोड में प्रयोग योग्य"
 
-#: templates/admin/partials/engine-details.php:59
 msgid "Configured CLI path"
-msgstr ""
+msgstr "कॉन्फ़िगर किया गया CLI पथ"
 
-#: templates/admin/partials/engine-details.php:64
 msgid "Auto-detected CLI path"
-msgstr ""
+msgstr "स्वतः-पता लगाया गया CLI पथ"
 
-#: templates/admin/partials/engine-details.php:68
 msgid "Effective CLI path"
-msgstr ""
+msgstr "प्रभावी CLI पथ"
 
-#: templates/admin/partials/engine-details.php:74
 msgid "Binary exists"
-msgstr ""
+msgstr "बाइनरी मौजूद है"
 
-#: templates/admin/partials/engine-details.php:78
 msgid "Binary executable"
-msgstr ""
+msgstr "बाइनरी निष्पादन योग्य"
 
-#: templates/admin/partials/engine-details.php:83
 msgid "AVIF-capable CLI detected"
-msgstr ""
+msgstr "AVIF-सक्षम CLI पता चला"
 
-#: templates/admin/partials/engine-details.php:87
 msgid "This is a best-effort probe. A custom path might still work."
-msgstr ""
+msgstr "यह एक सर्वोत्तम प्रयास जांच है। कस्टम पथ अभी भी काम कर सकता है।"
 
-#: templates/admin/partials/engine-details.php:96
 msgid "Detected ImageMagick binaries"
-msgstr ""
+msgstr "ImageMagick बाइनरी का पता चला"
 
-#: templates/admin/partials/engine-details.php:102
 msgid "AVIF: yes"
-msgstr ""
+msgstr "AVIF: हाँ"
 
-#: templates/admin/partials/engine-details.php:102
 msgid "AVIF: no"
-msgstr ""
+msgstr "AVIF: नहीं"
 
-#: templates/admin/partials/engine-details.php:113
 msgid "Run ImageMagick test"
-msgstr ""
+msgstr "ImageMagick परीक्षण चलाएं"
 
-#: templates/admin/partials/engine-details.php:122
 msgid "Note:"
-msgstr ""
+msgstr "नोट:"
 
-#: templates/admin/partials/engine-details.php:123
-msgid ""
-"Your PHP has exec disabled. The test button uses exec, but conversions use "
-"proc_open—so conversion may still work."
-msgstr ""
+msgid "Your PHP has exec disabled. The test button uses exec, but conversions use proc_open—so conversion may still work."
+msgstr "आपके PHP में exec अक्षम है। टेस्ट बटन exec का उपयोग करता है, लेकिन रूपांतरण proc_open का उपयोग करते हैं—इसलिए रूपांतरण काम कर सकता है।"
 
-#: templates/admin/partials/engine-details.php:138
-#: templates/admin/tab-tools.php:314
 msgid "Imagick (PHP extension)"
-msgstr ""
+msgstr "Imagick (PHP एक्सटेंशन)"
 
-#: templates/admin/partials/engine-details.php:143
-msgid ""
-"Used for conversion inside PHP. Great quality and better profile/metadata "
-"handling when ImageMagick has AVIF support."
-msgstr ""
+msgid "Used for conversion inside PHP. Great quality and better profile/metadata handling when ImageMagick has AVIF support."
+msgstr "PHP के अंदर रूपांतरण के लिए उपयोग। जब ImageMagick में AVIF समर्थन हो तो बेहतर गुणवत्ता और बेहतर प्रोफ़ाइल/मेटाडेटा हैंडलिंग।"
 
-#: templates/admin/partials/engine-details.php:149
 msgid "Imagick extension loaded"
-msgstr ""
+msgstr "Imagick एक्सटेंशन लोड"
 
-#: templates/admin/partials/engine-details.php:156
 msgid "ImageMagick library version"
-msgstr ""
+msgstr "ImageMagick लाइब्रेरी संस्करण"
 
-#: templates/admin/partials/engine-details.php:162
 msgid "AVIF support (queryFormats)"
-msgstr ""
+msgstr "AVIF समर्थन (queryFormats)"
 
-#: templates/admin/partials/engine-details.php:186
-#: templates/admin/tab-tools.php:315
 msgid "GD (imageavif)"
-msgstr ""
+msgstr "GD (imageavif)"
 
-#: templates/admin/partials/engine-details.php:191
-msgid ""
-"Used as a fallback when imageavif() is available. Fast, but does not perform "
-"color management and may not preserve metadata."
-msgstr ""
+msgid "Used as a fallback when imageavif() is available. Fast, but does not perform color management and may not preserve metadata."
+msgstr "जब imageavif() उपलब्ध हो तो फ़ॉलबैक के रूप में उपयोग। तेज़, लेकिन रंग प्रबंधन नहीं करता और मेटाडेटा संरक्षित नहीं कर सकता।"
 
-#: templates/admin/partials/engine-details.php:197
 msgid "GD extension loaded"
-msgstr ""
+msgstr "GD एक्सटेंशन लोड"
 
-#: templates/admin/partials/engine-details.php:203
 msgid "imageavif() available"
-msgstr ""
+msgstr "imageavif() उपलब्ध"
 
-#: templates/admin/partials/engine-details.php:208
 msgid "gd_info(): AVIF Support"
-msgstr ""
+msgstr "gd_info(): AVIF समर्थन"
 
-#: templates/admin/partials/engine-details.php:220
 msgid "Color management note:"
-msgstr ""
+msgstr "रंग प्रबंधन नोट:"
 
-#: templates/admin/partials/engine-details.php:221
-msgid ""
-"GD does not perform color management; non‑sRGB JPEGs may appear desaturated. "
-"For accurate color, enable Imagick."
-msgstr ""
+msgid "GD does not perform color management; non‑sRGB JPEGs may appear desaturated. For accurate color, enable Imagick."
+msgstr "GD रंग प्रबंधन नहीं करता; non-sRGB JPEG desaturated दिख सकते हैं। सटीक रंग के लिए, Imagick सक्षम करें।"
 
-#: templates/admin/tab-about.php:92
 msgid "Unable to read README file."
-msgstr ""
+msgstr "README फ़ाइल पढ़ने में असमर्थ।"
 
-#: templates/admin/tab-about.php:106
 msgid "View on WordPress.org"
-msgstr ""
+msgstr "WordPress.org पर देखें"
 
-#: templates/admin/tab-about.php:110
 msgid "GitHub Repository"
-msgstr ""
+msgstr "GitHub रिपॉजिटरी"
 
-#: templates/admin/tab-lqip.php:18
 msgid "ThumbHash LQIP"
-msgstr ""
+msgstr "ThumbHash LQIP"
 
-#: templates/admin/tab-lqip.php:21
-msgid ""
-"Low Quality Image Placeholders (LQIP) using ThumbHash. Generates ultra-"
-"compact image representations (~30 bytes) that are decoded client-side to "
-"smooth placeholders while full images load."
-msgstr ""
+msgid "Low Quality Image Placeholders (LQIP) using ThumbHash. Generates ultra-compact image representations (~30 bytes) that are decoded client-side to smooth placeholders while full images load."
+msgstr "ThumbHash का उपयोग करके निम्न गुणवत्ता छवि प्लेसहोल्डर (LQIP)। अल्ट्रा-कॉम्पैक्ट छवि प्रतिनिधित्व (~30 बाइट्स) उत्पन्न करता है जो पूर्ण छवियों के लोड होने के दौरान क्लाइंट-साइड पर स्मूथ प्लेसहोल्डर के रूप में डिकोड होते हैं।"
 
-#: templates/admin/tab-settings.php:17
 msgid "Serve AVIF files"
-msgstr ""
+msgstr "AVIF फ़ाइलें प्रदान करें"
 
-#: templates/admin/tab-settings.php:27
 msgid "Engine Selection"
-msgstr ""
+msgstr "इंजन चयन"
 
-#: templates/admin/tab-settings.php:37
 msgid "Conversion Settings"
-msgstr ""
+msgstr "रूपांतरण सेटिंग्स"
 
-#: templates/admin/tab-settings.php:53
 msgid "Reset all settings to defaults?"
-msgstr ""
+msgstr "सभी सेटिंग्स को डिफ़ॉल्ट पर रीसेट करें?"
 
-#: templates/admin/tab-settings.php:57
 msgid "Restore defaults"
-msgstr ""
+msgstr "डिफ़ॉल्ट पुनर्स्थापित करें"
 
-#: templates/admin/tab-tools.php:45
 msgid "AVIF Tools"
-msgstr ""
+msgstr "AVIF टूल्स"
 
-#: templates/admin/tab-tools.php:48
 msgid "Manage AVIF conversion for existing images."
-msgstr ""
+msgstr "मौजूदा छवियों के लिए AVIF रूपांतरण प्रबंधित करें।"
 
-#: templates/admin/tab-tools.php:53 templates/admin/tab-tools.php:161
 msgid "Images"
-msgstr ""
+msgstr "छवियाँ"
 
-#: templates/admin/tab-tools.php:56
 msgid "With AVIF"
-msgstr ""
+msgstr "AVIF के साथ"
 
-#: templates/admin/tab-tools.php:59 templates/admin/tab-tools.php:163
 msgid "Without"
-msgstr ""
+msgstr "बिना"
 
-#: templates/admin/tab-tools.php:66 templates/admin/tab-tools.php:133
 msgid "Generate All"
-msgstr ""
+msgstr "सभी उत्पन्न करें"
 
-#: templates/admin/tab-tools.php:68
 msgid "Stop"
-msgstr ""
+msgstr "रोकें"
 
-#: templates/admin/tab-tools.php:70 templates/admin/tab-tools.php:136
 msgid "Delete All"
-msgstr ""
+msgstr "सभी हटाएं"
 
-#: templates/admin/tab-tools.php:78
 msgid "Progress:"
-msgstr ""
+msgstr "प्रगति:"
 
-#: templates/admin/tab-tools.php:81
 msgid "AVIFs"
-msgstr ""
+msgstr "AVIFs"
 
-#: templates/admin/tab-tools.php:92
 msgid "Test AVIF Conversion"
-msgstr "कन्वर्शन परीक्षण"
+msgstr "AVIF रूपांतरण परीक्षण"
 
-#: templates/admin/tab-tools.php:95
-msgid ""
-"Upload a JPEG to preview resized images and the AVIFs generated by your "
-"current settings. The file is added to the Media Library."
-msgstr ""
-"वर्तमान सेटिंग्स से जनरेट किए गए रीसाइज़्ड चित्र और AVIF देखने के लिए JPEG अपलोड करें। "
-"फ़ाइल मीडिया लाइब्रेरी में जोड़ दी जाएगी।"
+msgid "Upload a JPEG to preview resized images and the AVIFs generated by your current settings. The file is added to the Media Library."
+msgstr "आकार बदली गई छवियों और अपनी वर्तमान सेटिंग्स द्वारा जेनरेट AVIF का पूर्वावलोकन करने के लिए JPEG अपलोड करें। फ़ाइल मीडिया लाइब्रेरी में जोड़ी जाती है।"
 
-#: templates/admin/tab-tools.php:106
 msgid "Upload & test"
-msgstr ""
+msgstr "अपलोड और टेस्ट"
 
-#: templates/admin/tab-tools.php:119
 msgid "LQIP Tools"
-msgstr ""
+msgstr "LQIP टूल्स"
 
-#: templates/admin/tab-tools.php:122
 msgid "Manage LQIP placeholders for existing images."
-msgstr ""
+msgstr "मौजूदा छवियों के लिए LQIP प्लेसहोल्डर प्रबंधित करें।"
 
-#: templates/admin/tab-tools.php:128 templates/admin/tab-tools.php:153
 msgid "Loading statistics..."
-msgstr ""
+msgstr "आंकड़े लोड हो रहे हैं..."
 
-#: templates/admin/tab-tools.php:162
 msgid "With LQIP"
-msgstr ""
+msgstr "LQIP के साथ"
 
-#: templates/admin/tab-tools.php:168
 msgid "Failed to load statistics."
-msgstr ""
+msgstr "आंकड़े लोड करने में विफल।"
 
-#: templates/admin/tab-tools.php:173
-msgid ""
-"Generate ThumbHashes for all images without them? This may take a while for "
-"large media libraries."
-msgstr ""
+msgid "Generate ThumbHashes for all images without them? This may take a while for large media libraries."
+msgstr "बिना ThumbHash वाली सभी छवियों के लिए ThumbHash जेनरेट करें? बड़ी मीडिया लाइब्रेरी के लिए इसमें समय लग सकता है।"
 
-#: templates/admin/tab-tools.php:179
 msgid "Generating ThumbHashes..."
-msgstr ""
+msgstr "ThumbHash जेनरेट हो रहे हैं..."
 
-#: templates/admin/tab-tools.php:187 templates/admin/tab-tools.php:223
 msgid "Done!"
-msgstr ""
+msgstr "पूर्ण!"
 
-#: templates/admin/tab-tools.php:188
 msgid "Generated:"
-msgstr ""
+msgstr "उत्पन्न:"
 
-#: templates/admin/tab-tools.php:189
 msgid "Skipped:"
-msgstr ""
+msgstr "छोड़े गए:"
 
-#: templates/admin/tab-tools.php:190
 msgid "Failed:"
-msgstr ""
+msgstr "विफल:"
 
-#: templates/admin/tab-tools.php:192
 msgid "Error:"
-msgstr ""
+msgstr "त्रुटि:"
 
-#: templates/admin/tab-tools.php:194
 msgid "File:"
-msgstr ""
+msgstr "फ़ाइल:"
 
-#: templates/admin/tab-tools.php:202
 msgid "Failed to generate ThumbHashes."
-msgstr ""
+msgstr "ThumbHash जेनरेट करने में विफल।"
 
-#: templates/admin/tab-tools.php:209
 msgid "Delete ALL ThumbHash data? This cannot be undone."
-msgstr ""
+msgstr "सभी ThumbHash डेटा हटाएं? यह पूर्ववत नहीं किया जा सकता।"
 
-#: templates/admin/tab-tools.php:215
 msgid "Deleting ThumbHashes..."
-msgstr ""
+msgstr "ThumbHash हटाए जा रहे हैं..."
 
-#: templates/admin/tab-tools.php:224
 msgid "Deleted:"
-msgstr ""
+msgstr "हटाए गए:"
 
-#: templates/admin/tab-tools.php:224
 msgid "entries"
-msgstr ""
+msgstr "एंट्री"
 
-#: templates/admin/tab-tools.php:228
 msgid "Failed to delete ThumbHashes."
-msgstr ""
+msgstr "ThumbHash हटाने में विफल।"
 
-#: templates/admin/tab-tools.php:241
 msgid "Logs"
-msgstr ""
+msgstr "लॉग्स"
 
-#: templates/admin/tab-tools.php:244
-msgid ""
-"View recent conversion logs including errors, settings used, and performance "
-"metrics."
-msgstr ""
+msgid "View recent conversion logs including errors, settings used, and performance metrics."
+msgstr "त्रुटियों, उपयोग की गई सेटिंग्स और प्रदर्शन मेट्रिक्स सहित हाल के रूपांतरण लॉग देखें।"
 
-#: templates/admin/tab-tools.php:248
 msgid "Refresh logs"
-msgstr ""
+msgstr "लॉग रीफ्रेश करें"
 
-#: templates/admin/tab-tools.php:250
 msgid "Copy logs"
-msgstr ""
+msgstr "लॉग कॉपी करें"
 
-#: templates/admin/tab-tools.php:252
 msgid "Clear logs"
-msgstr ""
+msgstr "लॉग साफ़ करें"
 
-#: templates/admin/tab-tools.php:254
 msgid "Only failed/errored"
-msgstr ""
+msgstr "केवल विफल/त्रुटि"
 
-#: templates/admin/tab-tools.php:257 templates/admin/tab-tools.php:278
 msgid "Copied!"
-msgstr ""
+msgstr "कॉपी किया गया!"
 
-#: templates/admin/tab-tools.php:272
 msgid "Server support"
-msgstr "सर्वर सपोर्ट"
+msgstr "सर्वर समर्थन"
 
-#: templates/admin/tab-tools.php:276
 msgid "Copy diagnostics as text"
-msgstr ""
+msgstr "डायग्नोस्टिक्स टेक्स्ट के रूप में कॉपी करें"
 
-#: templates/admin/tab-tools.php:282
-msgid ""
-"This panel explains what your server supports, what AVIF Local Support will "
-"do, and what to check when something is unexpected."
-msgstr ""
+msgid "This panel explains what your server supports, what AVIF Local Support will do, and what to check when something is unexpected."
+msgstr "यह पैनल बताता है कि आपका सर्वर क्या समर्थन करता है, AVIF Local Support क्या करेगा, और अप्रत्याशित होने पर क्या जाँचें।"
 
-#: templates/admin/tab-tools.php:287
 msgid "Summary"
-msgstr ""
+msgstr "सारांश"
 
-#: templates/admin/tab-tools.php:290
-msgid ""
-"Auto: the plugin will try engines in order (CLI → Imagick → GD) until one "
-"succeeds."
-msgstr ""
+msgid "Auto: the plugin will try engines in order (CLI → Imagick → GD) until one succeeds."
+msgstr "स्वचालित: प्लगइन क्रम में इंजन आज़माएगा (CLI → Imagick → GD) जब तक एक सफल न हो।"
 
-#: templates/admin/tab-tools.php:291
 msgid "Forced: the plugin will use only the selected engine (no fallback)."
-msgstr ""
+msgstr "बाध्य: प्लगइन केवल चयनित इंजन का उपयोग करेगा (कोई फ़ॉलबैक नहीं)।"
 
-#: templates/admin/tab-tools.php:297
 msgid "AVIF conversion available"
-msgstr ""
+msgstr "AVIF रूपांतरण उपलब्ध"
 
-#: templates/admin/tab-tools.php:303
 msgid "Engine setting"
-msgstr ""
+msgstr "इंजन सेटिंग"
 
-#: templates/admin/tab-tools.php:316
 msgid "None"
-msgstr ""
+msgstr "कोई नहीं"
 
-#: templates/admin/tab-tools.php:320
 msgid "Auto mode: first attempt"
-msgstr ""
+msgstr "स्वचालित मोड: पहला प्रयास"
 
-#: templates/admin/tab-tools.php:327
 msgid "fallbacks available"
-msgstr ""
+msgstr "फ़ॉलबैक उपलब्ध"
 
-#: templates/admin/tab-tools.php:332
 msgid "Fallback behavior"
-msgstr ""
+msgstr "फ़ॉलबैक व्यवहार"
 
-#: templates/admin/tab-tools.php:334
 msgid "No fallback in forced mode."
-msgstr ""
+msgstr "बाध्य मोड में कोई फ़ॉलबैक नहीं।"
 
-#: templates/admin/tab-tools.php:344
 msgid "Daily scan for missing AVIFs"
-msgstr ""
+msgstr "लापता AVIF के लिए दैनिक स्कैन"
 
-#. translators: %s: Schedule time (e.g., "01:00")
-#: templates/admin/tab-tools.php:352
 #, php-format
 msgid "scheduled around %s"
-msgstr ""
+msgstr "%s के आसपास शेड्यूल"
 
-#: templates/admin/tab-tools.php:359
 msgid "Front-end AVIF serving"
-msgstr ""
+msgstr "फ्रंट-एंड AVIF सेवा"
 
-#: templates/admin/tab-tools.php:364
-msgid ""
-"When enabled, the plugin wraps JPEG outputs in a <picture> tag with an AVIF "
-"<source> first."
-msgstr ""
+msgid "When enabled, the plugin wraps JPEG outputs in a <picture> tag with an AVIF <source> first."
+msgstr "सक्षम होने पर, प्लगइन JPEG आउटपुट को पहले AVIF <source> के साथ <picture> टैग में लपेटता है।"
 
-#: templates/admin/tab-tools.php:373
 msgid "Engine details"
-msgstr ""
+msgstr "इंजन विवरण"
 
-#: templates/admin/tab-tools.php:378
 msgid "Environment"
-msgstr ""
+msgstr "पर्यावरण"
 
-#: templates/admin/tab-tools.php:389
 msgid "PHP Version"
 msgstr "PHP संस्करण"
 
-#: templates/admin/tab-tools.php:394
 msgid "WordPress Version"
 msgstr "WordPress संस्करण"
 
-#: templates/admin/tab-tools.php:399
 msgid "PHP SAPI"
-msgstr ""
+msgstr "PHP SAPI"
 
-#: templates/admin/tab-tools.php:405
 msgid "Current user"
-msgstr ""
+msgstr "वर्तमान उपयोगकर्ता"
 
-#: templates/admin/tab-tools.php:410
-msgid ""
-"This is the OS user PHP runs as; it must have write access to wp-content/"
-"uploads."
-msgstr ""
+msgid "This is the OS user PHP runs as; it must have write access to wp-content/uploads."
+msgstr "यह वह OS उपयोगकर्ता है जिसके रूप में PHP चलता है; इसे wp-content/uploads में लिखने की पहुँच होनी चाहिए।"
 
-#: templates/admin/tab-tools.php:415
 msgid "open_basedir"
-msgstr ""
+msgstr "open_basedir"
 
-#: templates/admin/tab-tools.php:421
 msgid "disable_functions"
-msgstr ""
+msgstr "disable_functions"
 
-#~ msgid "AVIF Support"
-#~ msgstr "AVIF Support"
+msgid "ThumbHash size"
+msgstr "ThumbHash आकार"
 
-#~ msgid "https://github.com/daviddegner"
-#~ msgstr "https://github.com/daviddegner"
+msgid "Extra Small (16px)"
+msgstr "अति छोटा (16px)"
 
-#~ msgid "Time (24h):"
-#~ msgstr "समय (24 घंटे):"
+msgid "Small (32px)"
+msgstr "छोटा (32px)"
 
-#~ msgid "Speed (0–10)"
-#~ msgstr "गति (0–10)"
+msgid "Medium (64px)"
+msgstr "मध्यम (64px)"
 
-#~ msgid "Keep metadata (EXIF/XMP/IPTC)"
-#~ msgstr "मेटाडेटा रखें (EXIF/XMP/IPTC)"
+msgid "Large (100px)"
+msgstr "बड़ा (100px)"
 
-#~ msgid "When possible (ImageMagick required)."
-#~ msgstr "संभव होने पर (ImageMagick आवश्यक)।"
+msgid "Smaller = faster decode, less detail. 100px max for ThumbHash algorithm."
+msgstr "छोटा = तेज़ डिकोड, कम विवरण। ThumbHash एल्गोरिदम के लिए अधिकतम 100px।"
 
-#~ msgid "Keep color profile (ICC)"
-#~ msgstr "रंग प्रोफ़ाइल रखें (ICC)"
+msgid "Generate on upload"
+msgstr "अपलोड पर जेनरेट करें"
 
-#~ msgid "Avoid double-resizing"
-#~ msgstr "दोहरी रीसाइज़िंग से बचें"
+msgid "Generate LQIP when images are uploaded"
+msgstr "छवियाँ अपलोड होने पर LQIP जेनरेट करें"
 
-#~ msgid "Use original/-scaled as the source when converting resized JPEGs."
-#~ msgstr ""
-#~ "रीसाइज़ किए गए JPEG को कन्वर्ट करते समय स्रोत के रूप में original/-scaled का उपयोग "
-#~ "करें।"
+msgid "Daily generation"
+msgstr "दैनिक जेनरेशन"
 
-#~ msgid "Status"
-#~ msgstr "स्थिति"
-
-#~ msgid "Convert missing AVIFs"
-#~ msgstr "गायब AVIF कन्वर्ट करें"
-
-#~ msgid "Scan the Media Library and convert JPEGs that are missing AVIFs."
-#~ msgstr "मीडिया लाइब्रेरी स्कैन करें और जिन JPEG में AVIF नहीं है उन्हें कन्वर्ट करें।"
-
-#~ msgid "Convert now"
-#~ msgstr "अभी कन्वर्ट करें"
-
-#~ msgid "JPEG files"
-#~ msgstr "JPEG फ़ाइलें"
-
-#~ msgid "AVIF files"
-#~ msgstr "AVIF फ़ाइलें"
-
-#~ msgid "Missing AVIFs"
-#~ msgstr "गायब AVIF"
-
-#~ msgid "Convert"
-#~ msgstr "कन्वर्ट करें"
-
-#~ msgid "Test results for attachment:"
-#~ msgstr "अनुलग्नक के परीक्षण परिणाम:"
-
-#~ msgid "Size"
-#~ msgstr "आकार"
-
-#~ msgid "Dimensions"
-#~ msgstr "आयाम"
-
-#~ msgid "JPEG"
-#~ msgstr "JPEG"
-
-#~ msgid "JPEG size"
-#~ msgstr "JPEG आकार"
-
-#~ msgid "AVIF size"
-#~ msgstr "AVIF आकार"
-
-#~ msgid "Converted"
-#~ msgstr "कन्वर्ट किया गया"
-
-#~ msgid "Not created"
-#~ msgstr "नहीं बनाया गया"
-
-#~ msgid "View"
-#~ msgstr "देखें"
-
-#~ msgid "Library AVIF coverage"
-#~ msgstr "लाइब्रेरी AVIF कवरेज"
-
-#~ msgid "Overview of JPEGs with and without AVIFs."
-#~ msgstr "AVIF सहित और बिना AVIF वाले JPEG का अवलोकन।"
-
-#~ msgid "Rescan"
-#~ msgstr "पुनः स्कैन"
-
-#~ msgid "Server capabilities for AVIF conversion."
-#~ msgstr "AVIF कन्वर्शन के लिए सर्वर की क्षमताएँ।"
-
-#~ msgid "GD Extension"
-#~ msgstr "GD एक्सटेंशन"
-
-#~ msgid "Available"
-#~ msgstr "उपलब्ध"
-
-#~ msgid "Not available"
-#~ msgstr "उपलब्ध नहीं"
-
-#~ msgid "GD AVIF Support"
-#~ msgstr "GD का AVIF सपोर्ट"
-
-#~ msgid "ImageMagick (Imagick)"
-#~ msgstr "इमेजमैजिक (Imagick)"
-
-#~ msgid "ImageMagick AVIF Support"
-#~ msgstr "इमेजमैजिक का AVIF सपोर्ट"
-
-#~ msgid "Preferred method"
-#~ msgstr "पसंदीदा विधि"
-
-#~ msgid "AVIF supported"
-#~ msgstr "AVIF सपोर्टेड"
-
-#~ msgid "Yes"
-#~ msgstr "हाँ"
-
-#~ msgid "No"
-#~ msgstr "नहीं"
-
-#~ msgid "Unable to read readme.txt."
-#~ msgstr "readme.txt पढ़ा नहीं जा सका।"
-
-#~ msgid "README not found."
-#~ msgstr "README नहीं मिला।"
+msgid "Generate missing LQIPs during daily scan"
+msgstr "दैनिक स्कैन के दौरान लापता LQIP जेनरेट करें"

@@ -216,12 +216,11 @@ class LQIP_CLI
 		}
 
 		\WP_CLI::line("Generating LQIP for attachment ID {$attachmentId}...");
-		ThumbHash::generateForAttachment($attachmentId);
+		$hashes = ThumbHash::generateForAttachment($attachmentId);
 
 		// Verify it was generated with valid 'full' entry
-		$hash = get_post_meta($attachmentId, ThumbHash::getMetaKey(), true);
-		if (is_array($hash) && isset($hash['full']) && is_string($hash['full']) && strlen($hash['full']) > 10) {
-			$count = count($hash);
+		if (is_array($hashes) && isset($hashes['full']) && is_string($hashes['full']) && strlen($hashes['full']) > 10) {
+			$count = count($hashes);
 			\WP_CLI::success("Generated LQIP for {$count} size(s).");
 		} else {
 			$error = ThumbHash::getLastError();
@@ -267,6 +266,7 @@ class LQIP_CLI
 		\WP_CLI::line(sprintf('Generating LQIP for %d images...', $countToProcess));
 		\WP_CLI::line('');
 
+
 		$startTime = microtime(true);
 		$totalMissing = $stats['without_hash'];
 		$processed = 0;
@@ -297,16 +297,21 @@ class LQIP_CLI
 			\WP_CLI::line('');
 		}
 
+
 		$totalToProcess = count($postsToProcess);
 
 		foreach ($postsToProcess as $index => $attachmentId) {
+			// Clear object cache for this post to ensure fresh meta data
+			// This prevents stale data from persistent object caching (Redis/Memcached)
+			\clean_post_cache((int) $attachmentId);
+
 			// Skip if already has valid LQIP (check for 'full' key with proper hash), unless forcing
 			if (!$force) {
 				$existing = get_post_meta($attachmentId, ThumbHash::getMetaKey(), true);
 				if (is_array($existing) && isset($existing['full']) && is_string($existing['full']) && strlen($existing['full']) > 10) {
 					++$skipped;
 					++$processed;
-					$this->printProgress($processed, $countToProcess, $startTime);
+					$this->printProgress($processed, $totalToProcess, $startTime);
 					continue;
 				}
 			}
@@ -323,9 +328,10 @@ class LQIP_CLI
 			ThumbHash::getLastError();
 
 			// Try to generate with error handling
+			$hashes = null;
 			try {
 				$memoryBefore = memory_get_usage(true);
-				ThumbHash::generateForAttachment((int) $attachmentId);
+				$hashes = ThumbHash::generateForAttachment((int) $attachmentId);
 				$memoryAfter = memory_get_usage(true);
 
 				// Check for memory issues
@@ -336,16 +342,16 @@ class LQIP_CLI
 				\WP_CLI::warning(sprintf('Exception generating LQIP for attachment ID %d: %s', $attachmentId, $e->getMessage()));
 				++$failed;
 				++$processed;
-				$this->printProgress($processed, $totalMissing, $startTime);
+				$this->printProgress($processed, $totalToProcess, $startTime);
 				continue;
 			}
 
 			// Verify it was generated with valid 'full' entry
-			$hash = get_post_meta($attachmentId, ThumbHash::getMetaKey(), true);
-			if (is_array($hash) && isset($hash['full']) && is_string($hash['full']) && strlen($hash['full']) > 10) {
+			// We check $hashes which is the return value of generateForAttachment
+			if (is_array($hashes) && isset($hashes['full']) && is_string($hashes['full']) && strlen($hashes['full']) > 10) {
 				++$generated;
 				++$processed;
-				$this->printProgress($processed, $totalMissing, $startTime);
+				$this->printProgress($processed, $totalToProcess, $startTime);
 			} else {
 				++$failed;
 				++$processed;
@@ -353,7 +359,7 @@ class LQIP_CLI
 				if ($error && ($currentNum % 10 === 0 || $currentNum <= 5)) {
 					\WP_CLI::warning(sprintf('Failed to generate LQIP for attachment ID %d: %s', $attachmentId, $error));
 				}
-				$this->printProgress($processed, $totalMissing, $startTime);
+				$this->printProgress($processed, $totalToProcess, $startTime);
 			}
 
 			// Force garbage collection every 50 images to prevent memory buildup
@@ -420,7 +426,9 @@ class LQIP_CLI
 	private function printProgress(int $current, int $total, float $startTime): void
 	{
 		$elapsed = microtime(true) - $startTime;
-		$percentage = ($total > 0) ? round(($current / $total) * 100, 1) : 0;
+		// Ensure total is at least 1 div zero and percentage
+		$total = max(1, $total);
+		$percentage = round(($current / $total) * 100, 1);
 
 		// Calculate estimated time remaining
 		$eta = 0;
@@ -434,8 +442,10 @@ class LQIP_CLI
 
 		// Build progress bar
 		$barWidth = 20;
-		$filled = ($total > 0) ? (int) round(($current / $total) * $barWidth) : 0;
-		$empty = $barWidth - $filled;
+		// Ensure filled is between 0 and barWidth
+		$filled = (int) round(($current / $total) * $barWidth);
+		$filled = max(0, min($barWidth, $filled));
+		$empty = max(0, $barWidth - $filled);
 		$bar = str_repeat('█', $filled) . str_repeat('░', $empty);
 
 		// Output progress on same line (using STDERR like WP-CLI progress bar)

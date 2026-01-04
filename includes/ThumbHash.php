@@ -25,31 +25,18 @@ final class ThumbHash
 	private const META_KEY = '_aviflosu_thumbhash';
 
 	/**
-	 * Default maximum dimension for thumbnail before hashing.
-	 * ThumbHash library requires images ≤100×100.
+	 * Maximum dimension for thumbnail before hashing.
+	 * Fixed at 32px to match ThumbHash decoder output resolution.
 	 */
-	private const DEFAULT_MAX_DIMENSION = 100;
+	private const MAX_DIMENSION = 32;
 
 	/**
-	 * Available size options.
-	 */
-	public const SIZE_OPTIONS = array(
-		16 => 'Extra Small (16px)',
-		32 => 'Small (32px)',
-		64 => 'Medium (64px)',
-		100 => 'Large (100px)',
-	);
-
-	/**
-	 * Get the configured maximum dimension for ThumbHash generation.
+	 * Get the maximum dimension for ThumbHash generation.
+	 * Fixed at 32px to match the decoder output.
 	 */
 	public static function getMaxDimension(): int
 	{
-		$size = (int) \get_option('aviflosu_thumbhash_size', self::DEFAULT_MAX_DIMENSION);
-		if (!array_key_exists($size, self::SIZE_OPTIONS)) {
-			return self::DEFAULT_MAX_DIMENSION;
-		}
-		return $size;
+		return self::MAX_DIMENSION;
 	}
 
 	/**
@@ -253,7 +240,6 @@ final class ThumbHash
 
 			$resized = imagecreatetruecolor($newWidth, $newHeight);
 			if (!$resized) {
-				imagedestroy($image);
 				return null;
 			}
 
@@ -262,7 +248,6 @@ final class ThumbHash
 			imagesavealpha($resized, true);
 
 			imagecopyresampled($resized, $image, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
-			imagedestroy($image);
 			$image = $resized;
 		} else {
 			$newWidth = $width;
@@ -283,7 +268,7 @@ final class ThumbHash
 			}
 		}
 
-		imagedestroy($image);
+
 
 		// Generate hash
 		$hash = ThumbhashLib::RGBAToHash($newWidth, $newHeight, $pixels);
@@ -316,78 +301,15 @@ final class ThumbHash
 	 * Generate and store ThumbHashes for all sizes of an attachment.
 	 *
 	 * @param int $attachmentId WordPress attachment ID.
+	 * @return array<string, string>|null Hash array keyed by size name, or null on failure.
 	 */
-	public static function generateForAttachment(int $attachmentId): void
+	public static function generateForAttachment(int $attachmentId): ?array
 	{
 		if (!self::isEnabled()) {
-			return;
+			return null;
 		}
 
-		$metadata = \wp_get_attachment_metadata($attachmentId);
-		if (!is_array($metadata)) {
-			return;
-		}
-
-		$uploadDir = \wp_upload_dir();
-		$baseDir = $uploadDir['basedir'] ?? '';
-		if (!$baseDir) {
-			self::$lastError = 'Upload basedir not found.';
-			return;
-		}
-
-		$hashes = array();
-
-		// Get the directory from metadata
-		$file = $metadata['file'] ?? '';
-		if (!$file) {
-			self::$lastError = "Original file path missing in metadata for attachment $attachmentId";
-			return;
-		}
-		$fileDir = dirname($file);
-
-		// Generate for original/full image
-		$fullPath = $baseDir . '/' . $file;
-		// Some setups have 'file' as absolute path (rare but possible in offload plugins) -> usually relative
-		if (!file_exists($fullPath)) {
-			// Check if file exists relative to baseDir directly or if $file is absolute
-			if (file_exists($file)) {
-				$fullPath = $file;
-			} else {
-				self::$lastError = "File not found: $fullPath";
-				// Log primarily for the main file
-				if (class_exists(Logger::class)) {
-					(new Logger())->addLog('warning', "ThumbHash skipped: Source file missing for ID $attachmentId", array('path' => $fullPath));
-				}
-			}
-		}
-
-		if (file_exists($fullPath)) {
-			$hash = self::generate($fullPath);
-			if ($hash) {
-				$hashes['full'] = $hash;
-			}
-		}
-
-		// Generate for each registered size
-		$sizes = $metadata['sizes'] ?? array();
-		foreach ($sizes as $sizeName => $sizeData) {
-			$sizeFile = $sizeData['file'] ?? '';
-			if (!$sizeFile) {
-				continue;
-			}
-
-			$sizePath = $baseDir . '/' . $fileDir . '/' . $sizeFile;
-			if (file_exists($sizePath)) {
-				$hash = self::generate($sizePath);
-				if ($hash) {
-					$hashes[$sizeName] = $hash;
-				}
-			}
-		}
-
-		if (!empty($hashes)) {
-			\update_post_meta($attachmentId, self::META_KEY, $hashes);
-		}
+		return self::doGenerateForAttachment($attachmentId);
 	}
 
 	/**
@@ -436,74 +358,158 @@ final class ThumbHash
 			)
 		);
 
+		$logger = class_exists(Logger::class) ? new Logger() : null;
+
 		foreach ($query->posts as $attachmentId) {
+			// Clear object cache for this post to ensure fresh meta data
+			// This prevents stale data from persistent object caching (Redis/Memcached)
+			\clean_post_cache((int) $attachmentId);
+
 			// Skip if already has valid ThumbHash (unless forcing regeneration)
 			if (!$force) {
 				$existing = \get_post_meta($attachmentId, self::META_KEY, true);
 				// Verify it's a valid ThumbHash array with at least a 'full' entry
 				if (is_array($existing) && isset($existing['full']) && is_string($existing['full']) && strlen($existing['full']) > 10) {
 					++$result['skipped'];
-					continue;
-				}
-			}
-
-			$metadata = \wp_get_attachment_metadata($attachmentId);
-			if (!is_array($metadata) || empty($metadata['file'])) {
-				++$result['failed'];
-				continue;
-			}
-
-			$uploadDir = \wp_upload_dir();
-			$baseDir = $uploadDir['basedir'] ?? '';
-			if (!$baseDir) {
-				++$result['failed'];
-				continue;
-			}
-
-			$hashes = array();
-			$file = $metadata['file'];
-			$fileDir = dirname($file);
-
-			// Generate for original/full image
-			$fullPath = $baseDir . '/' . $file;
-			if (file_exists($fullPath)) {
-				$hash = self::generate($fullPath);
-				if ($hash) {
-					$hashes['full'] = $hash;
-				}
-			}
-
-			// Generate for each registered size
-			$sizes = $metadata['sizes'] ?? array();
-			foreach ($sizes as $sizeName => $sizeData) {
-				$sizeFile = $sizeData['file'] ?? '';
-				if (!$sizeFile) {
-					continue;
-				}
-
-				$sizePath = $baseDir . '/' . $fileDir . '/' . $sizeFile;
-				if (file_exists($sizePath)) {
-					$hash = self::generate($sizePath);
-					if ($hash) {
-						$hashes[$sizeName] = $hash;
+					// Log individual skip
+					if ($logger) {
+						$logger->addLog(
+							'info',
+							sprintf('LQIP skipped for attachment ID %d (already exists)', $attachmentId),
+							array('attachment_id' => $attachmentId)
+						);
 					}
+					continue;
 				}
 			}
 
-			if (!empty($hashes)) {
-				\update_post_meta($attachmentId, self::META_KEY, $hashes);
+			// Use private helper to generate (bypasses isEnabled check for bulk operations)
+			$hashes = self::doGenerateForAttachment((int) $attachmentId);
+
+			if (is_array($hashes) && !empty($hashes['full'])) {
 				++$result['generated'];
+				// Log individual success
+				if ($logger) {
+					$logger->addLog(
+						'success',
+						sprintf('LQIP generated for attachment ID %d', $attachmentId),
+						array(
+							'attachment_id' => $attachmentId,
+							'sizes_generated' => count($hashes),
+						)
+					);
+				}
 			} else {
 				++$result['failed'];
 				// Capture the last error for debugging
 				if (!isset($result['last_error']) && self::$lastError) {
 					$result['last_error'] = self::$lastError;
-					$result['last_error_file'] = $fullPath ?? '';
+				}
+				// Log individual failure
+				if ($logger) {
+					$logger->addLog(
+						'error',
+						sprintf('LQIP generation failed for attachment ID %d', $attachmentId),
+						array(
+							'attachment_id' => $attachmentId,
+							'error' => self::$lastError ?? 'Unknown error',
+						)
+					);
 				}
 			}
 		}
 
+		// Log summary of bulk operation
+		if ($logger && ($result['generated'] > 0 || $result['failed'] > 0 || $result['skipped'] > 0)) {
+			$logger->addLog(
+				$result['failed'] > 0 ? 'warning' : 'success',
+				sprintf(
+					'LQIP bulk generation complete: %d generated, %d skipped, %d failed',
+					$result['generated'],
+					$result['skipped'],
+					$result['failed']
+				),
+				array(
+					'generated' => $result['generated'],
+					'skipped' => $result['skipped'],
+					'failed' => $result['failed'],
+				)
+			);
+		}
+
 		return $result;
+	}
+
+	/**
+	 * Internal helper to generate ThumbHashes for an attachment without checking isEnabled().
+	 * Used by generateAll() for bulk operations where the caller handles the enable check.
+	 *
+	 * @param int $attachmentId WordPress attachment ID.
+	 * @return array<string, string>|null Hash array or null on failure.
+	 */
+	private static function doGenerateForAttachment(int $attachmentId): ?array
+	{
+		$metadata = \wp_get_attachment_metadata($attachmentId);
+		if (!is_array($metadata) || empty($metadata['file'])) {
+			self::$lastError = "Invalid or missing metadata for attachment $attachmentId";
+			return null;
+		}
+
+		$uploadDir = \wp_upload_dir();
+		$baseDir = $uploadDir['basedir'] ?? '';
+		if (!$baseDir) {
+			self::$lastError = 'Upload basedir not found.';
+			return null;
+		}
+
+		$hashes = array();
+		$file = $metadata['file'];
+		$fileDir = dirname($file);
+
+		// Generate for original/full image
+		$fullPath = $baseDir . '/' . $file;
+		// Some setups have 'file' as absolute path (rare but possible in offload plugins)
+		if (!file_exists($fullPath)) {
+			if (file_exists($file)) {
+				$fullPath = $file;
+			} else {
+				self::$lastError = "File not found: $fullPath";
+				if (class_exists(Logger::class)) {
+					(new Logger())->addLog('warning', "ThumbHash skipped: Source file missing for ID $attachmentId", array('path' => $fullPath));
+				}
+			}
+		}
+
+		if (file_exists($fullPath)) {
+			$hash = self::generate($fullPath);
+			if ($hash) {
+				$hashes['full'] = $hash;
+			}
+		}
+
+		// Generate for each registered size
+		$sizes = $metadata['sizes'] ?? array();
+		foreach ($sizes as $sizeName => $sizeData) {
+			$sizeFile = $sizeData['file'] ?? '';
+			if (!$sizeFile) {
+				continue;
+			}
+
+			$sizePath = $baseDir . '/' . $fileDir . '/' . $sizeFile;
+			if (file_exists($sizePath)) {
+				$hash = self::generate($sizePath);
+				if ($hash) {
+					$hashes[$sizeName] = $hash;
+				}
+			}
+		}
+
+		if (!empty($hashes)) {
+			\update_post_meta($attachmentId, self::META_KEY, $hashes);
+			return $hashes;
+		}
+
+		return null;
 	}
 
 	/**
@@ -542,11 +548,23 @@ final class ThumbHash
 			\clean_post_cache((int) $postId);
 		}
 
+		// Log the deletion
+		if (class_exists(Logger::class)) {
+			(new Logger())->addLog(
+				'info',
+				sprintf('LQIP bulk delete: %d entries deleted', $deleted),
+				array('deleted' => (int) $deleted)
+			);
+		}
+
 		return (int) $deleted;
 	}
 
 	/**
 	 * Count attachments with ThumbHash metadata.
+	 *
+	 * Validates that entries have a proper 'full' key with hash length > 10,
+	 * matching the skip logic in generateAll() to ensure consistent reporting.
 	 *
 	 * @return array{with_hash: int, without_hash: int, total: int}
 	 */
@@ -560,14 +578,32 @@ final class ThumbHash
 			"SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = 'attachment' AND post_mime_type IN ('image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp')"
 		);
 
-		// Count attachments with ThumbHash
+		// Get all ThumbHash metadata entries and validate structure
+		// This ensures stats match the skip logic which checks for valid 'full' key
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$withHash = (int) $wpdb->get_var(
+		$rows = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT COUNT(DISTINCT post_id) FROM {$wpdb->postmeta} WHERE meta_key = %s",
+				"SELECT post_id, meta_value FROM {$wpdb->postmeta} WHERE meta_key = %s",
 				self::META_KEY
 			)
 		);
+
+		$withHash = 0;
+		$seenPostIds = array();
+
+		foreach ($rows as $row) {
+			// Skip if we've already counted this post
+			if (isset($seenPostIds[$row->post_id])) {
+				continue;
+			}
+
+			// Validate the structure matches what generateAll() skip logic expects
+			$meta = maybe_unserialize($row->meta_value);
+			if (is_array($meta) && isset($meta['full']) && is_string($meta['full']) && strlen($meta['full']) > 10) {
+				++$withHash;
+				$seenPostIds[$row->post_id] = true;
+			}
+		}
 
 		return array(
 			'with_hash' => $withHash,

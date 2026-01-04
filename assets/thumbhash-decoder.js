@@ -204,20 +204,12 @@
 
         if (el.classList) el.classList.add('thumbhash-loading');
 
-        function clearBackground() {
-            s.backgroundImage = s.backgroundSize = s.backgroundPosition = s.backgroundRepeat = '';
-        }
-
         function startFade() {
             if (el.classList) el.classList.remove('thumbhash-loading');
-            // Delay clearing the background to allow for CSS fade transition (500ms)
-            setTimeout(clearBackground, 550);
         }
 
         function instantReveal() {
-            // Skip the fade - just clear immediately
             if (el.classList) el.classList.remove('thumbhash-loading');
-            clearBackground();
         }
 
         function onReady() {

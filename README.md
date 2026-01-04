@@ -3,7 +3,7 @@ Contributors: ddegner
 Tags: avif, images, performance, media, optimization
 Requires at least: 6.8
 Tested up to: 6.9
-Stable tag: 0.5.11
+Stable tag: 0.5.13
 Requires PHP: 8.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -197,6 +197,19 @@ LiteSpeed's open_basedir restriction prevents PHP from detecting executables out
 4. **About** — Quick reference and version info
 
 ## Changelog
+
+### 0.5.13
+
+- Refactor: Simplified LQIP fade logic by removing background cleanup step.
+
+### 0.5.12
+
+- Feature: LQIP operations now log successes, failures, and summaries to the Logs panel.
+- Fix: LQIP stats now correctly validate metadata structure, matching generation skip logic.
+- Fix: Add object cache clearing before LQIP generation to prevent stale data on servers with persistent caching.
+- Fix: Prevent false positive \"success\" reports in `wp lqip generate` when generation fails silently but stale data exists.
+- Fix: Remove deprecated `imagedestroy()` calls for PHP 8.0+ compatibility.
+- Refactor: Consolidate LQIP generation logic into shared helper for consistency between Admin UI and CLI.
 
 ### 0.5.11
 

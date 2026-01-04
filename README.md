@@ -3,7 +3,7 @@ Contributors: ddegner
 Tags: avif, images, performance, media, optimization
 Requires at least: 6.8
 Tested up to: 6.9
-Stable tag: 0.5.14
+Stable tag: 0.5.15
 Requires PHP: 8.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -197,6 +197,12 @@ LiteSpeed's open_basedir restriction prevents PHP from detecting executables out
 4. **About** — Quick reference and version info
 
 ## Changelog
+
+### 0.5.15
+
+- Enhancement: Tuned LQIP fade thresholds based on human perception research.
+- Change: Page load window increased to 2 seconds (covers initial render).
+- Change: Individual load duration increased to 200ms (perception threshold).
 
 ### 0.5.14
 

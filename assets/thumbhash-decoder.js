@@ -213,12 +213,12 @@
         }
 
         function onReady() {
-            // Check if image loaded quickly (within 1 second of page load)
+            // Check if image loaded quickly (within 2 seconds of page load)
             // Quick loads don't need fade - it would feel sluggish
             var timeSincePageLoad = Date.now() - pageLoadTime;
             var loadDuration = Date.now() - applyStartTime;
 
-            if (timeSincePageLoad < 1000 || loadDuration < 50) {
+            if (timeSincePageLoad < 2000 || loadDuration < 200) {
                 // Fast load - instant reveal, no fade needed
                 instantReveal();
             } else {

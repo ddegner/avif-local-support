@@ -514,6 +514,21 @@ final class ThumbHash
 	public static function deleteAll(): int
 	{
 		global $wpdb;
+
+		// Get all attachment IDs that have ThumbHash data
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$postIds = $wpdb->get_col(
+			$wpdb->prepare(
+				"SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = %s",
+				self::META_KEY
+			)
+		);
+
+		if (empty($postIds)) {
+			return 0;
+		}
+
+		// Delete the meta data directly
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$deleted = $wpdb->query(
 			$wpdb->prepare(
@@ -521,6 +536,12 @@ final class ThumbHash
 				self::META_KEY
 			)
 		);
+
+		// Clear object cache for affected posts to prevent stale data in get_post_meta
+		foreach ($postIds as $postId) {
+			\clean_post_cache((int) $postId);
+		}
+
 		return (int) $deleted;
 	}
 

@@ -10,12 +10,13 @@ use Ddegner\AvifLocalSupport\Formatter;
 use Ddegner\AvifLocalSupport\ImageMagickCli;
 use Ddegner\AvifLocalSupport\Logger;
 
-defined( 'ABSPATH' ) || exit;
+defined('ABSPATH') || exit;
 
 /**
  * Handles REST API routes for AVIF Local Support plugin.
  */
-final class RestController {
+final class RestController
+{
 
 
 
@@ -27,103 +28,105 @@ final class RestController {
 	private Logger $logger;
 	private Diagnostics $diagnostics;
 
-	public function __construct( Converter $converter, Logger $logger, Diagnostics $diagnostics ) {
-		$this->converter   = $converter;
-		$this->logger      = $logger;
+	public function __construct(Converter $converter, Logger $logger, Diagnostics $diagnostics)
+	{
+		$this->converter = $converter;
+		$this->logger = $logger;
 		$this->diagnostics = $diagnostics;
 	}
 
 	/**
 	 * Register all REST routes.
 	 */
-	public function register(): void {
+	public function register(): void
+	{
 		register_rest_route(
-			self::NAMESPACE,
+			self::NAMESPACE ,
 			'/scan-missing',
 			array(
-				'methods'             => 'POST',
-				'permission_callback' => array( $this, 'permissionManageOptions' ),
-				'callback'            => array( $this, 'scanMissing' ),
+				'methods' => 'POST',
+				'permission_callback' => array($this, 'permissionManageOptions'),
+				'callback' => array($this, 'scanMissing'),
 			)
 		);
 
 		register_rest_route(
-			self::NAMESPACE,
+			self::NAMESPACE ,
 			'/convert-now',
 			array(
-				'methods'             => 'POST',
-				'permission_callback' => array( $this, 'permissionManageOptions' ),
-				'callback'            => array( $this, 'convertNow' ),
+				'methods' => 'POST',
+				'permission_callback' => array($this, 'permissionManageOptions'),
+				'callback' => array($this, 'convertNow'),
 			)
 		);
 
 		register_rest_route(
-			self::NAMESPACE,
+			self::NAMESPACE ,
 			'/stop-convert',
 			array(
-				'methods'             => 'POST',
-				'permission_callback' => array( $this, 'permissionManageOptions' ),
-				'callback'            => array( $this, 'stopConvert' ),
+				'methods' => 'POST',
+				'permission_callback' => array($this, 'permissionManageOptions'),
+				'callback' => array($this, 'stopConvert'),
 			)
 		);
 
 		register_rest_route(
-			self::NAMESPACE,
+			self::NAMESPACE ,
 			'/delete-all-avifs',
 			array(
-				'methods'             => 'POST',
-				'permission_callback' => array( $this, 'permissionManageOptions' ),
-				'callback'            => array( $this, 'deleteAllAvifs' ),
+				'methods' => 'POST',
+				'permission_callback' => array($this, 'permissionManageOptions'),
+				'callback' => array($this, 'deleteAllAvifs'),
 			)
 		);
 
 		register_rest_route(
-			self::NAMESPACE,
+			self::NAMESPACE ,
 			'/logs',
 			array(
-				'methods'             => 'GET',
-				'permission_callback' => array( $this, 'permissionManageOptions' ),
-				'callback'            => array( $this, 'getLogs' ),
+				'methods' => 'GET',
+				'permission_callback' => array($this, 'permissionManageOptions'),
+				'callback' => array($this, 'getLogs'),
 			)
 		);
 
 		register_rest_route(
-			self::NAMESPACE,
+			self::NAMESPACE ,
 			'/logs/clear',
 			array(
-				'methods'             => 'POST',
-				'permission_callback' => array( $this, 'permissionManageOptions' ),
-				'callback'            => array( $this, 'clearLogs' ),
+				'methods' => 'POST',
+				'permission_callback' => array($this, 'permissionManageOptions'),
+				'callback' => array($this, 'clearLogs'),
 			)
 		);
 
 		register_rest_route(
-			self::NAMESPACE,
+			self::NAMESPACE ,
 			'/magick-test',
 			array(
-				'methods'             => 'POST',
-				'permission_callback' => array( $this, 'permissionManageOptions' ),
-				'callback'            => array( $this, 'runMagickTest' ),
+				'methods' => 'POST',
+				'permission_callback' => array($this, 'permissionManageOptions'),
+				'callback' => array($this, 'runMagickTest'),
 			)
 		);
 
 		register_rest_route(
-			self::NAMESPACE,
+			self::NAMESPACE ,
 			'/upload-test-status',
 			array(
-				'methods'             => 'POST',
-				'permission_callback' => array( $this, 'permissionManageOptions' ),
-				'callback'            => array( $this, 'uploadTestStatus' ),
-				'args'                => array(
+				'methods' => 'POST',
+				'permission_callback' => array($this, 'permissionManageOptions'),
+				'callback' => array($this, 'uploadTestStatus'),
+				'args' => array(
 					'attachment_id' => array(
-						'required'          => true,
-						'type'              => 'integer',
+						'required' => true,
+						'type' => 'integer',
 						'sanitize_callback' => 'absint',
 					),
-					'target_index'  => array(
-						'required'          => false,
-						'type'              => 'integer',
-						'default'           => 0,
+					'target_index' => array(
+						'required' => false,
+						'type' => 'integer',
+						'default' => 0,
 						'sanitize_callback' => 'absint',
 					),
 				),
@@ -131,103 +134,108 @@ final class RestController {
 		);
 
 		register_rest_route(
-			self::NAMESPACE,
+			self::NAMESPACE ,
 			'/upload-test',
 			array(
-				'methods'             => 'POST',
-				'permission_callback' => array( $this, 'permissionManageOptions' ),
-				'callback'            => array( $this, 'uploadTest' ),
+				'methods' => 'POST',
+				'permission_callback' => array($this, 'permissionManageOptions'),
+				'callback' => array($this, 'uploadTest'),
 			)
 		);
 
 		// ThumbHash bulk operations.
 		register_rest_route(
-			self::NAMESPACE,
+			self::NAMESPACE ,
 			'/thumbhash/stats',
 			array(
-				'methods'             => 'GET',
-				'permission_callback' => array( $this, 'permissionManageOptions' ),
-				'callback'            => array( $this, 'thumbhashStats' ),
+				'methods' => 'GET',
+				'permission_callback' => array($this, 'permissionManageOptions'),
+				'callback' => array($this, 'thumbhashStats'),
 			)
 		);
 
 		register_rest_route(
-			self::NAMESPACE,
+			self::NAMESPACE ,
 			'/thumbhash/generate-all',
 			array(
-				'methods'             => 'POST',
-				'permission_callback' => array( $this, 'permissionManageOptions' ),
-				'callback'            => array( $this, 'thumbhashGenerateAll' ),
+				'methods' => 'POST',
+				'permission_callback' => array($this, 'permissionManageOptions'),
+				'callback' => array($this, 'thumbhashGenerateAll'),
 			)
 		);
 
 		register_rest_route(
-			self::NAMESPACE,
+			self::NAMESPACE ,
 			'/thumbhash/delete-all',
 			array(
-				'methods'             => 'POST',
-				'permission_callback' => array( $this, 'permissionManageOptions' ),
-				'callback'            => array( $this, 'thumbhashDeleteAll' ),
+				'methods' => 'POST',
+				'permission_callback' => array($this, 'permissionManageOptions'),
+				'callback' => array($this, 'thumbhashDeleteAll'),
 			)
 		);
 	}
 
-	public function permissionManageOptions(): bool {
-		return current_user_can( 'manage_options' );
+	public function permissionManageOptions(): bool
+	{
+		return current_user_can('manage_options');
 	}
 
-	public function scanMissing( \WP_REST_Request $request ): \WP_REST_Response {
-		return rest_ensure_response( $this->diagnostics->computeMissingCounts() );
+	public function scanMissing(\WP_REST_Request $request): \WP_REST_Response
+	{
+		return rest_ensure_response($this->diagnostics->computeMissingCounts());
 	}
 
-	public function convertNow( \WP_REST_Request $request ): \WP_REST_Response {
+	public function convertNow(\WP_REST_Request $request): \WP_REST_Response
+	{
 		$queued = false;
-		if ( ! \wp_next_scheduled( 'aviflosu_run_on_demand' ) ) {
-			\wp_schedule_single_event( time() + 5, 'aviflosu_run_on_demand' );
+		if (!\wp_next_scheduled('aviflosu_run_on_demand')) {
+			\wp_schedule_single_event(time() + 5, 'aviflosu_run_on_demand');
 			$queued = true;
 		}
-		return rest_ensure_response( array( 'queued' => $queued ) );
+		return rest_ensure_response(array('queued' => $queued));
 	}
 
-	public function stopConvert( \WP_REST_Request $request ): \WP_REST_Response {
+	public function stopConvert(\WP_REST_Request $request): \WP_REST_Response
+	{
 		// Set stop flag that the conversion loop checks.
-		\set_transient( 'aviflosu_stop_conversion', true, 300 ); // 5 minute expiry.
+		\set_transient('aviflosu_stop_conversion', true, 300); // 5 minute expiry.
 
 		// Also unschedule any pending cron job.
-		$timestamp = \wp_next_scheduled( 'aviflosu_run_on_demand' );
-		if ( $timestamp ) {
-			\wp_unschedule_event( $timestamp, 'aviflosu_run_on_demand' );
+		$timestamp = \wp_next_scheduled('aviflosu_run_on_demand');
+		if ($timestamp) {
+			\wp_unschedule_event($timestamp, 'aviflosu_run_on_demand');
 		}
 
-		return rest_ensure_response( array( 'stopped' => true ) );
+		return rest_ensure_response(array('stopped' => true));
 	}
 
-	public function deleteAllAvifs( \WP_REST_Request $request ): \WP_REST_Response {
+	public function deleteAllAvifs(\WP_REST_Request $request): \WP_REST_Response
+	{
 		$uploads = \wp_upload_dir();
-		$baseDir = (string) ( $uploads['basedir'] ?? '' );
+		$baseDir = (string) ($uploads['basedir'] ?? '');
 
-		if ( '' === $baseDir || ! is_dir( $baseDir ) ) {
-			return new \WP_REST_Response( array( 'message' => 'uploads_not_found' ), 400 );
+		if ('' === $baseDir || !is_dir($baseDir)) {
+			return new \WP_REST_Response(array('message' => 'uploads_not_found'), 400);
 		}
 
 		$deleted = 0;
-		$failed  = 0;
+		$failed = 0;
 
 		$iterator = new \RecursiveIteratorIterator(
-			new \RecursiveDirectoryIterator( $baseDir, \FilesystemIterator::SKIP_DOTS )
+			new \RecursiveDirectoryIterator($baseDir, \FilesystemIterator::SKIP_DOTS)
 		);
 
-		foreach ( $iterator as $fileInfo ) {
-			if ( ! $fileInfo instanceof \SplFileInfo ) {
+		foreach ($iterator as $fileInfo) {
+			if (!$fileInfo instanceof \SplFileInfo) {
 				continue;
 			}
 			$path = $fileInfo->getPathname();
-			if ( \preg_match( '/\.avif$/i', $path ) ) {
-				if ( $fileInfo->isLink() ) {
+			if (\preg_match('/\.avif$/i', $path)) {
+				if ($fileInfo->isLink()) {
 					continue;
 				}
-				$ok = \wp_delete_file( $path );
-				if ( $ok ) {
+				$ok = \wp_delete_file($path);
+				if ($ok) {
 					++$deleted;
 				} else {
 					++$failed;
@@ -236,72 +244,75 @@ final class RestController {
 		}
 
 		// Clear the file existence cache so frontend stops trying to serve deleted AVIFs.
-		\delete_transient( 'aviflosu_file_cache' );
+		\delete_transient('aviflosu_file_cache');
 
 		return rest_ensure_response(
 			array(
 				'deleted' => $deleted,
-				'failed'  => $failed,
+				'failed' => $failed,
 			)
 		);
 	}
 
-	public function getLogs( \WP_REST_Request $request ): \WP_REST_Response {
+	public function getLogs(\WP_REST_Request $request): \WP_REST_Response
+	{
 		ob_start();
 		$this->logger->renderLogsContent();
 		$content = ob_get_clean();
-		return rest_ensure_response( array( 'content' => $content ) );
+		return rest_ensure_response(array('content' => $content));
 	}
 
-	public function clearLogs( \WP_REST_Request $request ): \WP_REST_Response {
+	public function clearLogs(\WP_REST_Request $request): \WP_REST_Response
+	{
 		$this->logger->clearLogs();
-		return rest_ensure_response( array( 'message' => 'Logs cleared' ) );
+		return rest_ensure_response(array('message' => 'Logs cleared'));
 	}
 
-	public function runMagickTest( \WP_REST_Request $request ): \WP_REST_Response {
-		$path     = (string) get_option( 'aviflosu_cli_path', '' );
+	public function runMagickTest(\WP_REST_Request $request): \WP_REST_Response
+	{
+		$path = (string) get_option('aviflosu_cli_path', '');
 		$detected = $this->diagnostics->detectCliBinaries();
 
-		if ( '' === $path && ! empty( $detected ) ) {
-			$path = (string) ( $detected[0]['path'] ?? '' );
+		if ('' === $path && !empty($detected)) {
+			$path = (string) ($detected[0]['path'] ?? '');
 		}
 
 		$autoSelected = false;
-		if ( '' === $path ) {
-			$auto = ImageMagickCli::getAutoDetectedPath( null );
-			if ( '' !== $auto ) {
-				$path         = $auto;
+		if ('' === $path) {
+			$auto = ImageMagickCli::getAutoDetectedPath(null);
+			if ('' !== $auto) {
+				$path = $auto;
 				$autoSelected = true;
 			}
 		}
 
-		$disableFunctions = array_map( 'trim', explode( ',', (string) ini_get( 'disable_functions' ) ) );
-		$execAvailable    = ! in_array( 'exec', $disableFunctions, true );
+		$disableFunctions = array_map('trim', explode(',', (string) ini_get('disable_functions')));
+		$execAvailable = !in_array('exec', $disableFunctions, true);
 
-		if ( ! $execAvailable ) {
-			return new \WP_REST_Response( array( 'message' => 'exec disabled by PHP disable_functions.' ), 400 );
+		if (!$execAvailable) {
+			return new \WP_REST_Response(array('message' => 'exec disabled by PHP disable_functions.'), 400);
 		}
 
-		if ( '' === $path || ! @file_exists( $path ) ) {
-			return new \WP_REST_Response( array( 'message' => 'No ImageMagick CLI path found. Set a custom path under Engine Selection.' ), 400 );
+		if ('' === $path || !@file_exists($path)) {
+			return new \WP_REST_Response(array('message' => 'No ImageMagick CLI path found. Set a custom path under Engine Selection.'), 400);
 		}
 
-		$strategy = ImageMagickCli::getDefineStrategy( $path, null );
+		$strategy = ImageMagickCli::getDefineStrategy($path, null);
 
-		$cmd      = escapeshellarg( $path ) . ' -version 2>&1';
+		$cmd = escapeshellarg($path) . ' -version 2>&1';
 		$outLines = array();
 		$exitCode = 0;
-		@exec( $cmd, $outLines, $exitCode );
-		$output = trim( implode( "\n", array_map( 'strval', $outLines ) ) );
+		@exec($cmd, $outLines, $exitCode);
+		$output = trim(implode("\n", array_map('strval', $outLines)));
 
-		if ( '' === $output ) {
+		if ('' === $output) {
 			return rest_ensure_response(
 				array(
-					'code'            => $exitCode,
-					'output'          => $output,
-					'hint'            => 'No output. If using ImageMagick 7, ensure the path points to `magick`.',
-					'selected_path'   => $path,
-					'auto_selected'   => $autoSelected,
+					'code' => $exitCode,
+					'output' => $output,
+					'hint' => 'No output. If using ImageMagick 7, ensure the path points to `magick`.',
+					'selected_path' => $path,
+					'auto_selected' => $autoSelected,
 					'define_strategy' => $strategy,
 				)
 			);
@@ -309,85 +320,86 @@ final class RestController {
 
 		return rest_ensure_response(
 			array(
-				'code'            => $exitCode,
-				'output'          => $output,
-				'selected_path'   => $path,
-				'auto_selected'   => $autoSelected,
+				'code' => $exitCode,
+				'output' => $output,
+				'selected_path' => $path,
+				'auto_selected' => $autoSelected,
 				'define_strategy' => $strategy,
 			)
 		);
 	}
 
-	public function uploadTest( \WP_REST_Request $request ): \WP_REST_Response {
-		if ( ! function_exists( 'media_handle_sideload' ) ) {
+	public function uploadTest(\WP_REST_Request $request): \WP_REST_Response
+	{
+		if (!function_exists('media_handle_sideload')) {
 			require_once ABSPATH . 'wp-admin/includes/file.php';
 			require_once ABSPATH . 'wp-admin/includes/media.php';
 			require_once ABSPATH . 'wp-admin/includes/image.php';
 		}
 
-		$files   = $request->get_file_params();
-		$rawFile = isset( $files['avif_local_support_test_file'] ) && is_array( $files['avif_local_support_test_file'] )
+		$files = $request->get_file_params();
+		$rawFile = isset($files['avif_local_support_test_file']) && is_array($files['avif_local_support_test_file'])
 			? $files['avif_local_support_test_file']
 			: array();
 
-		if ( empty( $rawFile ) || empty( $rawFile['tmp_name'] ) ) {
-			return new \WP_REST_Response( array( 'message' => __( 'No file uploaded.', 'avif-local-support' ) ), 400 );
+		if (empty($rawFile) || empty($rawFile['tmp_name'])) {
+			return new \WP_REST_Response(array('message' => __('No file uploaded.', 'avif-local-support')), 400);
 		}
 
 		$fileType = wp_check_filetype_and_ext(
 			(string) $rawFile['tmp_name'],
-			(string) ( $rawFile['name'] ?? '' ),
+			(string) ($rawFile['name'] ?? ''),
 			array(
-				'jpg'  => 'image/jpeg',
+				'jpg' => 'image/jpeg',
 				'jpeg' => 'image/jpeg',
 			)
 		);
 
-		if ( empty( $fileType['ext'] ) || ! \in_array( $fileType['ext'], array( 'jpg', 'jpeg' ), true ) ) {
-			return new \WP_REST_Response( array( 'message' => __( 'Only JPEG files are allowed.', 'avif-local-support' ) ), 400 );
+		if (empty($fileType['ext']) || !\in_array($fileType['ext'], array('jpg', 'jpeg'), true)) {
+			return new \WP_REST_Response(array('message' => __('Only JPEG files are allowed.', 'avif-local-support')), 400);
 		}
 
 		// Temporarily disable AVIF conversion during upload by removing the converter's hooks.
 		// Conversions will happen incrementally via the async polling mechanism (uploadTestStatus),
 		// preventing timeouts on large images that can take 30+ seconds per size to convert.
-		\remove_filter( 'wp_generate_attachment_metadata', array( $this->converter, 'convertGeneratedSizes' ), 20 );
-		\remove_filter( 'wp_update_attachment_metadata', array( $this->converter, 'convertGeneratedSizes' ), 20 );
-		\remove_filter( 'wp_handle_upload', array( $this->converter, 'convertOriginalOnUpload' ), 20 );
+		\remove_filter('wp_generate_attachment_metadata', array($this->converter, 'convertGeneratedSizes'), 20);
+		\remove_filter('wp_update_attachment_metadata', array($this->converter, 'convertGeneratedSizes'), 20);
+		\remove_filter('wp_handle_upload', array($this->converter, 'convertOriginalOnUpload'), 20);
 
-		$attachment_id = media_handle_sideload( $rawFile, 0 );
-		if ( is_wp_error( $attachment_id ) ) {
+		$attachment_id = media_handle_sideload($rawFile, 0);
+		if (is_wp_error($attachment_id)) {
 			// Re-add hooks before returning.
-			\add_filter( 'wp_generate_attachment_metadata', array( $this->converter, 'convertGeneratedSizes' ), 20, 2 );
-			\add_filter( 'wp_update_attachment_metadata', array( $this->converter, 'convertGeneratedSizes' ), 20, 2 );
-			\add_filter( 'wp_handle_upload', array( $this->converter, 'convertOriginalOnUpload' ), 20 );
-			return new \WP_REST_Response( array( 'message' => $attachment_id->get_error_message() ), 400 );
+			\add_filter('wp_generate_attachment_metadata', array($this->converter, 'convertGeneratedSizes'), 20, 2);
+			\add_filter('wp_update_attachment_metadata', array($this->converter, 'convertGeneratedSizes'), 20, 2);
+			\add_filter('wp_handle_upload', array($this->converter, 'convertOriginalOnUpload'), 20);
+			return new \WP_REST_Response(array('message' => $attachment_id->get_error_message()), 400);
 		}
 
-		$file = get_attached_file( $attachment_id );
-		if ( $file ) {
-			$metadata = \wp_generate_attachment_metadata( $attachment_id, $file );
-			if ( $metadata ) {
-				\wp_update_attachment_metadata( $attachment_id, $metadata );
+		$file = get_attached_file($attachment_id);
+		if ($file) {
+			$metadata = \wp_generate_attachment_metadata($attachment_id, $file);
+			if ($metadata) {
+				\wp_update_attachment_metadata($attachment_id, $metadata);
 			}
 		}
 
 		// Re-add the converter's hooks for normal operations.
-		\add_filter( 'wp_generate_attachment_metadata', array( $this->converter, 'convertGeneratedSizes' ), 20, 2 );
-		\add_filter( 'wp_update_attachment_metadata', array( $this->converter, 'convertGeneratedSizes' ), 20, 2 );
-		\add_filter( 'wp_handle_upload', array( $this->converter, 'convertOriginalOnUpload' ), 20 );
+		\add_filter('wp_generate_attachment_metadata', array($this->converter, 'convertGeneratedSizes'), 20, 2);
+		\add_filter('wp_update_attachment_metadata', array($this->converter, 'convertGeneratedSizes'), 20, 2);
+		\add_filter('wp_handle_upload', array($this->converter, 'convertOriginalOnUpload'), 20);
 
 		// Get sizes without converting - conversion happens incrementally via status endpoint.
-		$sizes    = $this->converter->getAttachmentSizes( (int) $attachment_id );
-		$editLink = get_edit_post_link( $attachment_id );
-		$title    = get_the_title( $attachment_id ) ?: (string) $attachment_id;
+		$sizes = $this->converter->getAttachmentSizes((int) $attachment_id);
+		$editLink = get_edit_post_link($attachment_id);
+		$title = get_the_title($attachment_id) ?: (string) $attachment_id;
 
 		return rest_ensure_response(
 			array(
 				'attachment_id' => $attachment_id,
-				'edit_link'     => $editLink ?: '',
-				'title'         => $title,
-				'sizes'         => $sizes['sizes'] ?? array(),
-				'complete'      => false,
+				'edit_link' => $editLink ?: '',
+				'title' => $title,
+				'sizes' => $sizes['sizes'] ?? array(),
+				'complete' => false,
 			)
 		);
 	}
@@ -396,52 +408,53 @@ final class RestController {
 	 * Poll for upload test status and convert one size at a time by index.
 	 * Guaranteed to progress through the list one by one.
 	 */
-	public function uploadTestStatus( \WP_REST_Request $request ): \WP_REST_Response {
-		$attachmentId = (int) $request->get_param( 'attachment_id' );
-		$targetIndex  = (int) $request->get_param( 'target_index' );
+	public function uploadTestStatus(\WP_REST_Request $request): \WP_REST_Response
+	{
+		$attachmentId = (int) $request->get_param('attachment_id');
+		$targetIndex = (int) $request->get_param('target_index');
 
-		if ( $attachmentId <= 0 ) {
-			return new \WP_REST_Response( array( 'message' => 'Invalid attachment ID.' ), 400 );
+		if ($attachmentId <= 0) {
+			return new \WP_REST_Response(array('message' => 'Invalid attachment ID.'), 400);
 		}
 
 		// Get current sizes.
-		$data       = $this->converter->getAttachmentSizes( $attachmentId );
-		$sizes      = $data['sizes'] ?? array();
-		$totalCount = count( $sizes );
+		$data = $this->converter->getAttachmentSizes($attachmentId);
+		$sizes = $data['sizes'] ?? array();
+		$totalCount = count($sizes);
 
 		// Fix stateless polling issue:
 		// Function getAttachmentSizes() returns 'pending' if file is missing.
 		// But if we have already iterated past an index (i < targetIndex),
 		// and it is still 'pending' (meaning no file created), it corresponds to a failure.
-		for ( $i = 0; $i < $targetIndex && $i < $totalCount; $i++ ) {
-			if ( isset( $sizes[ $i ]['status'] ) && 'pending' === $sizes[ $i ]['status'] ) {
-				$sizes[ $i ]['status'] = 'failure';
+		for ($i = 0; $i < $targetIndex && $i < $totalCount; $i++) {
+			if (isset($sizes[$i]['status']) && 'pending' === $sizes[$i]['status']) {
+				$sizes[$i]['status'] = 'failure';
 			}
 		}
 
-		if ( $targetIndex >= $totalCount ) {
+		if ($targetIndex >= $totalCount) {
 			// Index out of bounds - we are done.
 			$complete = true;
 		} else {
 			$complete = false;
-			$size     = &$sizes[ $targetIndex ];
+			$size = &$sizes[$targetIndex];
 
-			if ( 'success' === $size['status'] ) {
+			if ('success' === $size['status']) {
 				// Already converted, skip.
 			} else {
 				$jpegPath = $size['jpeg_path'] ?? '';
-				if ( '' !== $jpegPath ) {
-					$conversionResult  = $this->converter->convertSingleJpegToAvif( $jpegPath );
-					$success           = $conversionResult->success;
+				if ('' !== $jpegPath) {
+					$conversionResult = $this->converter->convertSingleJpegToAvif($jpegPath);
+					$success = $conversionResult->success;
 					$size['converted'] = $success;
-					$size['status']    = $success ? 'success' : 'failure';
-					if ( ! $success && ! empty( $conversionResult->error ) ) {
+					$size['status'] = $success ? 'success' : 'failure';
+					if (!$success && !empty($conversionResult->error)) {
 						$size['error'] = $conversionResult->error;
 					}
-					if ( $success ) {
+					if ($success) {
 						// Refresh AVIF size.
-						$avifPath          = $size['avif_path'] ?? '';
-						$size['avif_size'] = file_exists( $avifPath ) ? (int) filesize( $avifPath ) : 0;
+						$avifPath = $size['avif_path'] ?? '';
+						$size['avif_size'] = file_exists($avifPath) ? (int) filesize($avifPath) : 0;
 					}
 				} else {
 					$size['status'] = 'failure';
@@ -451,21 +464,21 @@ final class RestController {
 
 		// Mark the next item as 'processing' so frontend can show spinner.
 		$nextIndex = $targetIndex + 1;
-		if ( ! $complete && $nextIndex < $totalCount && 'pending' === $sizes[ $nextIndex ]['status'] ) {
-			$sizes[ $nextIndex ]['status'] = 'processing';
+		if (!$complete && $nextIndex < $totalCount && 'pending' === $sizes[$nextIndex]['status']) {
+			$sizes[$nextIndex]['status'] = 'processing';
 		}
 
-		$editLink = get_edit_post_link( $attachmentId );
-		$title    = get_the_title( $attachmentId ) ?: (string) $attachmentId;
+		$editLink = get_edit_post_link($attachmentId);
+		$title = get_the_title($attachmentId) ?: (string) $attachmentId;
 
 		return rest_ensure_response(
 			array(
 				'attachment_id' => $attachmentId,
-				'edit_link'     => $editLink ?: '',
-				'title'         => $title,
-				'sizes'         => $sizes,
-				'complete'      => $complete,
-				'next_index'    => $nextIndex,
+				'edit_link' => $editLink ?: '',
+				'title' => $title,
+				'sizes' => $sizes,
+				'complete' => $complete,
+				'next_index' => $nextIndex,
 			)
 		);
 	}
@@ -473,23 +486,26 @@ final class RestController {
 	/**
 	 * Get ThumbHash statistics.
 	 */
-	public function thumbhashStats( \WP_REST_Request $request ): \WP_REST_Response {
-		return rest_ensure_response( \Ddegner\AvifLocalSupport\ThumbHash::getStats() );
+	public function thumbhashStats(\WP_REST_Request $request): \WP_REST_Response
+	{
+		return rest_ensure_response(\Ddegner\AvifLocalSupport\ThumbHash::getStats());
 	}
 
 	/**
 	 * Generate ThumbHashes for all existing images.
 	 */
-	public function thumbhashGenerateAll( \WP_REST_Request $request ): \WP_REST_Response {
+	public function thumbhashGenerateAll(\WP_REST_Request $request): \WP_REST_Response
+	{
 		$result = \Ddegner\AvifLocalSupport\ThumbHash::generateAll();
-		return rest_ensure_response( $result );
+		return rest_ensure_response($result);
 	}
 
 	/**
 	 * Delete all ThumbHash metadata.
 	 */
-	public function thumbhashDeleteAll( \WP_REST_Request $request ): \WP_REST_Response {
+	public function thumbhashDeleteAll(\WP_REST_Request $request): \WP_REST_Response
+	{
 		$deleted = \Ddegner\AvifLocalSupport\ThumbHash::deleteAll();
-		return rest_ensure_response( array( 'deleted' => $deleted ) );
+		return rest_ensure_response(array('deleted' => $deleted));
 	}
 }

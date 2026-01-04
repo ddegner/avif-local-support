@@ -200,11 +200,12 @@ LiteSpeed's open_basedir restriction prevents PHP from detecting executables out
 
 ### 0.5.10
 
-- Feature: Properly implemented `--force` option to `wp lqip generate` command.
+- Fix: Critical fix for `wp lqip generate --force` option (was ignored in 0.5.9).
+- Fix: `wp lqip delete --all` now correctly clears object cache to prevent stale stats.
 
 ### 0.5.9
 
-- Feature: Reserved for valid implementation of `--force`.
+- Feature: Added `--force` option to `wp lqip generate` command to force regeneration of LQIPs.
 
 ### 0.5.8
 

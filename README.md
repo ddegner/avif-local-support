@@ -3,7 +3,7 @@ Contributors: ddegner
 Tags: avif, images, performance, media, optimization
 Requires at least: 6.8
 Tested up to: 6.9
-Stable tag: 0.5.10
+Stable tag: 0.5.11
 Requires PHP: 8.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -198,9 +198,9 @@ LiteSpeed's open_basedir restriction prevents PHP from detecting executables out
 
 ## Changelog
 
-### 0.5.10
+### 0.5.11
 
-- Fix: Critical fix for `wp lqip generate --force` option (was ignored in 0.5.9).
+- Fix: Critical fix for `wp lqip generate --force` option.
 - Fix: `wp lqip delete --all` now correctly clears object cache to prevent stale stats.
 
 ### 0.5.9

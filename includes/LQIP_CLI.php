@@ -187,7 +187,7 @@ class LQIP_CLI
 	/**
 	 * Generate LQIP for a single attachment.
 	 */
-	private function generateSingle(int $attachmentId, bool $dryRun): void
+	private function generateSingle(int $attachmentId, bool $dryRun, bool $force = false): void
 	{
 		$post = get_post($attachmentId);
 		if (!$post || 'attachment' !== $post->post_type) {
@@ -202,10 +202,12 @@ class LQIP_CLI
 		}
 
 		// Check if already has valid LQIP (with proper 'full' entry)
-		$existing = get_post_meta($attachmentId, ThumbHash::getMetaKey(), true);
-		if (is_array($existing) && isset($existing['full']) && is_string($existing['full']) && strlen($existing['full']) > 10) {
-			\WP_CLI::line("Attachment ID {$attachmentId} already has valid LQIP data.");
-			return;
+		if (!$force) {
+			$existing = get_post_meta($attachmentId, ThumbHash::getMetaKey(), true);
+			if (is_array($existing) && isset($existing['full']) && is_string($existing['full']) && strlen($existing['full']) > 10) {
+				\WP_CLI::line("Attachment ID {$attachmentId} already has valid LQIP data.");
+				return;
+			}
 		}
 
 		if ($dryRun) {
@@ -233,8 +235,9 @@ class LQIP_CLI
 	 * @param bool $dryRun Whether this is a dry run.
 	 * @param int  $limit Maximum number of images to process (0 = no limit).
 	 * @param bool $verbose Show detailed output for each image.
+	 * @param bool $force Force regeneration even if already exists.
 	 */
-	private function generateAll(bool $dryRun, int $limit = 0, bool $verbose = false): void
+	private function generateAll(bool $dryRun, int $limit = 0, bool $verbose = false, bool $force = false): void
 	{
 		$stats = ThumbHash::getStats();
 
@@ -243,7 +246,7 @@ class LQIP_CLI
 			return;
 		}
 
-		if (0 === $stats['without_hash']) {
+		if (0 === $stats['without_hash'] && !$force) {
 			\WP_CLI::success('All images already have LQIP data.');
 			return;
 		}
@@ -254,12 +257,14 @@ class LQIP_CLI
 		\WP_CLI::line(sprintf('Without LQIP:      %d', $stats['without_hash']));
 		\WP_CLI::line('');
 
+		$countToProcess = $force ? $stats['total'] : $stats['without_hash'];
+
 		if ($dryRun) {
-			\WP_CLI::line(sprintf('Would generate LQIP for %d images.', $stats['without_hash']));
+			\WP_CLI::line(sprintf('Would generate LQIP for %d images.', $countToProcess));
 			return;
 		}
 
-		\WP_CLI::line(sprintf('Generating LQIP for %d images...', $stats['without_hash']));
+		\WP_CLI::line(sprintf('Generating LQIP for %d images...', $countToProcess));
 		\WP_CLI::line('');
 
 		$startTime = microtime(true);
@@ -295,13 +300,15 @@ class LQIP_CLI
 		$totalToProcess = count($postsToProcess);
 
 		foreach ($postsToProcess as $index => $attachmentId) {
-			// Skip if already has valid LQIP (check for 'full' key with proper hash)
-			$existing = get_post_meta($attachmentId, ThumbHash::getMetaKey(), true);
-			if (is_array($existing) && isset($existing['full']) && is_string($existing['full']) && strlen($existing['full']) > 10) {
-				++$skipped;
-				++$processed;
-				$this->printProgress($processed, $totalMissing, $startTime);
-				continue;
+			// Skip if already has valid LQIP (check for 'full' key with proper hash), unless forcing
+			if (!$force) {
+				$existing = get_post_meta($attachmentId, ThumbHash::getMetaKey(), true);
+				if (is_array($existing) && isset($existing['full']) && is_string($existing['full']) && strlen($existing['full']) > 10) {
+					++$skipped;
+					++$processed;
+					$this->printProgress($processed, $countToProcess, $startTime);
+					continue;
+				}
 			}
 
 			// Show which image we're processing (helps identify hanging images)

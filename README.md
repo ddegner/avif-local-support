@@ -3,7 +3,7 @@ Contributors: ddegner
 Tags: avif, images, performance, media, optimization
 Requires at least: 6.8
 Tested up to: 6.9
-Stable tag: 0.5.9
+Stable tag: 0.5.10
 Requires PHP: 8.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -198,9 +198,13 @@ LiteSpeed's open_basedir restriction prevents PHP from detecting executables out
 
 ## Changelog
 
+### 0.5.10
+
+- Feature: Properly implemented `--force` option to `wp lqip generate` command.
+
 ### 0.5.9
 
-- Feature: Added `--force` option to `wp lqip generate` command to force regeneration of LQIPs.
+- Feature: Reserved for valid implementation of `--force`.
 
 ### 0.5.8
 

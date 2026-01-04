@@ -3,7 +3,7 @@ Contributors: ddegner
 Tags: avif, images, performance, media, optimization
 Requires at least: 6.8
 Tested up to: 6.9
-Stable tag: 0.5.15
+Stable tag: 0.5.16
 Requires PHP: 8.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -197,6 +197,13 @@ LiteSpeed's open_basedir restriction prevents PHP from detecting executables out
 4. **About** — Quick reference and version info
 
 ## Changelog
+
+### 0.5.16
+
+- Feature: Restored LQIP background cleanup after image load.
+- Feature: Added "Pixelated placeholders" option to display ThumbHash as sharp pixels.
+- Enhancement: Improved LQIP transition — blur-up effect with scale animation.
+- Change: Transition updated to 400ms ease-out for smoother reveal.
 
 ### 0.5.15
 

@@ -202,15 +202,31 @@
         s.backgroundRepeat = 'no-repeat';
         if (el.tagName === 'PICTURE') s.display = 'block';
 
-        if (el.classList) el.classList.add('thumbhash-loading');
+        function clearBackground() {
+            s.backgroundImage = s.backgroundSize = s.backgroundPosition = s.backgroundRepeat = '';
+        }
 
         function startFade() {
+            // Slow load - let CSS transition animate the fade
             if (el.classList) el.classList.remove('thumbhash-loading');
+            // Delay clearing the background to allow for CSS fade transition (400ms)
+            setTimeout(clearBackground, 450);
         }
 
         function instantReveal() {
+            // Fast load - disable transition to prevent 500ms fade animation
+            el.style.transition = 'none';
             if (el.classList) el.classList.remove('thumbhash-loading');
+            clearBackground();
         }
+
+        if (img.complete && img.naturalWidth) {
+            // Already loaded (cached) - don't add loading class at all, instant show
+            return;
+        }
+
+        // Image still loading - add the class to hide it behind placeholder
+        if (el.classList) el.classList.add('thumbhash-loading');
 
         function onReady() {
             // Check if image loaded quickly (within 2 seconds of page load)
@@ -231,13 +247,8 @@
             }
         }
 
-        if (img.complete && img.naturalWidth) {
-            // Already loaded - instant reveal
-            instantReveal();
-        } else {
-            img.addEventListener('load', onReady, { once: true });
-            img.addEventListener('error', instantReveal, { once: true });
-        }
+        img.addEventListener('load', onReady, { once: true });
+        img.addEventListener('error', instantReveal, { once: true });
     }
 
     function process(node) {

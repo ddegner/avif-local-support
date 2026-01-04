@@ -26,6 +26,7 @@ $aviflosu_options = array(
 	'aviflosu_lqip_generate_on_upload',
 	'aviflosu_lqip_generate_via_schedule',
 	'aviflosu_lqip_fade',
+	'aviflosu_lqip_pixelated',
 	// CSS Background Images
 	'aviflosu_enable_background_images',
 	// legacy options left behind in older versions

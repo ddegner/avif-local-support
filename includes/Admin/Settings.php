@@ -254,6 +254,17 @@ final class Settings
 			)
 		);
 
+		register_setting(
+			self::BETA_OPTION_GROUP,
+			'aviflosu_lqip_pixelated',
+			array(
+				'type' => 'boolean',
+				'default' => false,
+				'sanitize_callback' => 'rest_sanitize_boolean',
+				'show_in_rest' => true,
+			)
+		);
+
 	}
 
 	/**
@@ -410,6 +421,15 @@ final class Settings
 			self::PAGE_SLUG,
 			'aviflosu_lqip_conversion',
 			array('label_for' => 'aviflosu_lqip_fade')
+		);
+
+		add_settings_field(
+			'avif_local_support_lqip_pixelated',
+			__('Pixelated placeholders', 'avif-local-support'),
+			array($this, 'renderLqipPixelatedField'),
+			self::PAGE_SLUG,
+			'aviflosu_lqip_conversion',
+			array('label_for' => 'aviflosu_lqip_pixelated')
 		);
 
 
@@ -666,6 +686,16 @@ final class Settings
 		echo esc_html__('Fade in loaded images', 'avif-local-support');
 		echo '</label>';
 		echo '<p class="description">' . esc_html__('Adds a smooth transition effect when the full image loads over the placeholder.', 'avif-local-support') . '</p>';
+	}
+
+	public function renderLqipPixelatedField(): void
+	{
+		$value = (bool) get_option('aviflosu_lqip_pixelated', false);
+		echo '<label for="aviflosu_lqip_pixelated">';
+		echo '<input id="aviflosu_lqip_pixelated" type="checkbox" name="aviflosu_lqip_pixelated" value="1" ' . checked(true, $value, false) . ' /> ';
+		echo esc_html__('Display as sharp pixels instead of blur', 'avif-local-support');
+		echo '</label>';
+		echo '<p class="description">' . esc_html__('Shows the placeholder as chunky pixels rather than a smooth blur when scaled up.', 'avif-local-support') . '</p>';
 	}
 
 

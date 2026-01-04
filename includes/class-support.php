@@ -51,12 +51,18 @@ final class Support
 		// Inject CSS for fading if enabled.
 		if ((bool) get_option('aviflosu_lqip_fade', true)) {
 			// CSS explanation:
-			// 1. img[data-thumbhash] starts with opacity 1 and transition.
-			// 2. When inside .thumbhash-loading parent OR img itself has the class, opacity is 0.
-			// 3. When JS removes .thumbhash-loading, image fades in (opacity 0 -> 1).
-			$css = 'img[data-thumbhash]{opacity:1;transition:opacity 500ms ease-in-out;}'
+			// 1. img[data-thumbhash] starts with opacity 1, scale 1 and transitions.
+			// 2. When inside .thumbhash-loading parent OR img itself has the class, opacity is 0 and scale is 1.05.
+			// 3. When JS removes .thumbhash-loading, image fades in (opacity 0 -> 1) and scales down (1.05 -> 1).
+			// 4. Placeholder has blur(5px) for smoother transition (blur-up effect).
+			$css = 'img[data-thumbhash]{opacity:1;transform:scale(1);transition:opacity 400ms ease-out,transform 400ms ease-out;}'
 				. '.thumbhash-loading img[data-thumbhash],'
-				. 'img.thumbhash-loading[data-thumbhash]{opacity:0;}';
+				. 'img.thumbhash-loading[data-thumbhash]{opacity:0;transform:scale(1.05);}'
+				. '.thumbhash-loading,img.thumbhash-loading{filter:blur(5px);}';
+			// Optionally render placeholders as sharp pixels instead of smooth blur.
+			if ((bool) get_option('aviflosu_lqip_pixelated', false)) {
+				$css .= '.thumbhash-loading,img.thumbhash-loading{image-rendering:pixelated;}';
+			}
 			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static CSS string, no user input.
 			echo '<style id="aviflosu-thumbhash-fade">' . $css . '</style>' . "\n";
 		}

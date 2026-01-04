@@ -221,7 +221,8 @@
         }
 
         if (img.complete && img.naturalWidth) {
-            // Already loaded (cached) - don't add loading class at all, instant show
+            // Already loaded (cached) - clear background and return, no animation needed
+            clearBackground();
             return;
         }
 

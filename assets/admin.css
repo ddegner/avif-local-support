@@ -1,7 +1,15 @@
 /* AVIF Local Support admin styles */
-.avif-local-support-tab { margin-top: 16px; }
-.avif-local-support-tab:not(.active) { display: none; }
-.postbox .inside { display: block; }
+.avif-local-support-tab {
+  margin-top: 16px;
+}
+
+.avif-local-support-tab:not(.active) {
+  display: none;
+}
+
+.postbox .inside {
+  display: block;
+}
 
 /* Non-draggable header style to match WP metabox header visuals */
 body.settings_page_avif-local-support .postbox h2.avif-header {
@@ -14,10 +22,17 @@ body.settings_page_avif-local-support .postbox h2.avif-header {
 }
 
 /* Align labels and inputs a bit nicer in Settings API tables */
-.form-table th { width: 260px; }
+.form-table th {
+  width: 260px;
+}
+
 /* Increase spacing between inline radio options */
 #aviflosu_subsampling label,
-#aviflosu_bit_depth label { margin-right: 18px; display: inline-flex; align-items: center; }
+#aviflosu_bit_depth label {
+  margin-right: 18px;
+  display: inline-flex;
+  align-items: center;
+}
 
 /* Simple progress bar */
 .avif-local-support-progress {
@@ -27,6 +42,7 @@ body.settings_page_avif-local-support .postbox h2.avif-header {
   border-radius: 4px;
   overflow: hidden;
 }
+
 .avif-local-support-progress-fill {
   height: 100%;
   background: #2271b1;
@@ -40,6 +56,7 @@ body.settings_page_avif-local-support .postbox h2.avif-header {
   gap: 6px;
   margin-left: 6px;
 }
+
 .avif-logs-filter input {
   margin: 0;
 }
@@ -58,7 +75,7 @@ body.settings_page_avif-local-support .postbox h2.avif-header {
   padding: 8px;
   background: white;
   border-radius: 3px;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .avif-log-entry.error {
@@ -119,36 +136,44 @@ body.settings_page_avif-local-support .postbox h2.avif-header {
   font-weight: 600;
   border: 1px solid transparent;
 }
+
 .avif-badge-ok {
   background: #edfaef;
   border-color: #b7e1c0;
   color: #1a7f37;
 }
+
 .avif-badge-bad {
   background: #fff1f0;
   border-color: #f4c7c3;
   color: #b42318;
 }
+
 .avif-badge-neutral {
   background: #f6f7f7;
   border-color: #dcdcde;
   color: #50575e;
 }
+
 .avif-support-panel .widefat td {
   vertical-align: top;
 }
+
 .avif-support-details {
   margin: 10px 0;
   padding: 8px 10px;
   border: 1px solid #dcdcde;
   background: #fff;
 }
-.avif-support-details > summary {
+
+.avif-support-details>summary {
   cursor: pointer;
 }
+
 .avif-support-details-body {
   margin-top: 8px;
 }
+
 .avif-support-callout {
   margin: 10px 0 14px;
   padding: 10px;
@@ -161,40 +186,103 @@ body.settings_page_avif-local-support .postbox h2.avif-header {
   margin-bottom: 24px;
   max-width: 960px;
 }
+
 .avif-readme-section h3 {
   margin: 0 0 12px;
   padding-bottom: 8px;
   border-bottom: 1px solid #dcdcde;
 }
+
+.avif-readme-section h4 {
+  margin: 16px 0 8px;
+  color: #1d2327;
+}
+
+.avif-readme-section p {
+  margin: 0 0 12px;
+  line-height: 1.6;
+}
+
+.avif-readme-section ul {
+  margin: 0 0 16px 0;
+  padding-left: 24px;
+  list-style: disc;
+}
+
+.avif-readme-section ul li {
+  margin-bottom: 6px;
+  line-height: 1.5;
+}
+
+.avif-readme-section code {
+  background: #f0f0f1;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: Consolas, Monaco, monospace;
+  font-size: 13px;
+}
+
+.avif-code-block {
+  background: #f6f7f7;
+  padding: 12px 14px;
+  border-radius: 4px;
+  overflow-x: auto;
+  font-family: Consolas, Monaco, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 12px 0;
+  border: 1px solid #dcdcde;
+}
+
+.avif-code-block code {
+  background: none;
+  padding: 0;
+  font-size: inherit;
+  white-space: pre;
+}
+
 .avif-readme-content p {
   margin: 0 0 12px;
   line-height: 1.6;
 }
+
 .avif-faq-list {
   margin: 0;
 }
+
 .avif-faq-list dt {
   margin: 0 0 4px;
   font-weight: 600;
 }
+
 .avif-faq-list dd {
   margin: 0 0 16px 0;
   padding-left: 0;
   color: #50575e;
 }
+
 .avif-faq-list dd p {
   margin: 0;
 }
+
 .avif-changelog-entry {
   margin-bottom: 16px;
 }
+
 .avif-changelog-entry h4 {
   margin: 0 0 8px;
 }
+
 .avif-changelog-changes ul {
   margin: 0;
   padding-left: 20px;
 }
+
 .avif-changelog-changes li {
   margin-bottom: 4px;
+}
+
+/* Hide log entries that appear in wrong location (direct children of .wrap) */
+.wrap>.avif-log-entry {
+  display: none !important;
 }

@@ -20,6 +20,7 @@ final class RestController {
 
 
 
+
 	private const NAMESPACE = 'aviflosu/v1';
 
 	private Converter $converter;
@@ -233,6 +234,9 @@ final class RestController {
 				}
 			}
 		}
+
+		// Clear the file existence cache so frontend stops trying to serve deleted AVIFs.
+		\delete_transient( 'aviflosu_file_cache' );
 
 		return rest_ensure_response(
 			array(

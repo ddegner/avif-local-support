@@ -61,12 +61,12 @@
         function readAC(nx, ny, scale) {
             var ac = [], cy, cx, nibble;
             for (cy = 0; cy < ny; cy++) {
-                for (cx = 0; cx < nx; cx++) {
-                    if (cx || cy) {
-                        nibble = ac_idx & 1 ? bytes[ac_start + (ac_idx >> 1)] >> 4 : bytes[ac_start + (ac_idx >> 1)] & 15;
-                        ac.push((nibble / 7.5 - 1) * scale);
-                        ac_idx++;
-                    }
+                // Original triangular iteration: cx starts at 1 when cy=0, else 0
+                // Continues while cx * ny < nx * (ny - cy)
+                for (cx = cy ? 0 : 1; cx * ny < nx * (ny - cy); cx++) {
+                    nibble = ac_idx & 1 ? bytes[ac_start + (ac_idx >> 1)] >> 4 : bytes[ac_start + (ac_idx >> 1)] & 15;
+                    ac.push((nibble / 7.5 - 1) * scale);
+                    ac_idx++;
                 }
             }
             return ac;
@@ -110,34 +110,37 @@
                 var xFactor = (x + 0.5);
                 l = l_dc; p = p_dc; q = q_dc; a = a_dc;
 
-                // Luminance
+                // Precompute fx values (matching original's approach)
+                var fx_arr = [], n_fx = max(lx, hasAlpha ? 5 : 3);
+                for (i = 0; i < n_fx; i++) fx_arr[i] = cos(piW * xFactor * i);
+
+                // Luminance - triangular iteration matching original
                 j = 0;
                 for (cy = 0; cy < ly; cy++) {
-                    fy = fy_l[cy];
-                    for (cx = 0; cx < lx; cx++) {
-                        if (cx || cy) l += l_ac[j++] * cos(piW * xFactor * cx) * fy;
+                    var fy2_l = fy_l[cy] * 2;
+                    for (cx = cy ? 0 : 1; cx * ly < lx * (ly - cy); cx++, j++) {
+                        l += l_ac[j] * fx_arr[cx] * fy2_l;
                     }
                 }
 
-                // P and Q channels
+                // P and Q channels - triangular iteration matching original
                 j = 0;
                 for (cy = 0; cy < 3; cy++) {
-                    for (cx = 0; cx < 3; cx++) {
-                        if (cx || cy) {
-                            fx = cos(piW * xFactor * cx);
-                            p += p_ac[j] * fx * fy_p[cy];
-                            q += q_ac[j] * fx * fy_p[cy];
-                            j++;
-                        }
+                    var fy2_p = fy_p[cy] * 2;
+                    for (cx = cy ? 0 : 1; cx < 3 - cy; cx++, j++) {
+                        var f_pq = fx_arr[cx] * fy2_p;
+                        p += p_ac[j] * f_pq;
+                        q += q_ac[j] * f_pq;
                     }
                 }
 
-                // Alpha channel
+                // Alpha channel - triangular iteration matching original
                 if (hasAlpha) {
                     j = 0;
                     for (cy = 0; cy < 5; cy++) {
-                        for (cx = 0; cx < 5; cx++) {
-                            if (cx || cy) a += a_ac[j++] * cos(piW * xFactor * cx) * fy_a[cy];
+                        var fy2_a = fy_a[cy] * 2;
+                        for (cx = cy ? 0 : 1; cx < 5 - cy; cx++, j++) {
+                            a += a_ac[j] * fx_arr[cx] * fy2_a;
                         }
                     }
                 }

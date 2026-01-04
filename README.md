@@ -3,7 +3,7 @@ Contributors: ddegner
 Tags: avif, images, performance, media, optimization
 Requires at least: 6.8
 Tested up to: 6.9
-Stable tag: 0.5.6
+Stable tag: 0.5.7
 Requires PHP: 8.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -197,6 +197,15 @@ LiteSpeed's open_basedir restriction prevents PHP from detecting executables out
 4. **About** — Quick reference and version info
 
 ## Changelog
+
+### 0.5.7
+
+- Feature: CSS background image AVIF support — replaces JPEG background images with AVIF versions. Thanks to [David C.](https://www.rankxpress.com)
+- Feature: Works with page builders (Elementor, Divi, Beaver Builder, WPBakery, Bricks, etc.)
+- Feature: New setting "Serve AVIF for CSS backgrounds" under AVIF serving options
+- Fix: Versioned image URLs (e.g., `image.jpg?ver=123`) now correctly detected and replaced
+- Fix: Query string stripping for CSS file path resolution
+- Security: Sanitize CSS selectors to prevent XSS injection
 
 ### 0.5.6
 

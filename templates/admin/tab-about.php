@@ -10,13 +10,46 @@ defined( 'ABSPATH' ) || exit;
 
 /**
  * Simple Markdown to HTML converter for README display.
- * Handles basic markdown: headers, bold, italic, links, code, lists.
+ * Handles: headers, bold, italic, links, code blocks, indented code, lists.
  */
 function aviflosu_markdown_to_html( string $markdown ): string {
 	$html = $markdown;
 
-	// Escape HTML entities first
+	// Store code blocks to protect them from HTML escaping
+	$code_blocks = array();
+	$code_index  = 0;
+
+	// Handle indented code blocks (4 spaces) - convert to placeholders
+	$html = preg_replace_callback(
+		'/(?:^    .+$\n?)+/m',
+		function ( $m ) use ( &$code_blocks, &$code_index ) {
+			// Remove the 4-space indent from each line
+			$code                         = preg_replace( '/^    /m', '', $m[0] );
+			$placeholder                  = '<!--CODEBLOCK' . $code_index . '-->';
+			$code_blocks[ $code_index++ ] = '<pre class="avif-code-block"><code>' . esc_html( trim( $code ) ) . '</code></pre>';
+			return $placeholder;
+		},
+		$html
+	);
+
+	// Handle fenced code blocks (```) - convert to placeholders
+	$html = preg_replace_callback(
+		'/```(?:bash|php|html|css|js)?\n(.*?)```/s',
+		function ( $m ) use ( &$code_blocks, &$code_index ) {
+			$placeholder                  = '<!--CODEBLOCK' . $code_index . '-->';
+			$code_blocks[ $code_index++ ] = '<pre class="avif-code-block"><code>' . esc_html( trim( $m[1] ) ) . '</code></pre>';
+			return $placeholder;
+		},
+		$html
+	);
+
+	// Now escape HTML entities (code blocks are protected as placeholders)
 	$html = esc_html( $html );
+
+	// Restore code blocks
+	foreach ( $code_blocks as $idx => $block ) {
+		$html = str_replace( esc_html( '<!--CODEBLOCK' . $idx . '-->' ), $block, $html );
+	}
 
 	// Headers (## and ###)
 	$html = preg_replace( '/^### (.+)$/m', '<h4>$1</h4>', $html );
@@ -26,32 +59,29 @@ function aviflosu_markdown_to_html( string $markdown ): string {
 	$html = preg_replace( '/\*\*(.+?)\*\*/s', '<strong>$1</strong>', $html );
 	$html = preg_replace( '/\*(.+?)\*/s', '<em>$1</em>', $html );
 
-	// Inline code
+	// Inline code (but not inside code blocks)
 	$html = preg_replace( '/`([^`]+)`/', '<code>$1</code>', $html );
 
-	// Links [text](url)
+	// Links [text](url) - need to handle escaped brackets
 	$html = preg_replace_callback(
 		'/\[([^\]]+)\]\(([^)]+)\)/',
 		function ( $m ) {
-			return '<a href="' . esc_url( $m[2] ) . '" target="_blank" rel="noopener">' . $m[1] . '</a>';
+			return '<a href="' . esc_url( html_entity_decode( $m[2] ) ) . '" target="_blank" rel="noopener">' . $m[1] . '</a>';
 		},
 		$html
 	);
 
-	// Code blocks ```...```
-	$html = preg_replace_callback(
-		'/```(?:bash|php|html)?\n(.*?)```/s',
-		function ( $m ) {
-			return '<pre style="background:#f6f7f7;padding:10px;border-radius:4px;overflow-x:auto;"><code>' . $m[1] . '</code></pre>';
-		},
-		$html
-	);
+	// Numbered lists (1. item, 2. item, etc.)
+	$html = preg_replace( '/^\d+\. (.+)$/m', '<li>$1</li>', $html );
 
 	// Unordered lists (- item)
 	$html = preg_replace( '/^- (.+)$/m', '<li>$1</li>', $html );
-	$html = preg_replace( '/(<li>.*<\/li>\n?)+/s', '<ul>$0</ul>', $html );
+
+	// Wrap consecutive list items in ul
+	$html = preg_replace( '/(<li>.*?<\/li>\s*)+/s', '<ul>$0</ul>', $html );
+
 	// Clean up extra newlines in lists
-	$html = preg_replace( '/<\/li>\n<li>/s', '</li><li>', $html );
+	$html = preg_replace( '/<\/li>\s*<li>/s', '</li><li>', $html );
 
 	// Paragraphs (double newlines)
 	$html = preg_replace( '/\n\n+/', '</p><p>', $html );
@@ -61,6 +91,8 @@ function aviflosu_markdown_to_html( string $markdown ): string {
 	$html = preg_replace( '/<p>\s*<(h[34]|ul|pre|ol)/s', '<$1', $html );
 	$html = preg_replace( '/<\/(h[34]|ul|pre|ol)>\s*<\/p>/s', '</$1>', $html );
 	$html = preg_replace( '/<p>\s*<\/p>/', '', $html );
+	// Remove empty paragraphs with just whitespace or single newlines
+	$html = preg_replace( '/<p>[\s\n]*<\/p>/', '', $html );
 
 	return $html;
 }

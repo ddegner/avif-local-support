@@ -141,7 +141,8 @@
     }
 
     if (stopBtn && typeof AVIFLocalSupportData !== 'undefined') {
-      stopBtn.addEventListener('click', function () {
+      stopBtn.addEventListener('click', function (e) {
+        e.preventDefault();
         stopBtn.disabled = true;
         apiFetch({ path: '/aviflosu/v1/stop-convert', method: 'POST' })
           .then(function () {
@@ -158,7 +159,8 @@
     }
 
     if (convertBtn && typeof AVIFLocalSupportData !== 'undefined') {
-      convertBtn.addEventListener('click', function () {
+      convertBtn.addEventListener('click', function (e) {
+        e.preventDefault();
         convertBtn.disabled = true;
         if (spinner) spinner.classList.add('is-active');
         if (statusEl) statusEl.textContent = 'Converting...';
@@ -230,16 +232,25 @@
     var deleteSpinner = document.querySelector('#avif-local-support-delete-spinner');
     var deleteStatus = document.querySelector('#avif-local-support-delete-status');
     if (deleteBtn && typeof AVIFLocalSupportData !== 'undefined') {
-      deleteBtn.addEventListener('click', function () {
-        if (!confirm('Delete all .avif files in uploads? This cannot be undone.')) {
-          return;
-        }
+      deleteBtn.addEventListener('click', function (e) {
+        e.preventDefault();
         deleteBtn.disabled = true;
         if (deleteSpinner) deleteSpinner.classList.add('is-active');
         if (deleteStatus) deleteStatus.textContent = '';
         apiFetch({ path: '/aviflosu/v1/delete-all-avifs', method: 'POST' })
           .then(function (d) {
             if (deleteStatus) deleteStatus.textContent = 'Deleted ' + String(d.deleted || 0) + (d.failed ? (', failed ' + String(d.failed)) : '');
+            // Refresh the AVIF counts after deletion
+            apiFetch({ path: '/aviflosu/v1/scan-missing', method: 'POST' })
+              .then(function (data) {
+                var totalEl = document.querySelector('#avif-local-support-total-jpegs');
+                var avifsEl = document.querySelector('#avif-local-support-existing-avifs');
+                var missingEl = document.querySelector('#avif-local-support-missing-avifs');
+                if (totalEl) totalEl.textContent = String(data.total_jpegs || 0);
+                if (avifsEl) avifsEl.textContent = String(data.existing_avifs || 0);
+                if (missingEl) missingEl.textContent = String(data.missing_avifs || 0);
+              })
+              .catch(function () { /* Ignore scan errors after delete */ });
           })
           .catch(function () { if (deleteStatus) deleteStatus.textContent = 'Failed'; })
           .finally(function () {
@@ -293,7 +304,8 @@
     }
 
     if (copyLogsBtn) {
-      copyLogsBtn.addEventListener('click', function () {
+      copyLogsBtn.addEventListener('click', function (e) {
+        e.preventDefault();
         // Re-query to ensure we have the current content state
         var contentEl = document.querySelector('#avif-local-support-logs-content');
         var text = contentEl ? contentEl.innerText : '';
@@ -312,7 +324,8 @@
     }
 
     if (copySupportBtn) {
-      copySupportBtn.addEventListener('click', function () {
+      copySupportBtn.addEventListener('click', function (e) {
+        e.preventDefault();
         var text = buildSupportDiagnosticsText();
         if (!text) return;
 
@@ -526,7 +539,8 @@
     }
 
     if (refreshLogsBtn && typeof AVIFLocalSupportData !== 'undefined') {
-      refreshLogsBtn.addEventListener('click', function () {
+      refreshLogsBtn.addEventListener('click', function (e) {
+        e.preventDefault();
         if (logsSpinner) logsSpinner.classList.add('is-active');
         apiFetch({ path: '/aviflosu/v1/logs', method: 'GET' })
           .then(function (json) {
@@ -547,10 +561,8 @@
     }
 
     if (clearLogsBtn && typeof AVIFLocalSupportData !== 'undefined') {
-      clearLogsBtn.addEventListener('click', function () {
-        if (!confirm('Clear all logs? This cannot be undone.')) {
-          return;
-        }
+      clearLogsBtn.addEventListener('click', function (e) {
+        e.preventDefault();
 
         if (logsSpinner) logsSpinner.classList.add('is-active');
         apiFetch({ path: '/aviflosu/v1/logs/clear', method: 'POST' })
@@ -574,7 +586,8 @@
     var runTestStatus = document.querySelector('#avif-local-support-magick-test-status');
     var runTestOutput = document.querySelector('#avif-local-support-magick-test-output');
     if (runTestBtn && typeof AVIFLocalSupportData !== 'undefined') {
-      runTestBtn.addEventListener('click', function () {
+      runTestBtn.addEventListener('click', function (e) {
+        e.preventDefault();
         runTestBtn.disabled = true;
         if (runTestSpinner) runTestSpinner.classList.add('is-active');
         if (runTestStatus) runTestStatus.textContent = 'Running…';

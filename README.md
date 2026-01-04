@@ -3,7 +3,7 @@ Contributors: ddegner
 Tags: avif, images, performance, media, optimization
 Requires at least: 6.8
 Tested up to: 6.9
-Stable tag: 0.5.7
+Stable tag: 0.5.8
 Requires PHP: 8.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -197,6 +197,11 @@ LiteSpeed's open_basedir restriction prevents PHP from detecting executables out
 4. **About** — Quick reference and version info
 
 ## Changelog
+
+### 0.5.8
+
+- Fix: Resolved "Insufficient memory" error during LQIP generation for large images by optimizing Imagick loader
+
 
 ### 0.5.7
 

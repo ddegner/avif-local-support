@@ -6,7 +6,7 @@ declare(strict_types=1);
  * Plugin Name: AVIF Local Support
  * Plugin URI: https://github.com/ddegner/avif-local-support
  * Description: High-quality AVIF image conversion for WordPress — local, quality-first.
- * Version: 0.5.13
+ * Version: 0.5.14
  * Author: ddegner
  * Author URI: https://www.daviddegner.com
  * License: GPL v2 or later
@@ -21,7 +21,7 @@ declare(strict_types=1);
 \defined('ABSPATH') || exit;
 
 // Define constants
-\define('AVIFLOSU_VERSION', '0.5.13');
+\define('AVIFLOSU_VERSION', '0.5.14');
 \define('AVIFLOSU_PLUGIN_FILE', __FILE__);
 \define('AVIFLOSU_PLUGIN_DIR', plugin_dir_path(__FILE__));
 \define('AVIFLOSU_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -34,9 +34,9 @@ if (file_exists($thumbhashLib)) {
 }
 
 // Composer autoloader for other third-party dependencies (if needed)
-$composerAutoloader = AVIFLOSU_PLUGIN_DIR . 'vendor/autoload.php';
-if (file_exists($composerAutoloader)) {
-	require_once $composerAutoloader;
+$aviflosu_composer_autoloader = AVIFLOSU_PLUGIN_DIR . 'vendor/autoload.php';
+if (file_exists($aviflosu_composer_autoloader)) {
+	require_once $aviflosu_composer_autoloader;
 }
 
 // PSR-4 style autoloader for plugin classes

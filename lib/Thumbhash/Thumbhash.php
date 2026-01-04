@@ -17,6 +17,7 @@ class Thumbhash
 	{
 		// Encoding an image larger than 100x100 is slow with no benefit
 		if ($w > 100 || $h > 100) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Developer-facing exception, not user output.
 			throw new \Exception("{$w}x{$h} doesn't fit in 100x100");
 		}
 

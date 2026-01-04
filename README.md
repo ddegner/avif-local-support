@@ -200,8 +200,7 @@ LiteSpeed's open_basedir restriction prevents PHP from detecting executables out
 
 ### 0.5.8
 
-- Fix: Resolved "Insufficient memory" error during LQIP generation for large images by optimizing Imagick loader
-
+- Fix: Resolved "Insufficient memory" error when generating LQIP for high-resolution images by optimizing ImageMagick loading.
 
 ### 0.5.7
 

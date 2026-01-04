@@ -158,19 +158,14 @@ final class ThumbHash
 	private static function generateWithImagick(string $imagePath): ?string
 	{
 		$imagick = new \Imagick();
-
+		// Optimization: Hint to libjpeg to load a smaller version (downscale) to save memory.
+		// We only need ~100px, so 200x200 allows sufficient quality while significantly reducing memory for large JPEGs.
 		try {
-			// Optimization: Hint to the decoder to load a smaller version (powers of 2: 1/2, 1/4, 1/8)
-			// effectively reducing memory usage for large JPEGs.
-			// Requesting 2x the max dimension ensures we have enough data for a good quality downscale.
-			$targetSize = self::getMaxDimension() * 2;
-			$imagick->setSize($targetSize, $targetSize);
-			$imagick->readImage($imagePath);
+			$imagick->setOption('jpeg:size', '200x200');
 		} catch (\Throwable $e) {
-			$imagick->clear();
-			$imagick->destroy();
-			throw $e;
+			// Ignore if setOption fails (e.g. older ImageMagick versions)
 		}
+		$imagick->readImage($imagePath);
 
 		// Get original dimensions
 		$width = $imagick->getImageWidth();

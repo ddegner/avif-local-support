@@ -193,8 +193,7 @@
         if (!url) return;
 
         var el = img.closest('picture') || img,
-            s = el.style,
-            applyStartTime = Date.now();
+            s = el.style;
 
         s.backgroundImage = 'url(' + url + ')';
         s.backgroundSize = 'cover';
@@ -204,18 +203,20 @@
 
         function clearBackground() {
             s.backgroundImage = s.backgroundSize = s.backgroundPosition = s.backgroundRepeat = '';
+            if (el.tagName === 'PICTURE') s.display = '';
         }
 
         function startFade() {
-            // Slow load - let CSS transition animate the fade
+            // Slow load - fade in the image, then clear the LQIP background
+            // Remove the loading class to trigger opacity 0 -> 1 transition (400ms)
             if (el.classList) el.classList.remove('thumbhash-loading');
-            // Delay clearing the background to allow for CSS fade transition (400ms)
-            setTimeout(clearBackground, 450);
+            // Clear background after image is fully visible (transition complete)
+            setTimeout(clearBackground, 420);
         }
 
         function instantReveal() {
-            // Fast load - disable transition to prevent 500ms fade animation
-            el.style.transition = 'none';
+            // Fast load - disable CSS transition so image appears instantly
+            img.style.transition = 'none';
             if (el.classList) el.classList.remove('thumbhash-loading');
             clearBackground();
         }
@@ -230,12 +231,11 @@
         if (el.classList) el.classList.add('thumbhash-loading');
 
         function onReady() {
-            // Check if image loaded quickly (within 2 seconds of page load)
-            // Quick loads don't need fade - it would feel sluggish
+            // Skip fade animation if page loaded recently (within 2 seconds)
+            // For fast initial loads, animation feels sluggish
             var timeSincePageLoad = Date.now() - pageLoadTime;
-            var loadDuration = Date.now() - applyStartTime;
 
-            if (timeSincePageLoad < 2000 || loadDuration < 200) {
+            if (timeSincePageLoad < 2000) {
                 // Fast load - instant reveal, no fade needed
                 instantReveal();
             } else {

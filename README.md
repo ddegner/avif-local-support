@@ -3,7 +3,7 @@ Contributors: ddegner
 Tags: avif, images, performance, media, optimization
 Requires at least: 6.8
 Tested up to: 6.9
-Stable tag: 0.5.18
+Stable tag: 0.5.19
 Requires PHP: 8.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -197,6 +197,13 @@ LiteSpeed's open_basedir restriction prevents PHP from detecting executables out
 4. **About** — Quick reference and version info
 
 ## Changelog
+
+### 0.5.19
+
+- Refactor: Simplified LQIP fade transition — removed blur filter and scale animation.
+- Fix: Eliminated white flash during LQIP-to-image transition by ensuring image is fully visible before removing placeholder.
+- Fix: Fast-loading images now appear instantly without the 400ms fade delay.
+- Cleanup: Removed unused per-image load duration tracking.
 
 ### 0.5.18
 

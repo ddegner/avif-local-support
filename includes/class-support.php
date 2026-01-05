@@ -51,15 +51,13 @@ final class Support
 		// Inject CSS for fading if enabled.
 		if ((bool) get_option('aviflosu_lqip_fade', true)) {
 			// CSS explanation:
-			// 1. img[data-thumbhash] starts with opacity 1, scale 1 and transitions.
-			// 2. When inside .thumbhash-loading parent OR img itself has the class, opacity is 0 and scale is 1.05.
-			// 3. When JS removes .thumbhash-loading, image fades in (opacity 0 -> 1) and scales down (1.05 -> 1).
-			// 4. The .thumbhash-loading element has blur(5px) applied, making the ThumbHash background
-			//    (which is a data URL set via inline style) appear blurred for a smooth blur-up effect.
-			$css = 'img[data-thumbhash]{opacity:1;transform:scale(1);transition:opacity 400ms ease-out,transform 400ms ease-out;}'
+			// 1. img[data-thumbhash] starts visible (opacity 1) with a transition.
+			// 2. When .thumbhash-loading is applied, the image is hidden (opacity 0).
+			// 3. When JS removes .thumbhash-loading, the image fades in over the LQIP background.
+			// 4. The LQIP background is cleared after the fade completes to avoid a white flash.
+			$css = 'img[data-thumbhash]{opacity:1;transition:opacity 400ms ease-out;}'
 				. '.thumbhash-loading img[data-thumbhash],'
-				. 'img.thumbhash-loading[data-thumbhash]{opacity:0;transform:scale(1.05);}'
-				. '.thumbhash-loading,img.thumbhash-loading{filter:blur(5px);}';
+				. 'img.thumbhash-loading[data-thumbhash]{opacity:0;}';
 			// Optionally render placeholders as sharp pixels instead of smooth blur.
 			if ((bool) get_option('aviflosu_lqip_pixelated', false)) {
 				$css .= '.thumbhash-loading,img.thumbhash-loading{image-rendering:pixelated;}';

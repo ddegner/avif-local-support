@@ -6,7 +6,7 @@ declare(strict_types=1);
  * Plugin Name: AVIF Local Support
  * Plugin URI: https://github.com/ddegner/avif-local-support
  * Description: High-quality AVIF image conversion for WordPress — local, quality-first.
- * Version: 0.5.17
+ * Version: 0.5.18
  * Author: ddegner
  * Author URI: https://www.daviddegner.com
  * License: GPL v2 or later

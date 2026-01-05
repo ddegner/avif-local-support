@@ -54,7 +54,8 @@ final class Support
 			// 1. img[data-thumbhash] starts with opacity 1, scale 1 and transitions.
 			// 2. When inside .thumbhash-loading parent OR img itself has the class, opacity is 0 and scale is 1.05.
 			// 3. When JS removes .thumbhash-loading, image fades in (opacity 0 -> 1) and scales down (1.05 -> 1).
-			// 4. Placeholder has blur(5px) for smoother transition (blur-up effect).
+			// 4. The .thumbhash-loading element has blur(5px) applied, making the ThumbHash background
+			//    (which is a data URL set via inline style) appear blurred for a smooth blur-up effect.
 			$css = 'img[data-thumbhash]{opacity:1;transform:scale(1);transition:opacity 400ms ease-out,transform 400ms ease-out;}'
 				. '.thumbhash-loading img[data-thumbhash],'
 				. 'img.thumbhash-loading[data-thumbhash]{opacity:0;transform:scale(1.05);}'

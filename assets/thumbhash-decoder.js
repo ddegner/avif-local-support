@@ -23,7 +23,7 @@
     // Reusable canvas for encoding
     var canvas, ctx;
 
-    // Track page load time - images loading within first second skip the fade
+    // Track page load time - images loading within first 2 seconds skip the fade
     var pageLoadTime = Date.now();
 
     function decode(hash) {

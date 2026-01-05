@@ -426,7 +426,7 @@ class LQIP_CLI
 	private function printProgress(int $current, int $total, float $startTime): void
 	{
 		$elapsed = microtime(true) - $startTime;
-		// Ensure total is at least 1 div zero and percentage
+		// Ensure total is at least 1 to avoid division by zero
 		$total = max(1, $total);
 		$percentage = round(($current / $total) * 100, 1);
 

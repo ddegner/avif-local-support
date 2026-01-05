@@ -29,7 +29,11 @@ final class BackgroundImages
 	private bool $bufferingStarted = false;
 
 	/**
-	 * Collected JPEG to AVIF URL mappings.
+	 * Collected JPEG to AVIF URL mappings from inline styles.
+	 *
+	 * Note: Currently unused. Inline style="background-image: url(...)" attributes
+	 * cannot be overridden via injected CSS without modifying the HTML directly.
+	 * This data is collected for potential future direct HTML rewriting.
 	 *
 	 * @var array<string, string>
 	 */

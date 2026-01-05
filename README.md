@@ -3,7 +3,7 @@ Contributors: ddegner
 Tags: avif, images, performance, media, optimization
 Requires at least: 6.8
 Tested up to: 6.9
-Stable tag: 0.5.17
+Stable tag: 0.5.18
 Requires PHP: 8.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -197,6 +197,13 @@ LiteSpeed's open_basedir restriction prevents PHP from detecting executables out
 4. **About** — Quick reference and version info
 
 ## Changelog
+
+### 0.5.18
+
+- Feature: LQIP Generate All now shows real-time progress counter, status text, and stop button.
+- Feature: Unified spinner/status UI for both AVIF and LQIP tools panels.
+- Fix: "AVIF conversion available" badge now correctly shows "Yes" when engines report support.
+- Fix: AVIF Delete All button now correctly re-enables Generate All button after completion.
 
 ### 0.5.17
 

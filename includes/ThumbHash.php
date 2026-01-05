@@ -146,7 +146,8 @@ final class ThumbHash
 	{
 		$imagick = new \Imagick();
 		// Optimization: Hint to libjpeg to load a smaller version (downscale) to save memory.
-		// We only need ~100px, so 200x200 allows sufficient quality while significantly reducing memory for large JPEGs.
+		// ThumbHash output is 32px max, but we request 200x200 to give the resampling algorithm
+		// sufficient source data for smooth downscaling while still significantly reducing memory for large JPEGs.
 		try {
 			$imagick->setOption('jpeg:size', '200x200');
 		} catch (\Throwable $e) {

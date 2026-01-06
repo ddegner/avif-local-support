@@ -214,11 +214,20 @@
             setTimeout(clearBackground, 420);
         }
 
-        function instantReveal() {
-            // Fast load - disable CSS transition so image appears instantly
+        function doInstantReveal() {
+            // Fast load - disable CSS transition and show immediately
             img.style.transition = 'none';
             if (el.classList) el.classList.remove('thumbhash-loading');
             clearBackground();
+        }
+
+        function instantReveal() {
+            // Wait for image to be decoded before revealing to prevent white flash
+            if (img.decode) {
+                img.decode().then(doInstantReveal).catch(doInstantReveal);
+            } else {
+                doInstantReveal();
+            }
         }
 
         if (img.complete && img.naturalWidth) {
@@ -249,7 +258,7 @@
         }
 
         img.addEventListener('load', onReady, { once: true });
-        img.addEventListener('error', instantReveal, { once: true });
+        img.addEventListener('error', doInstantReveal, { once: true });
     }
 
     function process(node) {

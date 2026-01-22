@@ -3,7 +3,7 @@ Contributors: ddegner
 Tags: avif, images, performance, media, optimization
 Requires at least: 6.8
 Tested up to: 6.9
-Stable tag: 0.5.20
+Stable tag: 0.5.21
 Requires PHP: 8.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -197,6 +197,13 @@ LiteSpeed's open_basedir restriction prevents PHP from detecting executables out
 4. **About** — Quick reference and version info
 
 ## Changelog
+
+### 0.5.21
+
+- Enhancement: ThumbHash input increased to 100px for richer LQIP placeholders.
+- Fix: AVIF srcset now correctly lists all responsive sizes by running after WordPress adds srcset attributes.
+- Fix: Single AVIF images now include width descriptors for proper responsive selection.
+- Refactor: Removed redundant `render_block` filter; unified image processing in `the_content` filter.
 
 ### 0.5.20
 

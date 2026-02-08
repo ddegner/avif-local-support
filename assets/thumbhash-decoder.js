@@ -78,10 +78,10 @@
             a_ac = hasAlpha ? readAC(5, 5, a_scale) : null;
 
         // Calculate dimensions from header (inline aspect ratio calc)
-        var alpha = ((bytes[0] | bytes[1] << 8 | bytes[2] << 16) >> 23 & 1) !== 0,
-            landscape = ((bytes[3] | bytes[4] << 8) >> 15 & 1) !== 0,
-            _lx = landscape ? (alpha ? 5 : 7) : (bytes[3] | bytes[4] << 8 >> 8) & 7,
-            _ly = landscape ? (bytes[3] | bytes[4] << 8 >> 8) & 7 : (alpha ? 5 : 7),
+        var alpha = hasAlpha,
+            landscape = isLandscape,
+            _lx = landscape ? (alpha ? 5 : 7) : (h16 & 7),
+            _ly = landscape ? (h16 & 7) : (alpha ? 5 : 7),
             ratio = (landscape ? 32 : _lx) / (landscape ? _ly : 32),
             w = round(ratio > 1 ? 32 : 32 * ratio),
             h = round(ratio > 1 ? 32 / ratio : 32),

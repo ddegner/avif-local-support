@@ -42,7 +42,7 @@ final class BackgroundImages
 	/**
 	 * CSS selector to AVIF URL mappings for external stylesheets.
 	 *
-	 * @var array<string, string>
+	 * @var array<string, array{jpeg:string,avif:string}>
 	 */
 	private array $selectorOverrides = array();
 
@@ -176,7 +176,6 @@ final class BackgroundImages
 		}
 
 		$uploadsUrl = $this->uploadsInfo['baseurl'] ?? '';
-		$uploadsDir = $this->uploadsInfo['basedir'] ?? '';
 
 		foreach ($matches[1] as $cssUrl) {
 			// Only process CSS files from our uploads directory (page builder CSS)
@@ -265,8 +264,11 @@ final class BackgroundImages
 				$avifUrl = $this->getAvifUrl($jpegUrl);
 
 				if (null !== $avifUrl) {
-					// Store selector -> AVIF URL mapping
-					$this->selectorOverrides[$selector] = $avifUrl;
+					// Store selector -> source/AVIF URL mapping.
+					$this->selectorOverrides[$selector] = array(
+						'jpeg' => $jpegUrl,
+						'avif' => $avifUrl,
+					);
 				}
 			}
 		}
@@ -376,14 +378,28 @@ final class BackgroundImages
 		$rules = array();
 
 		// Add selector-based overrides (from external stylesheets)
-		foreach ($this->selectorOverrides as $selector => $avifUrl) {
+		foreach ($this->selectorOverrides as $selector => $urls) {
 			// Sanitize selector to prevent XSS (strip any HTML tags)
 			$safeSelector = wp_strip_all_tags(trim($selector));
 			if ('' === $safeSelector) {
 				continue;
 			}
-			// Add !important to ensure override
-			$rules[] = $safeSelector . '{background-image:url("' . \esc_url($avifUrl) . '") !important}';
+
+			$jpegUrl = '';
+			$avifUrl = '';
+			if (is_array($urls)) {
+				$jpegUrl = isset($urls['jpeg']) ? (string) $urls['jpeg'] : '';
+				$avifUrl = isset($urls['avif']) ? (string) $urls['avif'] : '';
+			}
+
+			if ('' === $jpegUrl || '' === $avifUrl) {
+				continue;
+			}
+
+			// Keep JPEG as fallback for browsers without AVIF support, then prefer AVIF via image-set().
+			$rules[] = $safeSelector
+				. '{background-image:url("' . \esc_url($jpegUrl) . '") !important;'
+				. 'background-image:image-set(url("' . \esc_url($avifUrl) . '") type("image/avif"),url("' . \esc_url($jpegUrl) . '") type("image/jpeg")) !important;}';
 		}
 
 		return implode('', $rules);

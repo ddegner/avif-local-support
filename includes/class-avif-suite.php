@@ -272,6 +272,7 @@ final class Plugin {
 		check_admin_referer( 'aviflosu_reset_defaults' );
 		// Reset options to defaults.
 		update_option( 'aviflosu_enable_support', true );
+		update_option( 'aviflosu_enable_background_images', true );
 		update_option( 'aviflosu_convert_on_upload', true );
 		update_option( 'aviflosu_convert_via_schedule', true );
 		update_option( 'aviflosu_schedule_time', '01:00' );
@@ -285,6 +286,11 @@ final class Plugin {
 		update_option( 'aviflosu_cli_path', '' );
 		update_option( 'aviflosu_cli_args', $this->get_suggested_cli_args() );
 		update_option( 'aviflosu_cli_env', $this->get_suggested_cli_env() );
+		update_option( 'aviflosu_thumbhash_enabled', false );
+		update_option( 'aviflosu_lqip_generate_on_upload', true );
+		update_option( 'aviflosu_lqip_generate_via_schedule', true );
+		update_option( 'aviflosu_lqip_fade', true );
+		update_option( 'aviflosu_lqip_pixelated', false );
 
 		// Clear caches to force fresh detection.
 		delete_transient( 'aviflosu_file_cache' );

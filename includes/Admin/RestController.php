@@ -211,43 +211,40 @@ final class RestController
 
 	public function deleteAllAvifs(\WP_REST_Request $request): \WP_REST_Response
 	{
-		$uploads = \wp_upload_dir();
-		$baseDir = (string) ($uploads['basedir'] ?? '');
-
-		if ('' === $baseDir || !is_dir($baseDir)) {
-			return new \WP_REST_Response(array('message' => 'uploads_not_found'), 400);
-		}
-
-		$deleted = 0;
-		$failed = 0;
-
-		$iterator = new \RecursiveIteratorIterator(
-			new \RecursiveDirectoryIterator($baseDir, \FilesystemIterator::SKIP_DOTS)
+		$query = new \WP_Query(
+			array(
+				'post_type'              => 'attachment',
+				'post_status'            => 'inherit',
+				'post_mime_type'         => array('image/jpeg', 'image/jpg'),
+				'posts_per_page'         => -1,
+				'fields'                 => 'ids',
+				'no_found_rows'          => true,
+				'update_post_meta_cache' => false,
+				'update_post_term_cache' => false,
+				'cache_results'          => false,
+			)
 		);
 
-		foreach ($iterator as $fileInfo) {
-			if (!$fileInfo instanceof \SplFileInfo) {
-				continue;
-			}
-			$path = $fileInfo->getPathname();
-			if (\preg_match('/\.avif$/i', $path)) {
-				if ($fileInfo->isLink()) {
-					continue;
-				}
-				$ok = \wp_delete_file($path);
-				if ($ok) {
-					++$deleted;
-				} else {
-					++$failed;
-				}
-			}
+		$attempted = 0;
+		$deleted = 0;
+		$processed = 0;
+
+		foreach ($query->posts as $attachmentId) {
+			$result = $this->converter->deleteAvifsForAttachment((int) $attachmentId);
+			$attempted += (int) ($result['attempted'] ?? 0);
+			$deleted += (int) ($result['deleted'] ?? 0);
+			++$processed;
 		}
+
+		$failed = max(0, $attempted - $deleted);
 
 		// Clear the file existence cache so frontend stops trying to serve deleted AVIFs.
 		\delete_transient('aviflosu_file_cache');
 
 		return rest_ensure_response(
 			array(
+				'attachments_processed' => $processed,
+				'attempted' => $attempted,
 				'deleted' => $deleted,
 				'failed' => $failed,
 			)

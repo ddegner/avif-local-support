@@ -46,18 +46,21 @@ $avif_support_level = (string) ($system_status['avif_support_level'] ?? (!empty(
 			<h2 class="avif-header"><span><?php esc_html_e('AVIF Tools', 'avif-local-support'); ?></span></h2>
 			<div class="inside">
 				<p class="description" style="margin-bottom:15px;">
-					<?php esc_html_e('Manage AVIF conversion for existing images.', 'avif-local-support'); ?>
+					<?php esc_html_e('Manage AVIF conversion for existing JPEG files (originals and generated sizes).', 'avif-local-support'); ?>
+				</p>
+				<p class="description" style="margin-top:-8px;margin-bottom:15px;">
+					<?php esc_html_e('Counts here are file-level totals used for responsive srcset output, not Media Library item totals.', 'avif-local-support'); ?>
 				</p>
 
 				<div id="avif-local-support-stats"
 					style="margin-bottom:15px;padding:10px;background:#f0f0f1;border-radius:4px;display:flex;gap:24px;align-items:center;flex-wrap:wrap;">
-					<div><strong><?php esc_html_e('Images', 'avif-local-support'); ?>:</strong> <span
+					<div><strong><?php esc_html_e('JPEG Files', 'avif-local-support'); ?>:</strong> <span
 							id="avif-local-support-total-jpegs"><?php echo (int) ($stats['total_jpegs'] ?? 0); ?></span>
 					</div>
 					<div><strong><?php esc_html_e('With AVIF', 'avif-local-support'); ?>:</strong> <span
 							id="avif-local-support-existing-avifs"><?php echo (int) ($stats['existing_avifs'] ?? 0); ?></span>
 					</div>
-					<div><strong><?php esc_html_e('Without', 'avif-local-support'); ?>:</strong> <span
+					<div><strong><?php esc_html_e('Without AVIF', 'avif-local-support'); ?>:</strong> <span
 							id="avif-local-support-missing-avifs"><?php echo (int) ($stats['missing_avifs'] ?? 0); ?></span>
 					</div>
 				</div>
@@ -79,7 +82,7 @@ $avif_support_level = (string) ($system_status['avif_support_level'] ?? (!empty(
 						<strong><?php esc_html_e('Progress:', 'avif-local-support'); ?></strong>
 						<span id="avif-local-support-progress-avifs">0</span> / <span
 							id="avif-local-support-progress-jpegs">0</span>
-						<?php esc_html_e('AVIFs', 'avif-local-support'); ?>
+						<?php esc_html_e('AVIF files', 'avif-local-support'); ?>
 					</span>
 				</div>
 			</div>
@@ -118,18 +121,18 @@ $avif_support_level = (string) ($system_status['avif_support_level'] ?? (!empty(
 			<h2 class="avif-header"><span><?php esc_html_e('LQIP Tools', 'avif-local-support'); ?></span></h2>
 			<div class="inside">
 				<p class="description" style="margin-bottom:15px;">
-					<?php esc_html_e('Manage LQIP placeholders for existing images.', 'avif-local-support'); ?>
+					<?php esc_html_e('Manage LQIP placeholders for existing media items.', 'avif-local-support'); ?>
 				</p>
 
 				<div id="aviflosu-thumbhash-stats"
 					style="margin-bottom:15px;padding:10px;background:#f0f0f1;border-radius:4px;display:flex;gap:24px;align-items:center;flex-wrap:wrap;">
-					<div><strong><?php esc_html_e('Images', 'avif-local-support'); ?>:</strong> <span
+					<div><strong><?php esc_html_e('Media Items', 'avif-local-support'); ?>:</strong> <span
 							id="aviflosu-thumbhash-total">-</span>
 					</div>
 					<div><strong><?php esc_html_e('With LQIP', 'avif-local-support'); ?>:</strong> <span
 							id="aviflosu-thumbhash-with">-</span>
 					</div>
-					<div><strong><?php esc_html_e('Without', 'avif-local-support'); ?>:</strong> <span
+					<div><strong><?php esc_html_e('Without LQIP', 'avif-local-support'); ?>:</strong> <span
 							id="aviflosu-thumbhash-without">-</span>
 					</div>
 				</div>
@@ -470,7 +473,7 @@ $avif_support_level = (string) ($system_status['avif_support_level'] ?? (!empty(
 								<td>
 									<?php echo wp_kses_post($badge($schedule_enabled, 'Enabled', 'Disabled')); ?>
 									<?php if ($schedule_enabled): ?>
-										class="description">(
+										<span class="description">(
 										<?php
 										/* translators: %s: Schedule time (e.g., "01:00") */
 										echo esc_html(sprintf(__('scheduled around %s', 'avif-local-support'), $schedule_time));

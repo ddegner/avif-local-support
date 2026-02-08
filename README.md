@@ -3,7 +3,7 @@ Contributors: ddegner
 Tags: avif, images, performance, media, optimization
 Requires at least: 6.8
 Tested up to: 6.9
-Stable tag: 0.5.21
+Stable tag: 0.5.22
 Requires PHP: 8.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -197,6 +197,15 @@ LiteSpeed's open_basedir restriction prevents PHP from detecting executables out
 4. **About** — Quick reference and version info
 
 ## Changelog
+
+### 0.5.22
+
+- Fix: AVIF Delete All now removes only plugin companion AVIF files for JPEG attachments, preventing deletion of user-uploaded AVIF originals.
+- Fix: CSS background AVIF overrides now keep a JPEG fallback and use `image-set(...)` so non-AVIF browsers still render backgrounds.
+- Fix: ThumbHash decoder aspect-ratio extraction corrected (`h16 & 7`) to match the upstream reference implementation.
+- Fix: Restore defaults now resets background-image and all LQIP settings in addition to core AVIF settings.
+- Fix: Corrected malformed HTML in the Tools diagnostics table around the schedule-time display.
+- Fix: Clarified Tools count labels to match scope: AVIF now shows file-level totals as "JPEG Files" (originals + generated sizes), and LQIP shows attachment-level totals as "Media Items" (plus clearer "Without AVIF/LQIP" and "AVIF files" progress wording).
 
 ### 0.5.21
 

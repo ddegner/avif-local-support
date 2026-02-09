@@ -1,0 +1,25 @@
+name: Update WordPress.org Assets
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.wordpress-org/**'
+      - '.github/workflows/update-assets.yml'
+  workflow_dispatch:
+
+jobs:
+  assets:
+    name: Update plugin assets
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: WordPress.org asset update
+        uses: 10up/action-wordpress-plugin-asset-update@stable
+        env:
+          SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
+          SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
+          SLUG: avif-local-support
+          IGNORE_OTHER_FILES: true

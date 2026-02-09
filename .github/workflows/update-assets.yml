@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - '.wordpress-org/**'
+      - 'README.md'
       - '.github/workflows/update-assets.yml'
   workflow_dispatch:
 
@@ -15,6 +16,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Generate readme.txt
+        uses: tarosky/workflows/actions/wp-readme@main
 
       - name: WordPress.org asset update
         uses: 10up/action-wordpress-plugin-asset-update@stable

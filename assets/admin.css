@@ -7,23 +7,214 @@
   display: none;
 }
 
-.postbox .inside {
-  display: block;
+.avif-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 10px 0;
 }
 
-/* Non-draggable header style to match WP metabox header visuals */
-body.settings_page_avif-local-support .postbox h2.avif-header {
-  font-size: 14px;
-  line-height: 1.4;
+.avif-status-success {
+  color: #00a32a;
+}
+
+.avif-status-success-text {
+  color: #00a32a;
+  font-weight: 700;
+}
+
+.avif-status-error {
+  color: #d63638;
+  font-weight: 700;
+}
+
+.avif-status-error-note {
+  color: #d63638;
+  font-size: 11px;
+}
+
+.avif-error-text {
+  color: #d63638;
+}
+
+.avif-spinner-inline {
+  float: none;
   margin: 0;
-  padding: 8px 12px;
-  border-bottom: 1px solid #c3c4c7;
+  vertical-align: middle;
+}
+
+#avif-local-support-stats,
+#aviflosu-thumbhash-stats {
+  margin-bottom: 12px;
+}
+
+.avif-result-row {
+  margin-top: 15px;
+}
+
+#avif-local-support-result .spinner,
+#aviflosu-thumbhash-result .spinner {
+  float: none;
+  visibility: visible;
+  margin: 0 8px 0 0;
+}
+
+.avif-test-form {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.avif-playground-upload-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.avif-playground-upload-row label {
+  font-weight: 600;
+}
+
+.avif-playground-controls {
+  margin: 14px 0 10px;
+  padding: 12px;
+  border: 1px solid #dcdcde;
+  background: #fff;
+}
+
+.avif-playground-controls-grid {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr);
+  gap: 10px 14px;
+  align-items: center;
+}
+
+.avif-playground-range-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.avif-playground-range-wrap input[type="range"] {
+  width: min(360px, 100%);
+}
+
+.avif-playground-view-switch {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 8px 0 12px;
+}
+
+.avif-playground-view-switch .button.is-primary {
+  border-color: #2271b1;
+}
+
+.avif-playground-controls .button.disabled,
+.avif-tools-section .button.disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.avif-playground-preview-card {
+  border: 1px solid #dcdcde;
+  background: #fff;
+  padding: 10px;
+}
+
+.avif-playground-preview-card h4 {
+  margin: 0 0 8px;
+}
+
+#avif-local-support-playground-size-summary {
+  margin: 0 0 10px;
+}
+
+.avif-playground-preview-frame {
+  max-width: 100%;
+  max-height: min(70vh, 900px);
+  overflow: auto;
   background: #f6f7f7;
+  border: 1px solid #dcdcde;
+}
+
+.avif-playground-preview-card img {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: none;
+  max-height: none;
+  object-fit: initial;
+  background: transparent;
+  border: 0;
+}
+
+.avif-code-overflow {
+  white-space: pre-wrap;
+  word-break: break-word;
+  display: inline-block;
+  max-width: 680px;
+  overflow: auto;
+}
+
+.avif-binary-list {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+.avif-panel-output {
+  max-width: 960px;
+  white-space: pre-wrap;
+  background: #f6f7f7;
+  padding: 10px;
+  border: 1px solid #ccd0d4;
+  margin-top: 8px;
 }
 
 /* Align labels and inputs a bit nicer in Settings API tables */
 .form-table th {
   width: 260px;
+}
+
+.avif-settings-form {
+  max-width: 980px;
+}
+
+.avif-tools-layout {
+  max-width: 980px;
+}
+
+.avif-settings-form .title {
+  margin: 0 0 2px;
+}
+
+.avif-tools-section {
+  margin: 0 0 24px;
+}
+
+.avif-tools-section + .avif-tools-section {
+  padding-top: 16px;
+  border-top: 1px solid #dcdcde;
+}
+
+.avif-tools-section h3 {
+  margin: 0 0 8px;
+}
+
+.avif-help-tip {
+  color: #646970;
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+  margin-left: 4px;
+  vertical-align: text-bottom;
+}
+
+.avif-help-tip:hover {
+  color: #2271b1;
 }
 
 /* Increase spacing between inline radio options */
@@ -32,21 +223,6 @@ body.settings_page_avif-local-support .postbox h2.avif-header {
   margin-right: 18px;
   display: inline-flex;
   align-items: center;
-}
-
-/* Simple progress bar */
-.avif-local-support-progress {
-  width: 320px;
-  height: 8px;
-  background: #e5e5e5;
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.avif-local-support-progress-fill {
-  height: 100%;
-  background: #2271b1;
-  width: 0%;
 }
 
 /* Logs styling */
@@ -64,18 +240,19 @@ body.settings_page_avif-local-support .postbox h2.avif-header {
 .avif-logs-container {
   max-height: 400px;
   overflow-y: auto;
-  border: 1px solid #ddd;
-  background: #f9f9f9;
+  border: 1px solid #c3c4c7;
+  background: #fff;
   padding: 10px;
-  border-radius: 4px;
 }
 
 .avif-log-entry {
-  margin-bottom: 8px;
-  padding: 8px;
-  background: white;
-  border-radius: 3px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  margin: 0;
+  padding: 10px 12px;
+  border-bottom: 1px solid #dcdcde;
+}
+
+.avif-log-entry:last-child {
+  border-bottom: 0;
 }
 
 .avif-log-entry.error {
@@ -92,7 +269,7 @@ body.settings_page_avif-local-support .postbox h2.avif-header {
 }
 
 .avif-log-header {
-  font-weight: bold;
+  font-weight: 600;
   margin-bottom: 4px;
 }
 
@@ -117,42 +294,13 @@ body.settings_page_avif-local-support .postbox h2.avif-header {
 }
 
 .avif-log-suggestion {
-  margin: 4px 0;
-  padding: 4px;
-  background: #fff4f4;
-  border-left: 3px solid #d63638;
-  color: #d63638;
-  font-weight: 600;
+  margin: 6px 0;
+  padding: 6px 8px;
+  background: #fcf9e8;
+  border-left: 4px solid #dba617;
+  color: #3c434a;
+  font-weight: 400;
   font-size: 12px;
-}
-
-/* Server Support (guided diagnostics) */
-.avif-badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 12px;
-  line-height: 1.6;
-  font-weight: 600;
-  border: 1px solid transparent;
-}
-
-.avif-badge-ok {
-  background: #edfaef;
-  border-color: #b7e1c0;
-  color: #1a7f37;
-}
-
-.avif-badge-bad {
-  background: #fff1f0;
-  border-color: #f4c7c3;
-  color: #b42318;
-}
-
-.avif-badge-neutral {
-  background: #f6f7f7;
-  border-color: #dcdcde;
-  color: #50575e;
 }
 
 .avif-support-panel .widefat td {
@@ -174,47 +322,64 @@ body.settings_page_avif-local-support .postbox h2.avif-header {
   margin-top: 8px;
 }
 
-.avif-support-callout {
-  margin: 10px 0 14px;
-  padding: 10px;
-  border: 1px solid #dcdcde;
-  background: #fff;
+.avif-support-details .form-table {
+  margin-top: 0;
+}
+
+.avif-inline-help {
+  margin: 8px 0 0;
+}
+
+.avif-inline-help>summary {
+  cursor: pointer;
 }
 
 /* About tab readme styling */
-.avif-readme-section {
-  margin-bottom: 24px;
+.avif-readme-content {
   max-width: 960px;
 }
 
-.avif-readme-section h3 {
+.avif-readme-content h2 {
+  margin: 0 0 10px;
+}
+
+.avif-readme-content h3 {
   margin: 0 0 12px;
   padding-bottom: 8px;
   border-bottom: 1px solid #dcdcde;
 }
 
-.avif-readme-section h4 {
+.avif-readme-content h4 {
   margin: 16px 0 8px;
   color: #1d2327;
 }
 
-.avif-readme-section p {
+.avif-readme-content p {
   margin: 0 0 12px;
   line-height: 1.6;
 }
 
-.avif-readme-section ul {
+.avif-readme-content ul,
+.avif-readme-content ol {
   margin: 0 0 16px 0;
   padding-left: 24px;
+}
+
+.avif-readme-content ul {
   list-style: disc;
 }
 
-.avif-readme-section ul li {
+.avif-readme-content ol {
+  list-style: decimal;
+}
+
+.avif-readme-content ul li,
+.avif-readme-content ol li {
   margin-bottom: 6px;
   line-height: 1.5;
 }
 
-.avif-readme-section code {
+.avif-readme-content code {
   background: #f0f0f1;
   padding: 2px 6px;
   border-radius: 3px;
@@ -241,48 +406,18 @@ body.settings_page_avif-local-support .postbox h2.avif-header {
   white-space: pre;
 }
 
-.avif-readme-content p {
-  margin: 0 0 12px;
-  line-height: 1.6;
-}
-
-.avif-faq-list {
-  margin: 0;
-}
-
-.avif-faq-list dt {
-  margin: 0 0 4px;
-  font-weight: 600;
-}
-
-.avif-faq-list dd {
-  margin: 0 0 16px 0;
-  padding-left: 0;
-  color: #50575e;
-}
-
-.avif-faq-list dd p {
-  margin: 0;
-}
-
-.avif-changelog-entry {
-  margin-bottom: 16px;
-}
-
-.avif-changelog-entry h4 {
-  margin: 0 0 8px;
-}
-
-.avif-changelog-changes ul {
-  margin: 0;
-  padding-left: 20px;
-}
-
-.avif-changelog-changes li {
-  margin-bottom: 4px;
-}
-
 /* Hide log entries that appear in wrong location (direct children of .wrap) */
 .wrap>.avif-log-entry {
   display: none !important;
+}
+
+@media (max-width: 782px) {
+  .avif-playground-controls-grid {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .avif-playground-preview-frame {
+    max-height: 60vh;
+  }
 }

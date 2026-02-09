@@ -9,35 +9,26 @@
 defined( 'ABSPATH' ) || exit;
 ?>
 <div id="avif-local-support-tab-lqip" class="avif-local-support-tab">
-	<div class="metabox-holder">
+	<form action="options.php" method="post" class="avif-settings-form">
+		<?php settings_fields( 'aviflosu_beta_settings' ); ?>
 
-		<form action="options.php" method="post">
-			<?php settings_fields( 'aviflosu_beta_settings' ); ?>
+		<h2 class="title"><?php esc_html_e( 'Placeholders', 'avif-local-support' ); ?></h2>
+		<table class="form-table" role="presentation">
+			<?php do_settings_fields( 'avif-local-support', 'aviflosu_beta' ); ?>
+			<?php do_settings_fields( 'avif-local-support', 'aviflosu_lqip_basic' ); ?>
+		</table>
 
-			<div class="postbox">
-				<h2 class="avif-header"><span><?php esc_html_e( 'Serve LQIP files', 'avif-local-support' ); ?></span>
-				</h2>
-				<div class="inside">
-
-					<table class="form-table" role="presentation">
-						<?php do_settings_fields( 'avif-local-support', 'aviflosu_beta' ); ?>
-					</table>
-				</div>
+		<details class="avif-support-details">
+			<summary><?php esc_html_e( 'Advanced Settings', 'avif-local-support' ); ?></summary>
+			<div class="avif-support-details-body">
+				<table class="form-table" role="presentation">
+					<?php do_settings_fields( 'avif-local-support', 'aviflosu_lqip_advanced' ); ?>
+				</table>
 			</div>
+		</details>
 
-			<div class="postbox">
-				<h2 class="avif-header"><span><?php esc_html_e( 'Conversion Settings', 'avif-local-support' ); ?></span>
-				</h2>
-				<div class="inside">
-					<table class="form-table" role="presentation">
-						<?php do_settings_fields( 'avif-local-support', 'aviflosu_lqip_conversion' ); ?>
-					</table>
-				</div>
-			</div>
-
-			<div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-				<?php submit_button( '', 'primary', 'submit', false ); ?>
-			</div>
-		</form>
-	</div>
+		<div class="avif-actions-row">
+			<?php submit_button( __( 'Save Placeholder Settings', 'avif-local-support' ), 'primary', 'submit', false ); ?>
+		</div>
+	</form>
 </div>

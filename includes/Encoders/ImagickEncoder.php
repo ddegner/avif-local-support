@@ -89,17 +89,17 @@ class ImagickEncoder implements AvifEncoderInterface {
 				$this->resizeAndCrop( $im, (int) $dimensions['width'], (int) $dimensions['height'] );
 			}
 
+			// Apply quality before and after selecting AVIF format.
+			// Some Imagick builds only honor this once AVIF is set, others preserve prior values.
+			$this->applyQualityOptions( $im, $settings->quality );
 			$im->setImageFormat( 'AVIF' );
+			$this->applyQualityOptions( $im, $settings->quality );
 
-			// Settings
-			// Suppress warnings for setOption as some versions might complain
-			@$im->setOption( 'avif:quality', (string) $settings->quality );
-			$im->setImageCompressionQuality( $settings->quality );
-			@$im->setOption( 'avif:speed', (string) min( 8, $settings->speed ) );
+			// Settings.
+			// Apply both heic:* and avif:* artifacts to handle delegate namespace differences across builds.
+			$this->setBothNamespaceOption( $im, 'speed', (string) min( 8, $settings->speed ) );
 
-			if ( $settings->lossless ) {
-				@$im->setOption( 'avif:lossless', 'true' );
-			}
+			$this->setBothNamespaceOption( $im, 'lossless', $settings->lossless ? 'true' : 'false' );
 
 			// Preserve all metadata (EXIF, XMP, IPTC, ICC profiles)
 			// Do not call stripImage()
@@ -114,16 +114,17 @@ class ImagickEncoder implements AvifEncoderInterface {
 			}
 
 			// Subsampling & Bit Depth
-			@$im->setOption( 'avif:chroma-subsample', $settings->getChromaLabel() );
-			@$im->setOption( 'avif:bit-depth', $settings->bitDepth );
+			$this->setCoderOption( $im, 'heic:chroma', $settings->getChromaNumeric() );
+			$this->setCoderOption( $im, 'avif:chroma-subsample', $settings->getChromaLabel() );
+			$this->setBothNamespaceOption( $im, 'bit-depth', $settings->bitDepth );
 			$im->setImageDepth( (int) $settings->bitDepth );
 
 			// NCLX defaults if no ICC
 			if ( ! $hadIcc ) {
-				@$im->setOption( 'avif:color-primaries', '1' );
-				@$im->setOption( 'avif:transfer-characteristics', '13' );
-				@$im->setOption( 'avif:matrix-coefficients', '1' );
-				@$im->setOption( 'avif:range', 'full' );
+				$this->setBothNamespaceOption( $im, 'color-primaries', '1' );
+				$this->setBothNamespaceOption( $im, 'transfer-characteristics', '13' );
+				$this->setBothNamespaceOption( $im, 'matrix-coefficients', '1' );
+				$this->setBothNamespaceOption( $im, 'range', 'full' );
 			}
 
 			// Restore ICC (always preserve for now as per original logic)
@@ -165,6 +166,67 @@ class ImagickEncoder implements AvifEncoderInterface {
 				$suggestion = 'Imagick cannot read this file format.';
 			}
 			return ConversionResult::failure( 'Imagick error: ' . $e->getMessage(), $suggestion );
+		}
+	}
+
+	private function setBothNamespaceOption( Imagick $im, string $name, string $value ): void {
+		$this->setCoderOption( $im, 'heic:' . $name, $value );
+		$this->setCoderOption( $im, 'avif:' . $name, $value );
+	}
+
+	private function applyQualityOptions( Imagick $im, int $quality ): void {
+		$q = (string) max( 0, min( 100, $quality ) );
+
+		// Keep explicit namespace keys for builds that wire AVIF quality through coder-specific options.
+		$this->setBothNamespaceOption( $im, 'quality', $q );
+		$this->setBothNamespaceOption( $im, 'q', $q );
+
+		// Apply generic quality knobs to mirror CLI "-quality" behavior as closely as possible.
+		$this->setCoderOption( $im, 'quality', $q );
+		$this->setCoderOption( $im, 'compression-quality', $q );
+
+		try {
+			$im->setImageCompressionQuality( (int) $q );
+		} catch ( Throwable $e ) {
+			// ignore if unsupported by this build
+		}
+
+		// Some builds expose quality controls only through object-level APIs.
+		if ( method_exists( $im, 'setCompressionQuality' ) ) {
+			try {
+				$im->setCompressionQuality( (int) $q );
+			} catch ( Throwable $e ) {
+				// ignore if unsupported by this build
+			}
+		}
+
+		// Mirror CLI-style quality through image properties as a last-resort path.
+		if ( method_exists( $im, 'setImageProperty' ) ) {
+			foreach ( array( 'quality', 'heic:quality', 'avif:quality', 'heic:q', 'avif:q' ) as $property ) {
+				try {
+					$im->setImageProperty( $property, $q );
+				} catch ( Throwable $e ) {
+					// ignore unsupported properties
+				}
+			}
+		}
+	}
+
+	private function setCoderOption( Imagick $im, string $name, string $value ): void {
+		// setImageArtifact maps to coder -define/-set behavior in modern Imagick builds.
+		if ( method_exists( $im, 'setImageArtifact' ) ) {
+			try {
+				$im->setImageArtifact( $name, $value );
+			} catch ( Throwable $e ) {
+				// ignore unsupported artifacts on older delegates
+			}
+		}
+
+		// Keep setOption as a fallback for older behavior and mixed installations.
+		try {
+			@$im->setOption( $name, $value );
+		} catch ( Throwable $e ) {
+			// ignore unsupported options
 		}
 	}
 

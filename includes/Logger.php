@@ -105,7 +105,8 @@ final class Logger {
 				echo '<div class="avif-log-details">';
 				foreach ( $details as $key => $value ) {
 					if ( is_scalar( $value ) ) {
-						echo '<div><strong>' . esc_html( $key ) . ':</strong> ' . esc_html( (string) $value ) . '</div>';
+						$displayValue = is_bool( $value ) ? ( $value ? 'true' : 'false' ) : (string) $value;
+						echo '<div><strong>' . esc_html( $key ) . ':</strong> ' . esc_html( $displayValue ) . '</div>';
 					}
 				}
 				echo '</div>';

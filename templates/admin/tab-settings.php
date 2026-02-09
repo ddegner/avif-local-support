@@ -9,53 +9,27 @@
 defined( 'ABSPATH' ) || exit;
 ?>
 <div id="avif-local-support-tab-settings" class="avif-local-support-tab active">
-	<div class="metabox-holder">
-		<form action="options.php" method="post">
-			<?php settings_fields( 'aviflosu_settings' ); ?>
+	<form action="options.php" method="post" class="avif-settings-form">
+		<?php settings_fields( 'aviflosu_settings' ); ?>
 
-			<div class="postbox">
-				<h2 class="avif-header"><span><?php esc_html_e( 'Serve AVIF files', 'avif-local-support' ); ?></span>
-				</h2>
-				<div class="inside">
-					<table class="form-table" role="presentation">
-						<?php do_settings_fields( 'avif-local-support', 'aviflosu_main' ); ?>
-					</table>
-				</div>
+		<h2 class="title"><?php esc_html_e( 'AVIF Settings', 'avif-local-support' ); ?></h2>
+		<table class="form-table" role="presentation">
+			<?php do_settings_fields( 'avif-local-support', 'aviflosu_main' ); ?>
+			<?php do_settings_fields( 'avif-local-support', 'aviflosu_conversion_basic' ); ?>
+		</table>
+
+		<details class="avif-support-details">
+			<summary><?php esc_html_e( 'Advanced Settings', 'avif-local-support' ); ?></summary>
+			<div class="avif-support-details-body">
+				<table class="form-table" role="presentation">
+					<?php do_settings_fields( 'avif-local-support', 'aviflosu_engine' ); ?>
+					<?php do_settings_fields( 'avif-local-support', 'aviflosu_conversion_advanced' ); ?>
+				</table>
 			</div>
+		</details>
 
-			<div class="postbox">
-				<h2 class="avif-header"><span><?php esc_html_e( 'Engine Selection', 'avif-local-support' ); ?></span>
-				</h2>
-				<div class="inside">
-					<table class="form-table" role="presentation">
-						<?php do_settings_fields( 'avif-local-support', 'aviflosu_engine' ); ?>
-					</table>
-				</div>
-			</div>
-
-			<div class="postbox">
-				<h2 class="avif-header"><span><?php esc_html_e( 'Conversion Settings', 'avif-local-support' ); ?></span>
-				</h2>
-				<div class="inside">
-					<table class="form-table" role="presentation">
-						<?php do_settings_fields( 'avif-local-support', 'aviflosu_conversion' ); ?>
-					</table>
-				</div>
-			</div>
-
-			<div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-				<?php submit_button( '', 'primary', 'submit', false ); ?>
-			</div>
-		</form>
-
-		<div style="margin-top:20px;padding-top:20px;border-top:1px solid #c3c4c7;">
-			<form action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post" style="display:inline"
-				onsubmit="return confirm('<?php esc_attr_e( 'Reset all settings to defaults?', 'avif-local-support' ); ?>');">
-				<input type="hidden" name="action" value="aviflosu_reset_defaults" />
-				<?php wp_nonce_field( 'aviflosu_reset_defaults', '_wpnonce', false, true ); ?>
-				<button type="submit"
-					class="button"><?php esc_html_e( 'Restore defaults', 'avif-local-support' ); ?></button>
-			</form>
+		<div class="avif-actions-row">
+			<?php submit_button( __( 'Save AVIF Settings', 'avif-local-support' ), 'primary', 'submit', false ); ?>
 		</div>
-	</div>
+	</form>
 </div>

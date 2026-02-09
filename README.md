@@ -3,7 +3,7 @@ Contributors: ddegner
 Tags: avif, images, performance, media, optimization
 Requires at least: 6.8
 Tested up to: 6.9
-Stable tag: 0.5.22
+Stable tag: 0.5.23
 Requires PHP: 8.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -12,11 +12,11 @@ High-quality AVIF image conversion for WordPress — local, quality-first.
 
 ## Description
 
-Built by a [Boston photographer](https://www.daviddegner.com) who needed it for their own portfolio. This plugin prioritizes **image quality** over everything else — no subscriptions, no external services.
+Built by a [Boston photographer](https://www.daviddegner.com) for site owners who care about visual quality and full control. This plugin prioritizes **image quality** over everything else — no subscriptions, no external services.
 
 ## Features
 
-- **Local Processing** — All conversion happens on your server. No external API calls. Works great on a shared CPU with 2GB RAM.
+- **Local Processing** — All conversion happens on your server. No subscriptions or external API calls. Works great on a shared CPU with 2GB RAM.
 - **Quality First** — Uses LANCZOS resizing, preserves ICC color profiles, and keeps EXIF/XMP/IPTC metadata intact.
 - **Fully Tunable** — Control quality (0–100), speed (0–10), chroma subsampling (4:2:0, 4:2:2, 4:4:4), and bit depth (8/10/12-bit).
 - **Smart Fallback** — Serves AVIF to supported browsers, JPEG to everyone else via picture elements.
@@ -42,6 +42,66 @@ Built by a [Boston photographer](https://www.daviddegner.com) who needed it for 
 - **PHP:** 8.3 or later
 - **WordPress:** 6.8 or later
 - **Recommended:** Imagick extension with AVIF-enabled ImageMagick
+
+## Server Setup
+
+The plugin supports three conversion engines, in order of preference:
+
+### ImageMagick CLI (Fastest, Recommended)
+
+Uses the ImageMagick command-line binary directly:
+
+- **System binary:** ImageMagick 7.x built with HEIF/AVIF support (via libheif)
+- **No PHP extension required**
+- **Benefits:** Fastest performance, LANCZOS resizing, full metadata preservation (EXIF, XMP, IPTC, ICC)
+- **Typical paths:** `/usr/bin/magick`, `/usr/local/bin/magick`, or Homebrew on macOS
+
+To verify AVIF support:
+
+    magick -list format | grep -i avif
+
+### Imagick PHP Extension (High Quality)
+
+Uses the PHP Imagick extension:
+
+- **PHP extension:** imagick
+- **System libraries:** ImageMagick built with HEIF/AVIF support (via libheif)
+- **Benefits:** LANCZOS resizing, full metadata preservation (EXIF, XMP, IPTC, ICC), color profile handling
+
+To install on Ubuntu/Debian:
+
+    apt install php-imagick imagemagick libheif-dev
+
+### GD Library (Fallback)
+
+Uses PHP's built-in GD library:
+
+- **PHP extension:** gd built with AVIF support (provides imageavif on PHP 8.1+)
+- **Note:** Some distro builds omit AVIF support; limited metadata preservation
+
+### MIME Type Configuration
+
+Ensure your web server is configured to serve .avif files as image/avif.
+
+### Documentation
+
+- [ImageMagick installation](https://imagemagick.org/script/download.php)
+- [PHP Imagick installation](https://www.php.net/imagick)
+- [PHP GD installation](https://www.php.net/manual/en/image.installation.php)
+- [ImageMagick format support](https://imagemagick.org/script/formats.php)
+
+### Need help with setup?
+
+If you're not sure what to install or upgrade, copy your **Server Diagnostics** from the plugin status/tools screen (or run `wp avif status --format=json`) and paste it into an LLM.
+
+Example prompt:
+
+    I need AVIF support for WordPress. Based on this diagnostics output, give me step-by-step commands to install or upgrade ImageMagick, libheif, and PHP Imagick on my server.
+
+After applying changes, verify with:
+
+    wp avif status
+    magick -list format | grep -i avif
 
 ## WP-CLI Commands
 
@@ -112,54 +172,7 @@ Manage LQIP (ThumbHash) placeholders:
 
 For more information, visit [wp-cli.org](https://wp-cli.org/).
 
-## Server Setup
-
-The plugin supports three conversion engines, in order of preference:
-
-### ImageMagick CLI (Fastest, Recommended)
-
-Uses the ImageMagick command-line binary directly:
-
-- **System binary:** ImageMagick 7.x built with HEIF/AVIF support (via libheif)
-- **No PHP extension required**
-- **Benefits:** Fastest performance, LANCZOS resizing, full metadata preservation (EXIF, XMP, IPTC, ICC)
-- **Typical paths:** `/usr/bin/magick`, `/usr/local/bin/magick`, or Homebrew on macOS
-
-To verify AVIF support:
-
-    magick -list format | grep -i avif
-
-### Imagick PHP Extension (High Quality)
-
-Uses the PHP Imagick extension:
-
-- **PHP extension:** imagick
-- **System libraries:** ImageMagick built with HEIF/AVIF support (via libheif)
-- **Benefits:** LANCZOS resizing, full metadata preservation (EXIF, XMP, IPTC, ICC), color profile handling
-
-To install on Ubuntu/Debian:
-
-    apt install php-imagick imagemagick libheif-dev
-
-### GD Library (Fallback)
-
-Uses PHP's built-in GD library:
-
-- **PHP extension:** gd built with AVIF support (provides imageavif on PHP 8.1+)
-- **Note:** Some distro builds omit AVIF support; limited metadata preservation
-
-### MIME Type Configuration
-
-Ensure your web server is configured to serve .avif files as image/avif.
-
-### Documentation
-
-- [ImageMagick installation](https://imagemagick.org/script/download.php)
-- [PHP Imagick installation](https://www.php.net/imagick)
-- [PHP GD installation](https://www.php.net/manual/en/image.installation.php)
-- [ImageMagick format support](https://imagemagick.org/script/formats.php)
-
-## FAQ
+## Frequently Asked Questions
 
 ### Does this modify my original JPEGs?
 
@@ -191,12 +204,20 @@ LiteSpeed's open_basedir restriction prevents PHP from detecting executables out
 
 ## Screenshots
 
-1. **Settings** — Configure AVIF quality, speed, and conversion options
-2. **Tools** — Convert missing AVIFs, test conversions, bulk delete
-3. **Status** — Server capability diagnostics and library coverage
+1. **AVIF Images** — Configure AVIF delivery, conversion quality, speed, and engine settings
+2. **Placeholders (LQIP)** — Configure ThumbHash placeholder generation and display behavior
+3. **Tools** — Run AVIF/LQIP bulk tools and review server support diagnostics
 4. **About** — Quick reference and version info
 
 ## Changelog
+
+### 0.5.23
+
+- Feature: Added an AVIF Settings Playground for real JPEG/AVIF preview comparisons and one-click apply of tested settings.
+- Feature: Expanded Tools with dedicated LQIP bulk generation/deletion controls and progress/status feedback.
+- Enhancement: Refreshed admin UX across tabs (clearer labels, advanced sections, improved diagnostics and logs layout).
+- Enhancement: Updated WordPress.org screenshots to match the current AVIF, Placeholders, Tools, and About screens.
+- Fix: Plugin Check hardening for release by escaping help-tip output safely and using `wp_delete_file()` in preview cleanup paths.
 
 ### 0.5.22
 

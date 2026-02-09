@@ -26,6 +26,13 @@
     return wp.apiFetch(options);
   }
 
+  function getI18n(key, fallback) {
+    if (typeof AVIFLocalSupportData === 'undefined' || !AVIFLocalSupportData.strings) return fallback;
+    var value = AVIFLocalSupportData.strings[key];
+    if (typeof value !== 'string' || value === '') return fallback;
+    return value;
+  }
+
   function activateTab(id) {
     var tabs = ['settings', 'lqip', 'tools', 'about'];
     tabs.forEach(function (t) {
@@ -62,42 +69,6 @@
     activateTab(initial);
   }
 
-  function initStatus() {
-    var btn = $('#avif-local-support-rescan');
-    if (!btn || typeof AVIFLocalSupportData === 'undefined') return;
-    function setLoading() {
-      var totalEl = $('#avif-local-support-total-jpegs');
-      var avifsEl = $('#avif-local-support-existing-avifs');
-      var missingEl = $('#avif-local-support-missing-avifs');
-      if (!totalEl || !avifsEl || !missingEl) return;
-      var spinner = '<span class="spinner is-active"></span>';
-      totalEl.innerHTML = avifsEl.innerHTML = missingEl.innerHTML = spinner;
-    }
-    function scan() {
-      setLoading();
-      apiFetch({ path: '/aviflosu/v1/scan-missing', method: 'POST' })
-        .then(function (data) {
-          var totalEl = $('#avif-local-support-total-jpegs');
-          var avifsEl = $('#avif-local-support-existing-avifs');
-          var missingEl = $('#avif-local-support-missing-avifs');
-          if (!totalEl || !avifsEl || !missingEl) return;
-          totalEl.textContent = String(data.total_jpegs || 0);
-          avifsEl.textContent = String(data.existing_avifs || 0);
-          missingEl.textContent = String(data.missing_avifs || 0);
-        })
-        .catch(function () {
-          var totalEl = $('#avif-local-support-total-jpegs');
-          var avifsEl = $('#avif-local-support-existing-avifs');
-          var missingEl = $('#avif-local-support-missing-avifs');
-          if (!totalEl || !avifsEl || !missingEl) return;
-          totalEl.textContent = avifsEl.textContent = missingEl.textContent = '-';
-        });
-    }
-    btn.addEventListener('click', scan);
-
-    // No global polling controller needed; tools tab has its own progress/polling
-  }
-
   function initCliSuggestions() {
     var buttons = document.querySelectorAll('.aviflosu-apply-suggestion');
     if (!buttons.length) return;
@@ -116,8 +87,13 @@
 
   function initAll() {
     initTabs();
-    initStatus();
     initCliSuggestions();
+
+    function toggleHidden(element, hidden) {
+      if (!element || !element.classList) return;
+      if (hidden) element.classList.add('hidden');
+      else element.classList.remove('hidden');
+    }
 
     // Convert-now button (AJAX queue + simple counter progress)
     var convertBtn = document.querySelector('#avif-local-support-convert-now');
@@ -135,8 +111,8 @@
         window.clearInterval(pollingTimerLocal);
         pollingTimerLocal = null;
       }
-      if (stopBtn) stopBtn.style.display = 'none';
-      if (progressEl) progressEl.style.display = 'none';
+      toggleHidden(stopBtn, true);
+      toggleHidden(progressEl, true);
       if (spinner) spinner.classList.remove('is-active');
       if (convertBtn) convertBtn.disabled = false;
     }
@@ -147,10 +123,10 @@
         stopBtn.disabled = true;
         apiFetch({ path: '/aviflosu/v1/stop-convert', method: 'POST' })
           .then(function () {
-            if (statusEl) statusEl.textContent = 'Stopped';
+            if (statusEl) statusEl.textContent = getI18n('avifStopped', 'AVIF generation stopped.');
           })
           .catch(function () {
-            if (statusEl) statusEl.textContent = 'Stop failed';
+            if (statusEl) statusEl.textContent = getI18n('avifStopFailed', 'Could not stop AVIF generation.');
           })
           .finally(function () {
             stopPolling();
@@ -163,15 +139,15 @@
       convertBtn.addEventListener('click', function (e) {
         e.preventDefault();
         convertBtn.disabled = true;
-        if (resultContainer) resultContainer.style.display = 'block';
+        toggleHidden(resultContainer, false);
         if (spinner) spinner.classList.add('is-active');
-        if (statusEl) statusEl.textContent = 'Converting...';
-        if (progressEl) progressEl.style.display = 'none';
-        if (stopBtn) stopBtn.style.display = '';
+        if (statusEl) statusEl.textContent = getI18n('avifConverting', 'Generating missing AVIF files...');
+        toggleHidden(progressEl, true);
+        toggleHidden(stopBtn, false);
         apiFetch({ path: '/aviflosu/v1/convert-now', method: 'POST' })
           .then(function () {
             // Show inline counter progress
-            if (progressEl) progressEl.style.display = '';
+            toggleHidden(progressEl, false);
             var prevMissing = null;
             var unchangedTicks = 0;
             var startTime = Date.now();
@@ -198,7 +174,7 @@
 
                   // Stop conditions: finished, stalled, or too long
                   if (missing === 0) {
-                    if (statusEl) statusEl.textContent = 'Complete!';
+                    if (statusEl) statusEl.textContent = getI18n('avifComplete', 'AVIF generation complete.');
                     stopPolling();
                   } else {
                     if (prevMissing !== null && missing === prevMissing) {
@@ -208,7 +184,7 @@
                     }
                     prevMissing = missing;
                     if (unchangedTicks >= MAX_UNCHANGED_TICKS || (Date.now() - startTime) > MAX_DURATION_MS) {
-                      if (statusEl) statusEl.textContent = 'Continuing in background...';
+                      if (statusEl) statusEl.textContent = getI18n('avifContinuingBackground', 'AVIF generation is continuing in the background.');
                       stopPolling();
                     }
                   }
@@ -220,7 +196,7 @@
             updateLocal();
           })
           .catch(function () {
-            if (statusEl) statusEl.textContent = 'Failed';
+            if (statusEl) statusEl.textContent = getI18n('avifFailed', 'AVIF generation failed.');
             stopPolling();
           })
           .finally(function () {
@@ -234,14 +210,22 @@
     if (deleteBtn && typeof AVIFLocalSupportData !== 'undefined') {
       deleteBtn.addEventListener('click', function (e) {
         e.preventDefault();
+        if (!window.confirm(getI18n('confirmDeleteAvifs', 'Delete all AVIF files generated by this plugin?'))) {
+          return;
+        }
         deleteBtn.disabled = true;
-        if (resultContainer) resultContainer.style.display = 'block';
+        toggleHidden(resultContainer, false);
         if (spinner) spinner.classList.add('is-active');
-        if (statusEl) statusEl.textContent = 'Deleting...';
-        if (progressEl) progressEl.style.display = 'none';
+        if (statusEl) statusEl.textContent = getI18n('avifDeleting', 'Deleting AVIF files...');
+        toggleHidden(progressEl, true);
         apiFetch({ path: '/aviflosu/v1/delete-all-avifs', method: 'POST' })
           .then(function (d) {
-            if (statusEl) statusEl.textContent = 'Deleted ' + String(d.deleted || 0) + (d.failed ? (', failed ' + String(d.failed)) : '');
+            if (statusEl) {
+              var deletedPrefix = getI18n('avifDeletedPrefix', 'Deleted AVIF files:');
+              var failedPrefix = getI18n('avifFailedPrefix', 'Failed:');
+              var deletedText = deletedPrefix + ' ' + String(d.deleted || 0);
+              statusEl.textContent = deletedText + (d.failed ? (', ' + failedPrefix + ' ' + String(d.failed)) : '');
+            }
             // Refresh the AVIF counts after deletion
             apiFetch({ path: '/aviflosu/v1/scan-missing', method: 'POST' })
               .then(function (data) {
@@ -254,11 +238,178 @@
               })
               .catch(function () { /* Ignore scan errors after delete */ });
           })
-          .catch(function () { if (statusEl) statusEl.textContent = 'Failed'; })
+          .catch(function () { if (statusEl) statusEl.textContent = getI18n('avifFailed', 'AVIF generation failed.'); })
           .finally(function () {
             if (spinner) spinner.classList.remove('is-active');
             deleteBtn.disabled = false;
             if (convertBtn) convertBtn.disabled = false;
+          });
+      });
+    }
+
+    // LQIP tools
+    var lqipTotalEl = document.querySelector('#aviflosu-thumbhash-total');
+    var lqipWithEl = document.querySelector('#aviflosu-thumbhash-with');
+    var lqipWithoutEl = document.querySelector('#aviflosu-thumbhash-without');
+    var lqipGenerateBtn = document.querySelector('#aviflosu-thumbhash-generate');
+    var lqipStopBtn = document.querySelector('#aviflosu-thumbhash-stop');
+    var lqipDeleteBtn = document.querySelector('#aviflosu-thumbhash-delete');
+    var lqipResultContainer = document.querySelector('#aviflosu-thumbhash-result');
+    var lqipSpinner = document.querySelector('#aviflosu-thumbhash-spinner');
+    var lqipStatusEl = document.querySelector('#aviflosu-thumbhash-status');
+    var lqipProgressEl = document.querySelector('#aviflosu-thumbhash-progress');
+    var lqipProgressWith = document.querySelector('#aviflosu-thumbhash-progress-with');
+    var lqipProgressTotal = document.querySelector('#aviflosu-thumbhash-progress-total');
+    var lqipPollingTimer = null;
+    var lqipStopRequested = false;
+
+    function loadLqipStats(callback) {
+      apiFetch({ path: '/aviflosu/v1/thumbhash/stats', method: 'GET' })
+        .then(function (data) {
+          if (lqipTotalEl) lqipTotalEl.textContent = String(data.total || 0);
+          if (lqipWithEl) lqipWithEl.textContent = String(data.with_hash || 0);
+          if (lqipWithoutEl) lqipWithoutEl.textContent = String(data.without_hash || 0);
+          if (callback) callback(data);
+        })
+        .catch(function () {
+          if (lqipTotalEl) lqipTotalEl.textContent = '-';
+          if (lqipWithEl) lqipWithEl.textContent = '-';
+          if (lqipWithoutEl) lqipWithoutEl.textContent = '-';
+          if (callback) callback({});
+        });
+    }
+
+    function stopLqipPolling() {
+      if (lqipPollingTimer) {
+        window.clearInterval(lqipPollingTimer);
+        lqipPollingTimer = null;
+      }
+      toggleHidden(lqipStopBtn, true);
+      toggleHidden(lqipProgressEl, true);
+      if (lqipSpinner) lqipSpinner.classList.remove('is-active');
+      if (lqipGenerateBtn) lqipGenerateBtn.disabled = false;
+      if (lqipDeleteBtn) lqipDeleteBtn.disabled = false;
+      lqipStopRequested = false;
+    }
+
+    if ((lqipTotalEl || lqipWithEl || lqipWithoutEl) && typeof AVIFLocalSupportData !== 'undefined') {
+      loadLqipStats();
+    }
+
+    if (lqipStopBtn && typeof AVIFLocalSupportData !== 'undefined') {
+      lqipStopBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        lqipStopRequested = true;
+        lqipStopBtn.disabled = true;
+        if (lqipStatusEl) lqipStatusEl.textContent = getI18n('lqipStopping', 'Stopping LQIP generation...');
+      });
+    }
+
+    if (lqipGenerateBtn && typeof AVIFLocalSupportData !== 'undefined') {
+      lqipGenerateBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        lqipGenerateBtn.disabled = true;
+        if (lqipDeleteBtn) lqipDeleteBtn.disabled = true;
+        lqipStopRequested = false;
+        toggleHidden(lqipResultContainer, false);
+        if (lqipSpinner) lqipSpinner.classList.add('is-active');
+        if (lqipStatusEl) lqipStatusEl.textContent = getI18n('lqipGenerating', 'Generating missing LQIPs...');
+        toggleHidden(lqipProgressEl, false);
+        toggleHidden(lqipStopBtn, false);
+        if (lqipStopBtn) lqipStopBtn.disabled = false;
+
+        loadLqipStats(function (initialData) {
+          var startWithout = initialData.without_hash || 0;
+          var total = initialData.total || 0;
+          if (lqipProgressTotal) lqipProgressTotal.textContent = String(total);
+          if (lqipProgressWith) lqipProgressWith.textContent = String(initialData.with_hash || 0);
+
+          apiFetch({ path: '/aviflosu/v1/thumbhash/generate-all', method: 'POST' })
+            .then(function (data) {
+              if (lqipStatusEl) {
+                lqipStatusEl.textContent = getI18n('lqipComplete', 'LQIP generation complete.') +
+                  ' ' + getI18n('lqipGenerated', 'Generated:') + ' ' + (data.generated || 0) +
+                  ', ' + getI18n('lqipSkipped', 'Skipped:') + ' ' + (data.skipped || 0) +
+                  ', ' + getI18n('lqipFailed', 'Failed:') + ' ' + (data.failed || 0);
+              }
+              stopLqipPolling();
+              loadLqipStats();
+            })
+            .catch(function () {
+              if (lqipStatusEl) lqipStatusEl.textContent = getI18n('lqipFailedShort', 'LQIP generation failed.');
+              stopLqipPolling();
+            });
+
+          var prevWithout = startWithout;
+          var unchangedTicks = 0;
+          var startTime = Date.now();
+          var MAX_UNCHANGED_TICKS = 20;
+          var MAX_DURATION_MS = 10 * 60 * 1000;
+
+          function pollLqipProgress() {
+            if (lqipStopRequested) {
+              if (lqipStatusEl) lqipStatusEl.textContent = getI18n('lqipStopped', 'LQIP generation stopped.');
+              stopLqipPolling();
+              loadLqipStats();
+              return;
+            }
+
+            loadLqipStats(function (data) {
+              var withHash = data.with_hash || 0;
+              var without = data.without_hash || 0;
+
+              if (lqipProgressWith) lqipProgressWith.textContent = String(withHash);
+
+              if (without !== 0) {
+                if (without === prevWithout) {
+                  unchangedTicks++;
+                } else {
+                  unchangedTicks = 0;
+                }
+                prevWithout = without;
+                if (unchangedTicks >= MAX_UNCHANGED_TICKS || (Date.now() - startTime) > MAX_DURATION_MS) {
+                  if (lqipStatusEl) lqipStatusEl.textContent = getI18n('lqipContinuingBackground', 'LQIP generation is continuing in the background...');
+                  stopLqipPolling();
+                }
+              }
+            });
+          }
+
+          if (lqipPollingTimer) window.clearInterval(lqipPollingTimer);
+          lqipPollingTimer = window.setInterval(pollLqipProgress, 1500);
+          pollLqipProgress();
+        });
+      });
+    }
+
+    if (lqipDeleteBtn && typeof AVIFLocalSupportData !== 'undefined') {
+      lqipDeleteBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        if (!window.confirm(getI18n('confirmDeleteLqips', 'Delete all generated LQIP placeholders?'))) {
+          return;
+        }
+        if (lqipGenerateBtn) lqipGenerateBtn.disabled = true;
+        lqipDeleteBtn.disabled = true;
+        toggleHidden(lqipResultContainer, false);
+        if (lqipSpinner) lqipSpinner.classList.add('is-active');
+        if (lqipStatusEl) lqipStatusEl.textContent = getI18n('lqipDeleting', 'Deleting LQIPs...');
+        toggleHidden(lqipProgressEl, true);
+
+        apiFetch({ path: '/aviflosu/v1/thumbhash/delete-all', method: 'POST' })
+          .then(function (data) {
+            if (lqipStatusEl) {
+              lqipStatusEl.textContent = getI18n('lqipDeleted', 'Deleted LQIPs:') + ' ' + (data.deleted || 0) + ' ' + getI18n('lqipEntries', 'entries');
+            }
+            if (lqipSpinner) lqipSpinner.classList.remove('is-active');
+            if (lqipGenerateBtn) lqipGenerateBtn.disabled = false;
+            lqipDeleteBtn.disabled = false;
+            loadLqipStats();
+          })
+          .catch(function () {
+            if (lqipStatusEl) lqipStatusEl.textContent = getI18n('lqipFailedShort', 'LQIP generation failed.');
+            if (lqipSpinner) lqipSpinner.classList.remove('is-active');
+            if (lqipGenerateBtn) lqipGenerateBtn.disabled = false;
+            lqipDeleteBtn.disabled = false;
           });
       });
     }
@@ -347,9 +498,9 @@
     // Consolidated copy helpers
     function showStatusElement(element) {
       if (!element) return;
-      element.style.display = 'inline';
+      element.classList.remove('hidden');
       setTimeout(function () {
-        element.style.display = 'none';
+        element.classList.add('hidden');
       }, 2000);
     }
 
@@ -554,7 +705,7 @@
           })
           .catch(function () {
             if (logsContent) {
-              logsContent.innerHTML = '<p class="description" style="color:#dc3232;">Failed to refresh logs. Please try again.</p>';
+              logsContent.innerHTML = '<p class="description avif-error-text">' + getI18n('logsRefreshFailed', 'Could not refresh logs. Please try again.') + '</p>';
             }
           })
           .finally(function () {
@@ -566,16 +717,21 @@
     if (clearLogsBtn && typeof AVIFLocalSupportData !== 'undefined') {
       clearLogsBtn.addEventListener('click', function (e) {
         e.preventDefault();
+        if (!window.confirm(getI18n('confirmClearLogs', 'Clear all logs?'))) {
+          return;
+        }
 
         if (logsSpinner) logsSpinner.classList.add('is-active');
         apiFetch({ path: '/aviflosu/v1/logs/clear', method: 'POST' })
           .then(function () {
             if (logsContent) {
-              logsContent.innerHTML = '<p class="description">No logs available.</p>';
+              logsContent.innerHTML = '<p class="description">' + getI18n('logsNone', 'No logs available.') + '</p>';
             }
           })
           .catch(function () {
-            alert('Failed to clear logs. Please try again.');
+            if (logsContent) {
+              logsContent.innerHTML = '<p class="description avif-error-text">' + getI18n('logsClearFailed', 'Could not clear logs. Please try again.') + '</p>';
+            }
           })
           .finally(function () {
             if (logsSpinner) logsSpinner.classList.remove('is-active');
@@ -593,20 +749,23 @@
         e.preventDefault();
         runTestBtn.disabled = true;
         if (runTestSpinner) runTestSpinner.classList.add('is-active');
-        if (runTestStatus) runTestStatus.textContent = 'Running…';
-        if (runTestOutput) { runTestOutput.style.display = 'none'; runTestOutput.textContent = ''; }
+        if (runTestStatus) runTestStatus.textContent = getI18n('magickRunning', 'Running ImageMagick check...');
+        if (runTestOutput) {
+          toggleHidden(runTestOutput, true);
+          runTestOutput.textContent = '';
+        }
         apiFetch({ path: '/aviflosu/v1/magick-test', method: 'POST' })
           .then(function (data) {
             if (!data) return;
-            if (runTestStatus) runTestStatus.textContent = 'Exit code ' + String(data.code);
+            if (runTestStatus) runTestStatus.textContent = getI18n('magickExitCode', 'Exit code') + ' ' + String(data.code);
             var lines = [];
             if (data.selected_path) {
-              lines.push('Selected binary: ' + String(data.selected_path) + (data.auto_selected ? ' (auto)' : ''));
+              lines.push(getI18n('magickSelectedBinary', 'Selected binary:') + ' ' + String(data.selected_path) + (data.auto_selected ? (' ' + getI18n('magickAuto', '(auto)')) : ''));
             }
             if (data.define_strategy && data.define_strategy.namespace) {
               var s = data.define_strategy;
               lines.push(
-                'Define strategy: ' + String(s.namespace) +
+                getI18n('magickDefineStrategy', 'Define strategy:') + ' ' + String(s.namespace) +
                 ' (lossless=' + String(!!s.supports_lossless) +
                 ', chroma=' + String(!!s.supports_chroma) +
                 ', -depth=' + String(!!s.supports_depth) +
@@ -615,12 +774,15 @@
             }
             if (lines.length) { lines.push(''); }
             lines.push(String(data.output || ''));
-            if (data.hint) { lines.push(''); lines.push('Hint: ' + String(data.hint)); }
+            if (data.hint) { lines.push(''); lines.push(getI18n('magickHint', 'Hint:') + ' ' + String(data.hint)); }
             var text = lines.join('\n');
-            if (runTestOutput) { runTestOutput.textContent = text; runTestOutput.style.display = ''; }
+            if (runTestOutput) {
+              runTestOutput.textContent = text;
+              toggleHidden(runTestOutput, false);
+            }
           })
           .catch(function (err) {
-            if (runTestStatus) runTestStatus.textContent = (err && err.message) ? String(err.message) : 'Failed';
+            if (runTestStatus) runTestStatus.textContent = (err && err.message) ? String(err.message) : getI18n('magickFailed', 'ImageMagick check failed.');
           })
           .finally(function () {
             if (runTestSpinner) runTestSpinner.classList.remove('is-active');
@@ -629,91 +791,336 @@
       });
     }
 
-    // Test Conversion (AJAX)
-    var testForm = document.querySelector('#avif-local-support-test-form');
-    var testFile = document.querySelector('#avif-local-support-test-file');
-    var testSubmit = document.querySelector('#avif-local-support-test-submit');
-    var testSpinner = document.querySelector('#avif-local-support-test-spinner');
-    var testStatus = document.querySelector('#avif-local-support-test-status');
-    var testResults = document.querySelector('#avif-local-support-test-results');
+    // AVIF settings playground
+    var playgroundUploadForm = document.querySelector('#avif-local-support-playground-upload-form');
+    var playgroundFileInput = document.querySelector('#avif-local-support-playground-file');
+    var playgroundSizeSelect = document.querySelector('#avif-local-support-playground-size');
+    var playgroundUploadSubmit = document.querySelector('#avif-local-support-playground-upload-submit');
+    var playgroundUploadSpinner = document.querySelector('#avif-local-support-playground-upload-spinner');
+    var playgroundUploadStatus = document.querySelector('#avif-local-support-playground-upload-status');
+    var playgroundPanel = document.querySelector('#avif-local-support-playground-panel');
 
-    if (testForm && testFile && testSubmit && typeof AVIFLocalSupportData !== 'undefined') {
-      testForm.addEventListener('submit', function (e) {
-        e.preventDefault();
-        var file = testFile.files[0];
-        if (!file) return;
+    var playgroundQuality = document.querySelector('#avif-local-support-playground-quality');
+    var playgroundQualityValue = document.querySelector('#avif-local-support-playground-quality-value');
+    var playgroundSpeed = document.querySelector('#avif-local-support-playground-speed');
+    var playgroundSpeedValue = document.querySelector('#avif-local-support-playground-speed-value');
+    var playgroundSubsampling = document.querySelector('#avif-local-support-playground-subsampling');
+    var playgroundBitDepth = document.querySelector('#avif-local-support-playground-bit-depth');
+    var playgroundEngineMode = document.querySelector('#avif-local-support-playground-engine-mode');
+    var playgroundRefreshBtn = document.querySelector('#avif-local-support-playground-refresh');
+    var playgroundApplyBtn = document.querySelector('#avif-local-support-playground-apply-settings');
+    var playgroundPreviewSpinner = document.querySelector('#avif-local-support-playground-preview-spinner');
+    var playgroundPreviewStatus = document.querySelector('#avif-local-support-playground-preview-status');
+    var playgroundSizeSummary = document.querySelector('#avif-local-support-playground-size-summary');
 
-        testSubmit.disabled = true;
-        if (testSpinner) testSpinner.classList.add('is-active');
-        if (testStatus) testStatus.textContent = 'Uploading...';
-        if (testResults) testResults.innerHTML = '';
+    var playgroundViewJpg = document.querySelector('#avif-local-support-playground-view-jpg');
+    var playgroundViewAvif = document.querySelector('#avif-local-support-playground-view-avif');
+    var playgroundDownloadJpeg = document.querySelector('#avif-local-support-playground-download-jpeg');
+    var playgroundDownloadAvif = document.querySelector('#avif-local-support-playground-download-avif');
+    var playgroundPreviewTitle = document.querySelector('#avif-local-support-playground-preview-title');
+    var playgroundPreviewImage = document.querySelector('#avif-local-support-playground-preview-image');
 
-        function pollTestStatus(attachmentId, targetIndex) {
-          apiFetch({
-            path: '/aviflosu/v1/upload-test-status',
-            method: 'POST',
-            body: JSON.stringify({ attachment_id: attachmentId, target_index: targetIndex }),
-            headers: { 'Content-Type': 'application/json' }
-          })
-            .then(function (json) {
-              if (json && json.sizes) {
-                renderTestResultsTable(json, testResults);
+    var playgroundToken = '';
+    var playgroundData = null;
+    var playgroundPreviewFormat = 'jpeg';
 
-                // Update status text
-                if (testStatus) {
-                  testStatus.textContent = 'Converting...';
-                }
+    function setStatusText(element, message, isError) {
+      if (!element) return;
+      element.textContent = String(message || '');
+      if (isError) element.classList.add('avif-status-error');
+      else element.classList.remove('avif-status-error');
+    }
 
-                if (!json.complete) {
-                  // Continue to next item
-                  pollTestStatus(attachmentId, json.next_index);
-                } else {
-                  // Done
-                  if (testStatus) testStatus.textContent = 'Done';
-                  if (testSpinner) testSpinner.classList.remove('is-active');
-                  testSubmit.disabled = false;
-                }
-              } else {
-                // Unexpected response
-                if (testStatus) testStatus.textContent = 'Failed to get status';
-                if (testSpinner) testSpinner.classList.remove('is-active');
-                testSubmit.disabled = false;
-              }
-            })
-            .catch(function (err) {
-              if (testStatus) testStatus.textContent = 'Error: ' + (err.message || 'Unknown');
-              if (testSpinner) testSpinner.classList.remove('is-active');
-              testSubmit.disabled = false;
-            });
+    function updateRangeValue(input, output) {
+      if (!input || !output) return;
+      output.textContent = String(input.value || '');
+    }
+
+    function getPlaygroundSettings() {
+      return {
+        quality: playgroundQuality ? Number(playgroundQuality.value || 0) : 85,
+        speed: playgroundSpeed ? Number(playgroundSpeed.value || 0) : 1,
+        subsampling: playgroundSubsampling ? String(playgroundSubsampling.value || '420') : '420',
+        bit_depth: playgroundBitDepth ? String(playgroundBitDepth.value || '8') : '8',
+        engine_mode: playgroundEngineMode ? String(playgroundEngineMode.value || 'auto') : 'auto'
+      };
+    }
+
+    function syncPlaygroundSettings(settings) {
+      if (!settings) return;
+      if (playgroundQuality && typeof settings.quality !== 'undefined') {
+        playgroundQuality.value = String(settings.quality);
+      }
+      if (playgroundSpeed && typeof settings.speed !== 'undefined') {
+        playgroundSpeed.value = String(settings.speed);
+      }
+      if (playgroundSubsampling && settings.subsampling) {
+        playgroundSubsampling.value = String(settings.subsampling);
+      }
+      if (playgroundBitDepth && settings.bit_depth) {
+        playgroundBitDepth.value = String(settings.bit_depth);
+      }
+      if (playgroundEngineMode && settings.engine_mode) {
+        playgroundEngineMode.value = String(settings.engine_mode);
+      }
+      updateRangeValue(playgroundQuality, playgroundQualityValue);
+      updateRangeValue(playgroundSpeed, playgroundSpeedValue);
+    }
+
+    function syncMainSettingsInputs(settings) {
+      if (!settings) return;
+      var qualityInput = document.querySelector('#aviflosu_quality');
+      var speedInput = document.querySelector('#aviflosu_speed');
+      var subInput = document.querySelector('input[name="aviflosu_subsampling"][value="' + String(settings.subsampling || '') + '"]');
+      var bitInput = document.querySelector('input[name="aviflosu_bit_depth"][value="' + String(settings.bit_depth || '') + '"]');
+      var engineInput = document.querySelector('input[name="aviflosu_engine_mode"][value="' + String(settings.engine_mode || '') + '"]');
+
+      if (qualityInput && typeof settings.quality !== 'undefined') {
+        qualityInput.value = String(settings.quality);
+        if (qualityInput.nextElementSibling) qualityInput.nextElementSibling.textContent = String(settings.quality);
+      }
+      if (speedInput && typeof settings.speed !== 'undefined') {
+        speedInput.value = String(settings.speed);
+        if (speedInput.nextElementSibling) speedInput.nextElementSibling.textContent = String(settings.speed);
+      }
+      if (subInput) subInput.checked = true;
+      if (bitInput) bitInput.checked = true;
+      if (engineInput) {
+        engineInput.checked = true;
+        updateEngineVisibility();
+      }
+    }
+
+    function setDownloadLink(linkEl, url, filename) {
+      if (!linkEl) return;
+      if (url) {
+        linkEl.href = url;
+        if (filename) linkEl.setAttribute('download', filename);
+        linkEl.classList.remove('disabled');
+        linkEl.removeAttribute('aria-disabled');
+      } else {
+        linkEl.removeAttribute('href');
+        linkEl.classList.add('disabled');
+        linkEl.setAttribute('aria-disabled', 'true');
+      }
+    }
+
+    function setPlaygroundViewButtons(mode) {
+      var buttons = [
+        { el: playgroundViewJpg, mode: 'jpeg' },
+        { el: playgroundViewAvif, mode: 'avif' }
+      ];
+      buttons.forEach(function (item) {
+        if (!item.el) return;
+        if (item.mode === mode) item.el.classList.add('is-primary');
+        else item.el.classList.remove('is-primary');
+      });
+    }
+
+    function updatePlaygroundImage() {
+      if (!playgroundData || !playgroundPreviewImage) return;
+      var jpgSrc = String(playgroundData.jpeg_url || '');
+      var avifSrc = String(playgroundData.avif_url || '');
+      var hasAvif = !!avifSrc;
+
+      var source = jpgSrc;
+      var title = getI18n('playgroundSizeLabelJpeg', 'JPEG');
+      if (playgroundPreviewFormat === 'avif' && hasAvif) {
+        source = avifSrc;
+        title = getI18n('playgroundSizeLabelAvif', 'AVIF');
+      }
+
+      playgroundPreviewImage.src = source;
+      if (playgroundPreviewTitle) playgroundPreviewTitle.textContent = title;
+      setPlaygroundViewButtons(playgroundPreviewFormat);
+    }
+
+    function renderPlaygroundData(data) {
+      if (!data || !data.token) return;
+      playgroundData = data;
+      playgroundToken = String(data.token);
+      syncPlaygroundSettings(data.settings || null);
+
+      if (playgroundPanel) toggleHidden(playgroundPanel, false);
+
+      setDownloadLink(playgroundDownloadJpeg, data.jpeg_download_url || data.jpeg_url || '', data.jpeg_name || 'preview.jpg');
+      setDownloadLink(playgroundDownloadAvif, data.avif_download_url || '', data.avif_name || 'preview.avif');
+
+      if (!data.avif_url && playgroundPreviewFormat === 'avif') {
+        playgroundPreviewFormat = 'jpeg';
+      }
+
+      if (playgroundSizeSummary) {
+        var summary = getI18n('playgroundSizeLabelJpeg', 'JPEG') + ': ' + formatBytes(data.jpeg_size || 0, 2);
+        summary += ' • ' + getI18n('playgroundSizeLabelAvif', 'AVIF') + ': ' + formatBytes(data.avif_size || 0, 2);
+        if (typeof data.jpeg_quality !== 'undefined' && Number(data.jpeg_quality || 0) > 0) {
+          summary += ' • ' + getI18n('playgroundJpegQualityLabel', 'JPEG quality') + ': ' + String(data.jpeg_quality);
+        } else if (String(data.jpeg_quality_source || '') === 'original') {
+          summary += ' • ' + getI18n('playgroundJpegQualityOriginal', 'JPEG quality: original upload (not recompressed)');
         }
+        if (data.width && data.height) {
+          summary += ' • ' + String(data.width) + '×' + String(data.height);
+        }
+        playgroundSizeSummary.textContent = summary;
+      }
+
+      updatePlaygroundImage();
+    }
+
+    function setPlaygroundBusy(uploadBusy, previewBusy) {
+      var hasAvif = !!(playgroundData && playgroundData.avif_url);
+      if (playgroundFileInput) playgroundFileInput.disabled = !!uploadBusy;
+      if (playgroundSizeSelect) playgroundSizeSelect.disabled = !!uploadBusy;
+      if (playgroundUploadSubmit) playgroundUploadSubmit.disabled = !!uploadBusy;
+      if (playgroundRefreshBtn) playgroundRefreshBtn.disabled = !!uploadBusy || !!previewBusy || !playgroundToken;
+      if (playgroundApplyBtn) playgroundApplyBtn.disabled = !!uploadBusy || !!previewBusy || !playgroundToken;
+      if (playgroundViewJpg) playgroundViewJpg.disabled = !!uploadBusy || !playgroundToken;
+      if (playgroundViewAvif) playgroundViewAvif.disabled = !!uploadBusy || !playgroundToken || !hasAvif;
+    }
+
+    function handlePlaygroundPreviewResponse(data, defaultSuccessMessage) {
+      if (!data || !data.token) {
+        setStatusText(playgroundPreviewStatus, getI18n('playgroundPreviewFailed', 'Could not render AVIF preview.'), true);
+        return;
+      }
+      renderPlaygroundData(data);
+      if (data.error) {
+        setStatusText(playgroundPreviewStatus, String(data.error), true);
+      } else {
+        if (data.avif_url) {
+          playgroundPreviewFormat = 'avif';
+          updatePlaygroundImage();
+        }
+        setStatusText(playgroundPreviewStatus, defaultSuccessMessage, false);
+      }
+    }
+
+    if (playgroundQuality) {
+      playgroundQuality.addEventListener('input', function () { updateRangeValue(playgroundQuality, playgroundQualityValue); });
+    }
+    if (playgroundSpeed) {
+      playgroundSpeed.addEventListener('input', function () { updateRangeValue(playgroundSpeed, playgroundSpeedValue); });
+    }
+    updateRangeValue(playgroundQuality, playgroundQualityValue);
+    updateRangeValue(playgroundSpeed, playgroundSpeedValue);
+
+    if (playgroundViewJpg) {
+      playgroundViewJpg.addEventListener('click', function (e) {
+        e.preventDefault();
+        if (!playgroundData) return;
+        playgroundPreviewFormat = 'jpeg';
+        updatePlaygroundImage();
+      });
+    }
+    if (playgroundViewAvif) {
+      playgroundViewAvif.addEventListener('click', function (e) {
+        e.preventDefault();
+        if (!playgroundData || !playgroundData.avif_url) return;
+        playgroundPreviewFormat = 'avif';
+        updatePlaygroundImage();
+      });
+    }
+
+    if (playgroundUploadForm && playgroundFileInput && playgroundUploadSubmit && typeof AVIFLocalSupportData !== 'undefined') {
+      setPlaygroundBusy(false, false);
+      playgroundUploadForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var file = playgroundFileInput.files && playgroundFileInput.files.length ? playgroundFileInput.files[0] : null;
+        if (!file) {
+          setStatusText(playgroundUploadStatus, getI18n('playgroundSelectFile', 'Please choose a JPEG file first.'), true);
+          return;
+        }
+
+        setPlaygroundBusy(true, false);
+        if (playgroundUploadSpinner) playgroundUploadSpinner.classList.add('is-active');
+        setStatusText(playgroundUploadStatus, getI18n('playgroundUploading', 'Uploading playground JPEG...'), false);
+        setStatusText(playgroundPreviewStatus, '', false);
 
         var formData = new FormData();
         formData.append('avif_local_support_test_file', file);
-        apiFetch({ path: '/aviflosu/v1/upload-test', method: 'POST', body: formData })
-          .then(function (json) {
-            if (json && json.attachment_id) {
-              // Initial render with whatever we have (likely all "Not created" if conversion on upload is off)
-              renderTestResultsTable(json, testResults);
+        if (playgroundSizeSelect && playgroundSizeSelect.value) {
+          formData.append('avif_local_support_playground_size', String(playgroundSizeSelect.value));
+        }
 
-              // Update status immediately to indicate we are moving to conversion phase
-              if (testStatus) testStatus.textContent = 'Converting...';
-
-              // Start polling from index 0
-              pollTestStatus(json.attachment_id, 0);
+        apiFetch({ path: '/aviflosu/v1/playground/create', method: 'POST', body: formData })
+          .then(function (data) {
+            renderPlaygroundData(data);
+            if (data && data.error) {
+              setStatusText(playgroundUploadStatus, String(data.error), true);
             } else {
-              if (testStatus) testStatus.textContent = 'Upload failed';
-              if (testSpinner) testSpinner.classList.remove('is-active');
-              testSubmit.disabled = false;
+              setStatusText(playgroundUploadStatus, getI18n('playgroundLoaded', 'Playground image ready.'), false);
             }
           })
           .catch(function (err) {
-            var msg = (err && err.message) ? String(err.message) : 'Error';
-            if (msg.toLowerCase().indexOf('json') !== -1 || msg.toLowerCase().indexOf('timeout') !== -1 || msg.toLowerCase().indexOf('fetch') !== -1) {
-              msg = 'Upload timed out or failed. Check logs.';
+            var msg = (err && err.message) ? String(err.message) : getI18n('playgroundUploadFailed', 'Failed to load playground image.');
+            setStatusText(playgroundUploadStatus, msg, true);
+          })
+          .finally(function () {
+            if (playgroundUploadSpinner) playgroundUploadSpinner.classList.remove('is-active');
+            setPlaygroundBusy(false, false);
+          });
+      });
+    }
+
+    if (playgroundRefreshBtn && typeof AVIFLocalSupportData !== 'undefined') {
+      playgroundRefreshBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        if (!playgroundToken) return;
+
+        setPlaygroundBusy(false, true);
+        if (playgroundPreviewSpinner) playgroundPreviewSpinner.classList.add('is-active');
+        setStatusText(playgroundPreviewStatus, getI18n('playgroundPreviewing', 'Rendering AVIF preview...'), false);
+
+        apiFetch({
+          path: '/aviflosu/v1/playground/preview',
+          method: 'POST',
+          body: JSON.stringify({ token: playgroundToken, settings: getPlaygroundSettings() }),
+          headers: { 'Content-Type': 'application/json' }
+        })
+          .then(function (data) {
+            handlePlaygroundPreviewResponse(data, getI18n('playgroundPreviewReady', 'AVIF preview updated.'));
+          })
+          .catch(function (err) {
+            var msg = (err && err.message) ? String(err.message) : getI18n('playgroundPreviewFailed', 'Could not render AVIF preview.');
+            setStatusText(playgroundPreviewStatus, msg, true);
+          })
+          .finally(function () {
+            if (playgroundPreviewSpinner) playgroundPreviewSpinner.classList.remove('is-active');
+            setPlaygroundBusy(false, false);
+          });
+      });
+    }
+
+    if (playgroundApplyBtn && typeof AVIFLocalSupportData !== 'undefined') {
+      playgroundApplyBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        if (!playgroundToken) return;
+
+        setPlaygroundBusy(false, true);
+        if (playgroundPreviewSpinner) playgroundPreviewSpinner.classList.add('is-active');
+        setStatusText(playgroundPreviewStatus, getI18n('playgroundApplying', 'Saving AVIF settings...'), false);
+
+        apiFetch({
+          path: '/aviflosu/v1/playground/apply-settings',
+          method: 'POST',
+          body: JSON.stringify({ settings: getPlaygroundSettings() }),
+          headers: { 'Content-Type': 'application/json' }
+        })
+          .then(function (data) {
+            if (data && data.settings) {
+              syncPlaygroundSettings(data.settings);
+              syncMainSettingsInputs(data.settings);
             }
-            if (testStatus) testStatus.textContent = msg;
-            if (testSpinner) testSpinner.classList.remove('is-active');
-            testSubmit.disabled = false;
+            var message = (data && data.message) ? String(data.message) : getI18n('playgroundApplySuccess', 'Plugin AVIF settings updated.');
+            setStatusText(playgroundPreviewStatus, message, false);
+          })
+          .catch(function (err) {
+            var msg = (err && err.message) ? String(err.message) : getI18n('playgroundApplyFailed', 'Could not update plugin settings.');
+            setStatusText(playgroundPreviewStatus, msg, true);
+          })
+          .finally(function () {
+            if (playgroundPreviewSpinner) playgroundPreviewSpinner.classList.remove('is-active');
+            setPlaygroundBusy(false, false);
           });
       });
     }
@@ -784,59 +1191,9 @@
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
   }
 
-  function renderTestResultsTable(data, container) {
-    var html = '<p><strong>Test results for attachment:</strong> <a href="' + (data.edit_link || '#') + '" target="_blank">' + (data.title || data.attachment_id) + '</a></p>';
-    html += '<table class="widefat striped" style="max-width:960px"><thead><tr>' +
-      '<th>Size</th><th>Dimensions</th><th>JPEG</th><th>JPEG size</th><th>AVIF</th><th>AVIF size</th><th>Status</th>' +
-      '</tr></thead><tbody>';
-
-    if (data.sizes && data.sizes.length) {
-      data.sizes.forEach(function (row) {
-        var dims = (row.width && row.height) ? (row.width + '×' + row.height) : '';
-        var jpegLink = row.jpeg_url ? '<a href="' + row.jpeg_url + '" target="_blank">View</a>' : '-';
-        var avifLink = (row.status === 'success' && row.avif_url) ? '<a href="' + row.avif_url + '" target="_blank">View</a>' : '-';
-
-        var status;
-        switch (row.status) {
-          case 'success':
-            status = '<span style="color:#00a32a;font-weight:bold;">Converted</span>';
-            break;
-          case 'failure':
-            status = '<span style="color:#d63638;font-weight:bold;">Failed</span>';
-            if (row.error) {
-              var errText = String(row.error).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-              status += '<br><span style="font-size:11px;color:#d63638;">' + errText + '</span>';
-            }
-            break;
-          case 'processing':
-            status = '<span class="spinner is-active" style="float:none;margin:0 4px -2px 0;"></span> Processing...';
-            break;
-          default:
-            status = 'Pending';
-        }
-
-        html += '<tr>' +
-          '<td>' + (row.name || '') + '</td>' +
-          '<td>' + dims + '</td>' +
-          '<td>' + jpegLink + '</td>' +
-          '<td>' + formatBytes(row.jpeg_size || 0, 2) + '</td>' +
-          '<td>' + avifLink + '</td>' +
-          '<td>' + formatBytes(row.avif_size || 0, 2) + '</td>' +
-          '<td>' + status + '</td>' +
-          '</tr>';
-      });
-    } else {
-      html += '<tr><td colspan="7">No sizes found.</td></tr>';
-    }
-    html += '</tbody></table>';
-    container.innerHTML = html;
-  }
-
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initAll);
   } else {
     initAll();
   }
 })();
-
-

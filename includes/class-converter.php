@@ -204,9 +204,9 @@ final class Converter {
 		return $this->convertToAvif( $sourcePath, $avifPath, $targetDimensions );
 	}
 
-	private function convertToAvif( string $sourcePath, string $avifPath, ?array $targetDimensions ): ConversionResult {
+	private function convertToAvif( string $sourcePath, string $avifPath, ?array $targetDimensions, ?AvifSettings $settings = null ): ConversionResult {
 		$start_time = microtime( true );
-		$settings   = AvifSettings::fromOptions();
+		$settings   = $settings ?? AvifSettings::fromOptions();
 
 		// Ensure directory exists.
 		$dir = dirname( $avifPath );
@@ -294,6 +294,22 @@ final class Converter {
 
 		$this->log_conversion( 'error', $sourcePath, $avifPath, $engineUsed, $start_time, $errorMsg, $details );
 		return ConversionResult::failure( $errorMsg ?? 'Unknown error', $suggestion );
+	}
+
+	/**
+	 * Convert a JPEG path to a specific AVIF destination using provided settings.
+	 * This bypasses option persistence and is intended for preview workflows.
+	 */
+	public function convertJpegToAvifWithSettings( string $jpegPath, string $avifPath, AvifSettings $settings ): ConversionResult {
+		if ( '' === $jpegPath || ! file_exists( $jpegPath ) ) {
+			return ConversionResult::failure( __( 'Source file not found', 'avif-local-support' ) );
+		}
+		if ( ! preg_match( '/\.(jpe?g)$/i', $jpegPath ) ) {
+			return ConversionResult::failure( __( 'Only JPEG source files are supported.', 'avif-local-support' ) );
+		}
+
+		[$sourcePath, $targetDimensions] = $this->getConversionData( $jpegPath );
+		return $this->convertToAvif( $sourcePath, $avifPath, $targetDimensions, $settings );
 	}
 
 	/**

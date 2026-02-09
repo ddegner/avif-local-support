@@ -190,29 +190,14 @@ class CliEncoder implements AvifEncoderInterface {
 		$sourceArg = $source;
 		$outputArg = $destination;
 
-		// Construct command.
-		// Prefer proc_open() with an argv array (avoids invoking a shell) on PHP 7.4+.
-		$command        = null;
-		$commandForLogs = '';
-		if ( version_compare( PHP_VERSION, '7.4.0', '>=' ) ) {
-			$command = array_merge( array( $bin, $sourceArg ), array_map( 'strval', $args ), array( $outputArg ) );
-			// A safe, human-readable representation for debugging/logs (not executed).
-			$cmdParts       = array_map(
-				static fn( $p ): string => escapeshellarg( (string) $p ),
-				$command
-			);
-			$commandForLogs = implode( ' ', $cmdParts );
-		} else {
-			// Legacy fallback: shell-escaped string.
-			$cmdParts   = array( escapeshellarg( $bin ) );
-			$cmdParts[] = escapeshellarg( $sourceArg );
-			foreach ( $args as $arg ) {
-				$cmdParts[] = escapeshellarg( (string) $arg );
-			}
-			$cmdParts[]     = escapeshellarg( $outputArg );
-			$commandForLogs = implode( ' ', $cmdParts );
-			$command        = $commandForLogs;
-		}
+		// Construct command using argv form to avoid invoking a shell.
+		$command = array_merge( array( $bin, $sourceArg ), array_map( 'strval', $args ), array( $outputArg ) );
+		// A safe, human-readable representation for debugging/logs (not executed).
+		$cmdParts       = array_map(
+			static fn( $p ): string => escapeshellarg( (string) $p ),
+			$command
+		);
+		$commandForLogs = implode( ' ', $cmdParts );
 
 		// Retry loop.
 		$attempts    = 0;

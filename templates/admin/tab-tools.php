@@ -7,556 +7,443 @@
  * @var array $stats AVIF counts
  * @var array $logs Conversion logs
  * @var array $settings Plugin settings
- * @var int $test_id Test attachment ID if present
- * @var array|null $test_results Test AVIF Conversion results if available
+ * @var \Ddegner\AvifLocalSupport\Logger $logger Logger instance
  */
 
 // phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Template local variables.
-defined('ABSPATH') || exit;
+defined( 'ABSPATH' ) || exit;
 
-// Badge helper.
-$badge = static function ($state, string $yes = 'Yes', string $no = 'No', string $unknown = 'Unknown'): string {
-	$s = \is_string($state) ? strtolower($state) : ($state ? 'yes' : 'no');
-	if ('unknown' === $s) {
-		return '<span class="avif-badge avif-badge-neutral">' . esc_html($unknown) . '</span>';
+// Simple status helper using native text labels.
+$badge = static function ( $state, string $yes = 'Yes', string $no = 'No', string $unknown = 'Unknown' ): string {
+	$s = \is_string( $state ) ? strtolower( $state ) : ( $state ? 'yes' : 'no' );
+	if ( 'unknown' === $s ) {
+		return esc_html( $unknown );
 	}
-	// Accept 'yes', 'full', or 'partial' as positive values.
-	$ok = in_array($s, array('yes', 'full', 'partial'), true);
-	$cls = $ok ? 'avif-badge avif-badge-ok' : 'avif-badge avif-badge-bad';
-	$txt = $ok ? $yes : $no;
-	return '<span class="' . esc_attr($cls) . '">' . esc_html($txt) . '</span>';
+	$ok = in_array( $s, array( 'yes', 'full', 'partial' ), true );
+	return esc_html( $ok ? $yes : $no );
 };
 
 // Extract values from system status.
-$engine_mode = $settings['engine_mode'] ?? 'auto';
+$engine_mode       = $settings['engine_mode'] ?? 'auto';
 $convert_on_upload = $settings['convert_on_upload'] ?? true;
-$schedule_enabled = $settings['schedule_enabled'] ?? true;
-$schedule_time = $settings['schedule_time'] ?? '01:00';
-$frontend_enabled = $settings['frontend_enabled'] ?? true;
+$schedule_enabled  = $settings['schedule_enabled'] ?? true;
+$schedule_time     = $settings['schedule_time'] ?? '01:00';
+$frontend_enabled  = $settings['frontend_enabled'] ?? true;
+$playground_quality = max( 0, min( 100, (int) get_option( 'aviflosu_quality', 85 ) ) );
+$playground_speed = max( 0, min( 8, (int) get_option( 'aviflosu_speed', 1 ) ) );
+$playground_subsampling = (string) get_option( 'aviflosu_subsampling', '420' );
+if ( ! in_array( $playground_subsampling, array( '420', '422', '444' ), true ) ) {
+	$playground_subsampling = '420';
+}
+$playground_bit_depth = (string) get_option( 'aviflosu_bit_depth', '8' );
+if ( ! in_array( $playground_bit_depth, array( '8', '10', '12' ), true ) ) {
+	$playground_bit_depth = '8';
+}
+$playground_engine_mode = (string) get_option( 'aviflosu_engine_mode', 'auto' );
+if ( ! in_array( $playground_engine_mode, array( 'auto', 'cli', 'imagick', 'gd' ), true ) ) {
+	$playground_engine_mode = 'auto';
+}
+$playground_size_labels = array(
+	'thumbnail'    => __( 'Thumbnail', 'avif-local-support' ),
+	'medium'       => __( 'Medium', 'avif-local-support' ),
+	'medium_large' => __( 'Medium Large', 'avif-local-support' ),
+	'large'        => __( 'Large', 'avif-local-support' ),
+);
+$playground_sizes = array();
+$playground_additional_sizes = function_exists( 'wp_get_additional_image_sizes' ) ? wp_get_additional_image_sizes() : array();
+foreach ( (array) get_intermediate_image_sizes() as $playground_size_name ) {
+	$playground_width  = 0;
+	$playground_height = 0;
+	if ( isset( $playground_additional_sizes[ $playground_size_name ] ) ) {
+		$playground_size_data = $playground_additional_sizes[ $playground_size_name ];
+		$playground_width     = (int) ( $playground_size_data['width'] ?? 0 );
+		$playground_height    = (int) ( $playground_size_data['height'] ?? 0 );
+	} else {
+		$playground_width  = (int) get_option( "{$playground_size_name}_size_w", 0 );
+		$playground_height = (int) get_option( "{$playground_size_name}_size_h", 0 );
+	}
+	if ( $playground_width <= 0 && $playground_height <= 0 ) {
+		continue;
+	}
+	$playground_label = $playground_size_labels[ $playground_size_name ] ?? ucwords( str_replace( array( '-', '_' ), ' ', $playground_size_name ) );
+	if ( $playground_width > 0 && $playground_height > 0 ) {
+		$playground_dimensions = sprintf( '%d×%d', $playground_width, $playground_height );
+	} elseif ( $playground_width > 0 ) {
+		/* translators: %d: pixel width */
+		$playground_dimensions = sprintf( __( '%dpx wide', 'avif-local-support' ), $playground_width );
+	} else {
+		/* translators: %d: pixel height */
+		$playground_dimensions = sprintf( __( '%dpx tall', 'avif-local-support' ), $playground_height );
+	}
+	$playground_sizes[ $playground_size_name ] = array(
+		'label'      => $playground_label,
+		'dimensions' => $playground_dimensions,
+	);
+}
+if ( empty( $playground_sizes ) ) {
+	$playground_sizes['large'] = array(
+		'label'      => __( 'Large', 'avif-local-support' ),
+		'dimensions' => '1024px wide',
+	);
+}
+$playground_default_size = '';
+foreach ( array( 'large', 'medium_large', 'medium', 'thumbnail' ) as $playground_preferred_size ) {
+	if ( isset( $playground_sizes[ $playground_preferred_size ] ) ) {
+		$playground_default_size = $playground_preferred_size;
+		break;
+	}
+}
+if ( '' === $playground_default_size ) {
+	$playground_default_size = (string) array_key_first( $playground_sizes );
+}
 
-$auto_first_attempt = (string) ($system_status['auto_first_attempt'] ?? 'none');
-$auto_has_fallback = !empty($system_status['auto_has_fallback']);
-$avif_support_level = (string) ($system_status['avif_support_level'] ?? (!empty($system_status['avif_support']) ? 'yes' : 'no'));
+$auto_first_attempt = (string) ( $system_status['auto_first_attempt'] ?? 'none' );
+$auto_has_fallback  = ! empty( $system_status['auto_has_fallback'] );
+$avif_support_level = (string) ( $system_status['avif_support_level'] ?? ( ! empty( $system_status['avif_support'] ) ? 'yes' : 'no' ) );
+$auto_first_label   = match ( $auto_first_attempt ) {
+	'cli' => esc_html__( 'CLI (ImageMagick command-line)', 'avif-local-support' ),
+	'imagick' => esc_html__( 'Imagick (PHP extension)', 'avif-local-support' ),
+	'gd' => esc_html__( 'GD (imageavif)', 'avif-local-support' ),
+	default => esc_html__( 'None', 'avif-local-support' ),
+};
 ?>
 <div id="avif-local-support-tab-tools" class="avif-local-support-tab">
-	<div class="metabox-holder">
+	<div class="avif-settings-form avif-tools-layout">
+		<section class="avif-tools-section">
+			<h3><?php esc_html_e( 'AVIF Tools', 'avif-local-support' ); ?></h3>
+			<p class="description">
+				<?php esc_html_e( 'Generate or remove AVIF files for existing JPEG media.', 'avif-local-support' ); ?>
+			</p>
 
-		<!-- AVIF Tools -->
-		<div class="postbox">
-			<h2 class="avif-header"><span><?php esc_html_e('AVIF Tools', 'avif-local-support'); ?></span></h2>
-			<div class="inside">
-				<p class="description" style="margin-bottom:15px;">
-					<?php esc_html_e('Manage AVIF conversion for existing JPEG files (originals and generated sizes).', 'avif-local-support'); ?>
-				</p>
-				<p class="description" style="margin-top:-8px;margin-bottom:15px;">
-					<?php esc_html_e('Counts here are file-level totals used for responsive srcset output, not Media Library item totals.', 'avif-local-support'); ?>
-				</p>
+			<table id="avif-local-support-stats" class="widefat striped">
+				<tbody>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'JPEG Files', 'avif-local-support' ); ?></th>
+						<td><span id="avif-local-support-total-jpegs"><?php echo (int) ( $stats['total_jpegs'] ?? 0 ); ?></span></td>
+					</tr>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'With AVIF', 'avif-local-support' ); ?></th>
+						<td><span id="avif-local-support-existing-avifs"><?php echo (int) ( $stats['existing_avifs'] ?? 0 ); ?></span></td>
+					</tr>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Without AVIF', 'avif-local-support' ); ?></th>
+						<td><span id="avif-local-support-missing-avifs"><?php echo (int) ( $stats['missing_avifs'] ?? 0 ); ?></span></td>
+					</tr>
+				</tbody>
+			</table>
 
-				<div id="avif-local-support-stats"
-					style="margin-bottom:15px;padding:10px;background:#f0f0f1;border-radius:4px;display:flex;gap:24px;align-items:center;flex-wrap:wrap;">
-					<div><strong><?php esc_html_e('JPEG Files', 'avif-local-support'); ?>:</strong> <span
-							id="avif-local-support-total-jpegs"><?php echo (int) ($stats['total_jpegs'] ?? 0); ?></span>
-					</div>
-					<div><strong><?php esc_html_e('With AVIF', 'avif-local-support'); ?>:</strong> <span
-							id="avif-local-support-existing-avifs"><?php echo (int) ($stats['existing_avifs'] ?? 0); ?></span>
-					</div>
-					<div><strong><?php esc_html_e('Without AVIF', 'avif-local-support'); ?>:</strong> <span
-							id="avif-local-support-missing-avifs"><?php echo (int) ($stats['missing_avifs'] ?? 0); ?></span>
-					</div>
-				</div>
-
-				<div style="display:flex;gap:8px;flex-wrap:wrap;">
-					<button type="button" class="button button-primary"
-						id="avif-local-support-convert-now"><?php esc_html_e('Generate All', 'avif-local-support'); ?></button>
-					<button type="button" class="button" id="avif-local-support-stop-convert"
-						style="display:none;"><?php esc_html_e('Stop', 'avif-local-support'); ?></button>
-					<button type="button" class="button button-secondary"
-						id="avif-local-support-delete-avifs"><?php esc_html_e('Delete All', 'avif-local-support'); ?></button>
-				</div>
-
-				<div id="avif-local-support-result" style="margin-top:15px;display:none;">
-					<span class="spinner" id="avif-local-support-spinner"
-						style="float:none;visibility:visible;margin:0 8px 0 0;"></span>
-					<span id="avif-local-support-status" class="description"></span>
-					<span id="avif-local-support-convert-progress" class="description" style="display:none;">
-						<strong><?php esc_html_e('Progress:', 'avif-local-support'); ?></strong>
-						<span id="avif-local-support-progress-avifs">0</span> / <span
-							id="avif-local-support-progress-jpegs">0</span>
-						<?php esc_html_e('AVIF files', 'avif-local-support'); ?>
-					</span>
-				</div>
+			<div class="avif-actions-row">
+				<button type="button" class="button button-primary" id="avif-local-support-convert-now"><?php esc_html_e( 'Generate Missing AVIF', 'avif-local-support' ); ?></button>
+				<button type="button" class="button hidden" id="avif-local-support-stop-convert"><?php esc_html_e( 'Stop', 'avif-local-support' ); ?></button>
+				<button type="button" class="button button-secondary" id="avif-local-support-delete-avifs"><?php esc_html_e( 'Delete All AVIF', 'avif-local-support' ); ?></button>
 			</div>
-		</div>
 
-		<!-- Test AVIF Conversion -->
-		<div class="postbox">
-			<h2 class="avif-header"><span><?php esc_html_e('Test AVIF Conversion', 'avif-local-support'); ?></span>
-			</h2>
-			<div class="inside">
+			<div id="avif-local-support-result" class="avif-result-row hidden">
+				<span class="spinner" id="avif-local-support-spinner"></span>
+				<span id="avif-local-support-status" class="description"></span>
+				<span id="avif-local-support-convert-progress" class="description hidden">
+					<strong><?php esc_html_e( 'Progress:', 'avif-local-support' ); ?></strong>
+					<span id="avif-local-support-progress-avifs">0</span> / <span id="avif-local-support-progress-jpegs">0</span>
+					<?php esc_html_e( 'AVIF files created', 'avif-local-support' ); ?>
+				</span>
+			</div>
+		</section>
+
+			<section class="avif-tools-section">
+				<h3><?php esc_html_e( 'AVIF Settings Playground', 'avif-local-support' ); ?></h3>
 				<p class="description">
-					<?php esc_html_e('Upload a JPEG to preview resized images and the AVIFs generated by your current settings. The file is added to the Media Library.', 'avif-local-support'); ?>
+					<?php esc_html_e( 'Upload one JPEG, pick a WordPress image size for preview generation, then compare JPEG and AVIF while tuning settings.', 'avif-local-support' ); ?>
 				</p>
-				<form id="avif-local-support-test-form" action="<?php echo esc_url(admin_url('admin-post.php')); ?>"
-					method="post" enctype="multipart/form-data"
-					style="display:flex;flex-direction:column;align-items:flex-start;gap:8px">
-					<input type="hidden" name="action" value="aviflosu_upload_test" />
-					<?php wp_nonce_field('aviflosu_upload_test', '_wpnonce'); ?>
-					<input type="file" id="avif-local-support-test-file" name="avif_local_support_test_file"
-						accept="image/jpeg" required />
-					<div style="display:flex;align-items:center;gap:8px;">
-						<button type="submit" class="button button-primary"
-							id="avif-local-support-test-submit"><?php esc_html_e('Upload & test', 'avif-local-support'); ?></button>
-						<span class="spinner" id="avif-local-support-test-spinner" style="float:none;margin:0;"></span>
-						<span id="avif-local-support-test-status" class="description"></span>
+				<form id="avif-local-support-playground-upload-form" action="#" method="post" enctype="multipart/form-data" class="avif-test-form">
+					<input type="file" id="avif-local-support-playground-file" name="avif_local_support_test_file" accept="image/jpeg" required />
+					<div class="avif-playground-upload-row">
+						<label for="avif-local-support-playground-size"><?php esc_html_e( 'Preview Size', 'avif-local-support' ); ?></label>
+						<select id="avif-local-support-playground-size" name="avif_local_support_playground_size">
+							<?php foreach ( $playground_sizes as $playground_size_name => $playground_size ) : ?>
+								<?php
+								$playground_option_label = (string) $playground_size['label'];
+								$playground_option_dims  = (string) ( $playground_size['dimensions'] ?? '' );
+								if ( '' !== $playground_option_dims ) {
+									$playground_option_label .= ' (' . $playground_option_dims . ')';
+								}
+								?>
+								<option value="<?php echo esc_attr( $playground_size_name ); ?>" <?php selected( $playground_size_name, $playground_default_size ); ?>>
+									<?php echo esc_html( $playground_option_label ); ?>
+								</option>
+							<?php endforeach; ?>
+						</select>
+					</div>
+					<div class="avif-actions-row">
+						<button type="submit" class="button button-primary" id="avif-local-support-playground-upload-submit"><?php esc_html_e( 'Load Playground Image', 'avif-local-support' ); ?></button>
+						<span class="spinner avif-spinner-inline" id="avif-local-support-playground-upload-spinner"></span>
+						<span id="avif-local-support-playground-upload-status" class="description"></span>
 					</div>
 				</form>
-				<div id="avif-local-support-test-results"></div>
 
+			<div id="avif-local-support-playground-panel" class="hidden">
+				<div class="avif-playground-controls">
+					<div class="avif-playground-controls-grid">
+						<label for="avif-local-support-playground-quality"><?php esc_html_e( 'Quality', 'avif-local-support' ); ?></label>
+						<div class="avif-playground-range-wrap">
+							<input type="range" id="avif-local-support-playground-quality" min="0" max="100" value="<?php echo esc_attr( (string) $playground_quality ); ?>" />
+							<span id="avif-local-support-playground-quality-value"><?php echo esc_html( (string) $playground_quality ); ?></span>
+						</div>
 
-			</div>
-		</div>
+						<label for="avif-local-support-playground-speed"><?php esc_html_e( 'Speed', 'avif-local-support' ); ?></label>
+						<div class="avif-playground-range-wrap">
+							<input type="range" id="avif-local-support-playground-speed" min="0" max="8" value="<?php echo esc_attr( (string) $playground_speed ); ?>" />
+							<span id="avif-local-support-playground-speed-value"><?php echo esc_html( (string) $playground_speed ); ?></span>
+						</div>
 
-		<!-- LQIP Tools -->
-		<div class="postbox">
-			<h2 class="avif-header"><span><?php esc_html_e('LQIP Tools', 'avif-local-support'); ?></span></h2>
-			<div class="inside">
-				<p class="description" style="margin-bottom:15px;">
-					<?php esc_html_e('Manage LQIP placeholders for existing media items.', 'avif-local-support'); ?>
-				</p>
+						<label for="avif-local-support-playground-subsampling"><?php esc_html_e( 'Chroma', 'avif-local-support' ); ?></label>
+						<select id="avif-local-support-playground-subsampling">
+							<option value="420" <?php selected( '420', $playground_subsampling ); ?>>4:2:0</option>
+							<option value="422" <?php selected( '422', $playground_subsampling ); ?>>4:2:2</option>
+							<option value="444" <?php selected( '444', $playground_subsampling ); ?>>4:4:4</option>
+						</select>
 
-				<div id="aviflosu-thumbhash-stats"
-					style="margin-bottom:15px;padding:10px;background:#f0f0f1;border-radius:4px;display:flex;gap:24px;align-items:center;flex-wrap:wrap;">
-					<div><strong><?php esc_html_e('Media Items', 'avif-local-support'); ?>:</strong> <span
-							id="aviflosu-thumbhash-total">-</span>
+						<label for="avif-local-support-playground-bit-depth"><?php esc_html_e( 'Bit depth', 'avif-local-support' ); ?></label>
+						<select id="avif-local-support-playground-bit-depth">
+							<option value="8" <?php selected( '8', $playground_bit_depth ); ?>>8-bit</option>
+							<option value="10" <?php selected( '10', $playground_bit_depth ); ?>>10-bit</option>
+							<option value="12" <?php selected( '12', $playground_bit_depth ); ?>>12-bit</option>
+						</select>
+
+						<label for="avif-local-support-playground-engine-mode"><?php esc_html_e( 'Engine', 'avif-local-support' ); ?></label>
+						<select id="avif-local-support-playground-engine-mode">
+							<option value="auto" <?php selected( 'auto', $playground_engine_mode ); ?>><?php esc_html_e( 'Auto', 'avif-local-support' ); ?></option>
+							<option value="cli" <?php selected( 'cli', $playground_engine_mode ); ?>><?php esc_html_e( 'CLI', 'avif-local-support' ); ?></option>
+							<option value="imagick" <?php selected( 'imagick', $playground_engine_mode ); ?>><?php esc_html_e( 'Imagick', 'avif-local-support' ); ?></option>
+							<option value="gd" <?php selected( 'gd', $playground_engine_mode ); ?>><?php esc_html_e( 'GD', 'avif-local-support' ); ?></option>
+						</select>
 					</div>
-					<div><strong><?php esc_html_e('With LQIP', 'avif-local-support'); ?>:</strong> <span
-							id="aviflosu-thumbhash-with">-</span>
+
+					<div class="avif-actions-row">
+						<button type="button" class="button button-primary" id="avif-local-support-playground-refresh"><?php esc_html_e( 'Update AVIF Preview', 'avif-local-support' ); ?></button>
+						<button type="button" class="button button-secondary" id="avif-local-support-playground-apply-settings"><?php esc_html_e( 'Use These Settings Plugin-Wide', 'avif-local-support' ); ?></button>
+						<span class="spinner avif-spinner-inline" id="avif-local-support-playground-preview-spinner"></span>
+						<span id="avif-local-support-playground-preview-status" class="description"></span>
 					</div>
-					<div><strong><?php esc_html_e('Without LQIP', 'avif-local-support'); ?>:</strong> <span
-							id="aviflosu-thumbhash-without">-</span>
+				</div>
+
+				<div class="avif-playground-preview-card">
+					<h4 id="avif-local-support-playground-preview-title"><?php esc_html_e( 'JPEG', 'avif-local-support' ); ?></h4>
+					<div class="avif-playground-view-switch" role="group" aria-label="<?php esc_attr_e( 'Preview format', 'avif-local-support' ); ?>">
+						<button type="button" class="button button-small is-primary" id="avif-local-support-playground-view-jpg"><?php esc_html_e( 'Show JPG', 'avif-local-support' ); ?></button>
+						<button type="button" class="button button-small" id="avif-local-support-playground-view-avif"><?php esc_html_e( 'Show AVIF', 'avif-local-support' ); ?></button>
+					</div>
+					<p id="avif-local-support-playground-size-summary" class="description"></p>
+					<div class="avif-playground-preview-frame">
+						<img id="avif-local-support-playground-preview-image" src="" alt="<?php esc_attr_e( 'Playground preview image', 'avif-local-support' ); ?>" />
 					</div>
 				</div>
 
-				<div style="display:flex;gap:8px;flex-wrap:wrap;">
-					<button type="button" id="aviflosu-thumbhash-generate" class="button button-primary">
-						<?php esc_html_e('Generate All', 'avif-local-support'); ?>
-					</button>
-					<button type="button" id="aviflosu-thumbhash-stop" class="button" style="display:none;">
-						<?php esc_html_e('Stop', 'avif-local-support'); ?>
-					</button>
-					<button type="button" id="aviflosu-thumbhash-delete" class="button button-secondary">
-						<?php esc_html_e('Delete All', 'avif-local-support'); ?>
-					</button>
-				</div>
-
-				<div id="aviflosu-thumbhash-result" style="margin-top:15px;display:none;">
-					<span class="spinner" id="aviflosu-thumbhash-spinner"
-						style="float:none;visibility:visible;margin:0 8px 0 0;"></span>
-					<span id="aviflosu-thumbhash-status" class="description"></span>
-					<span id="aviflosu-thumbhash-progress" class="description" style="display:none;">
-						<strong><?php esc_html_e('Progress:', 'avif-local-support'); ?></strong>
-						<span id="aviflosu-thumbhash-progress-with">0</span> / <span
-							id="aviflosu-thumbhash-progress-total">0</span>
-						<?php esc_html_e('LQIPs', 'avif-local-support'); ?>
-					</span>
-				</div>
-			</div>
-		</div>
-		<script>
-			(function () {
-				'use strict';
-
-				var totalEl = document.getElementById('aviflosu-thumbhash-total');
-				var withEl = document.getElementById('aviflosu-thumbhash-with');
-				var withoutEl = document.getElementById('aviflosu-thumbhash-without');
-				var generateBtn = document.getElementById('aviflosu-thumbhash-generate');
-				var stopBtn = document.getElementById('aviflosu-thumbhash-stop');
-				var deleteBtn = document.getElementById('aviflosu-thumbhash-delete');
-				var resultContainer = document.getElementById('aviflosu-thumbhash-result');
-				var spinner = document.getElementById('aviflosu-thumbhash-spinner');
-				var statusEl = document.getElementById('aviflosu-thumbhash-status');
-				var progressEl = document.getElementById('aviflosu-thumbhash-progress');
-				var progressWith = document.getElementById('aviflosu-thumbhash-progress-with');
-				var progressTotal = document.getElementById('aviflosu-thumbhash-progress-total');
-
-				var pollingTimer = null;
-				var stopRequested = false;
-
-				function loadStats(callback) {
-					fetch('<?php echo esc_url(rest_url('aviflosu/v1/thumbhash/stats')); ?>', {
-						method: 'GET',
-						headers: {
-							'X-WP-Nonce': '<?php echo esc_js(wp_create_nonce('wp_rest')); ?>'
-						}
-					})
-						.then(function (r) {
-							return r.json();
-						})
-						.then(function (data) {
-							if (totalEl) totalEl.textContent = String(data.total || 0);
-							if (withEl) withEl.textContent = String(data.with_hash || 0);
-							if (withoutEl) withoutEl.textContent = String(data.without_hash || 0);
-							if (callback) callback(data);
-						})
-						.catch(function () {
-							if (totalEl) totalEl.textContent = '-';
-							if (withEl) withEl.textContent = '-';
-							if (withoutEl) withoutEl.textContent = '-';
-						});
-				}
-
-				function stopPolling() {
-					if (pollingTimer) {
-						window.clearInterval(pollingTimer);
-						pollingTimer = null;
-					}
-					if (stopBtn) stopBtn.style.display = 'none';
-					if (progressEl) progressEl.style.display = 'none';
-					if (spinner) spinner.classList.remove('is-active');
-					if (generateBtn) generateBtn.disabled = false;
-					if (deleteBtn) deleteBtn.disabled = false;
-					stopRequested = false;
-				}
-
-				if (stopBtn) {
-					stopBtn.addEventListener('click', function (e) {
-						e.preventDefault();
-						stopRequested = true;
-						stopBtn.disabled = true;
-						if (statusEl) statusEl.textContent = '<?php echo esc_js(__('Stopping...', 'avif-local-support')); ?>';
-					});
-				}
-
-				if (generateBtn) {
-					generateBtn.addEventListener('click', function (e) {
-						e.preventDefault();
-						generateBtn.disabled = true;
-						deleteBtn.disabled = true;
-						stopRequested = false;
-						if (resultContainer) resultContainer.style.display = 'block';
-						if (spinner) spinner.classList.add('is-active');
-						if (statusEl) statusEl.textContent = '<?php echo esc_js(__('Generating...', 'avif-local-support')); ?>';
-						if (progressEl) progressEl.style.display = '';
-						if (stopBtn) {
-							stopBtn.style.display = '';
-							stopBtn.disabled = false;
-						}
-
-						// Get initial stats for progress tracking
-						loadStats(function (initialData) {
-							var startWithout = initialData.without_hash || 0;
-							var total = initialData.total || 0;
-							if (progressTotal) progressTotal.textContent = String(total);
-							if (progressWith) progressWith.textContent = String(initialData.with_hash || 0);
-
-							// Start background generation
-							fetch('<?php echo esc_url(rest_url('aviflosu/v1/thumbhash/generate-all')); ?>', {
-								method: 'POST',
-								headers: {
-									'X-WP-Nonce': '<?php echo esc_js(wp_create_nonce('wp_rest')); ?>'
-								}
-							})
-								.then(function (r) {
-									return r.json();
-								})
-								.then(function (data) {
-									// Generation complete
-									if (statusEl) {
-										statusEl.textContent = '<?php echo esc_js(__('Complete!', 'avif-local-support')); ?>' +
-											' <?php echo esc_js(__('Generated:', 'avif-local-support')); ?> ' + (data.generated || 0) +
-											', <?php echo esc_js(__('Skipped:', 'avif-local-support')); ?> ' + (data.skipped || 0) +
-											', <?php echo esc_js(__('Failed:', 'avif-local-support')); ?> ' + (data.failed || 0);
-									}
-									stopPolling();
-									loadStats();
-								})
-								.catch(function () {
-									if (statusEl) statusEl.textContent = '<?php echo esc_js(__('Failed', 'avif-local-support')); ?>';
-									stopPolling();
-								});
-
-							// Poll for progress while generation runs
-							var prevWithout = startWithout;
-							var unchangedTicks = 0;
-							var startTime = Date.now();
-							var MAX_UNCHANGED = 20;
-							var MAX_DURATION = 10 * 60 * 1000;
-
-							function pollProgress() {
-								if (stopRequested) {
-									if (statusEl) statusEl.textContent = '<?php echo esc_js(__('Stopped', 'avif-local-support')); ?>';
-									stopPolling();
-									loadStats();
-									return;
-								}
-
-								loadStats(function (data) {
-									var withHash = data.with_hash || 0;
-									var without = data.without_hash || 0;
-
-									if (progressWith) progressWith.textContent = String(withHash);
-
-									// Check completion
-									if (without === 0) {
-										// Will complete via the fetch promise above
-									} else {
-										if (without === prevWithout) {
-											unchangedTicks++;
-										} else {
-											unchangedTicks = 0;
-										}
-										prevWithout = without;
-
-										// Safety timeout
-										if (unchangedTicks >= MAX_UNCHANGED || (Date.now() - startTime) > MAX_DURATION) {
-											if (statusEl) statusEl.textContent = '<?php echo esc_js(__('Continuing in background...', 'avif-local-support')); ?>';
-											stopPolling();
-										}
-									}
-								});
-							}
-
-							if (pollingTimer) window.clearInterval(pollingTimer);
-							pollingTimer = window.setInterval(pollProgress, 1500);
-							pollProgress();
-						});
-					});
-				}
-
-				if (deleteBtn) {
-					deleteBtn.addEventListener('click', function (e) {
-						e.preventDefault();
-						generateBtn.disabled = true;
-						deleteBtn.disabled = true;
-						if (resultContainer) resultContainer.style.display = 'block';
-						if (spinner) spinner.classList.add('is-active');
-						if (statusEl) statusEl.textContent = '<?php echo esc_js(__('Deleting...', 'avif-local-support')); ?>';
-						if (progressEl) progressEl.style.display = 'none';
-
-						fetch('<?php echo esc_url(rest_url('aviflosu/v1/thumbhash/delete-all')); ?>', {
-							method: 'POST',
-							headers: {
-								'X-WP-Nonce': '<?php echo esc_js(wp_create_nonce('wp_rest')); ?>'
-							}
-						})
-							.then(function (r) {
-								return r.json();
-							})
-							.then(function (data) {
-								if (statusEl) statusEl.textContent = '<?php echo esc_js(__('Deleted:', 'avif-local-support')); ?> ' + (data.deleted || 0) + ' <?php echo esc_js(__('entries', 'avif-local-support')); ?>';
-								if (spinner) spinner.classList.remove('is-active');
-								generateBtn.disabled = false;
-								deleteBtn.disabled = false;
-								loadStats();
-							})
-							.catch(function () {
-								if (statusEl) statusEl.textContent = '<?php echo esc_js(__('Failed', 'avif-local-support')); ?>';
-								if (spinner) spinner.classList.remove('is-active');
-								generateBtn.disabled = false;
-								deleteBtn.disabled = false;
-							});
-					});
-				}
-
-				// Load stats on page load
-				loadStats();
-			})();
-		</script>
-
-		<!-- Logs section -->
-		<div class="postbox">
-			<h2 class="avif-header"><span><?php esc_html_e('Logs', 'avif-local-support'); ?></span></h2>
-			<div class="inside">
-				<p class="description">
-					<?php esc_html_e('View recent conversion logs including errors, settings used, and performance metrics.', 'avif-local-support'); ?>
-				</p>
-				<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-					<button type="button" class="button"
-						id="avif-local-support-refresh-logs"><?php esc_html_e('Refresh logs', 'avif-local-support'); ?></button>
-					<button type="button" class="button"
-						id="avif-local-support-copy-logs"><?php esc_html_e('Copy logs', 'avif-local-support'); ?></button>
-					<button type="button" class="button"
-						id="avif-local-support-clear-logs"><?php esc_html_e('Clear logs', 'avif-local-support'); ?></button>
-					<label class="avif-logs-filter"><input type="checkbox" id="avif-local-support-logs-only-errors" />
-						<?php esc_html_e('Only failed/errored', 'avif-local-support'); ?></label>
-					<span class="spinner" id="avif-local-support-logs-spinner" style="float:none;margin:0 6px;"></span>
-					<span id="avif-local-support-copy-status" class="description"
-						style="color:#00a32a;display:none;"><?php esc_html_e('Copied!', 'avif-local-support'); ?></span>
-				</div>
-				<div id="avif-local-support-logs-content" class="avif-logs-container">
-					<?php
-					// Use the logger instance that was passed in the data.
-					if (isset($logger) && method_exists($logger, 'renderLogsContent')) {
-						$logger->renderLogsContent();
-					}
-					?>
+				<div class="avif-actions-row">
+					<a id="avif-local-support-playground-download-jpeg" class="button" href="#" target="_blank" rel="noopener" download><?php esc_html_e( 'Download JPG', 'avif-local-support' ); ?></a>
+					<a id="avif-local-support-playground-download-avif" class="button" href="#" target="_blank" rel="noopener" download><?php esc_html_e( 'Download AVIF', 'avif-local-support' ); ?></a>
 				</div>
 			</div>
-		</div>
+		</section>
 
-		<!-- Server support -->
-		<div class="postbox">
-			<h2 class="avif-header"><span><?php esc_html_e('Server support', 'avif-local-support'); ?></span></h2>
-			<div class="inside">
-				<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 10px;">
-					<button type="button" class="button"
-						id="avif-local-support-copy-support"><?php esc_html_e('Copy diagnostics as text', 'avif-local-support'); ?></button>
-					<span id="avif-local-support-copy-support-status" class="description"
-						style="color:#00a32a;display:none;"><?php esc_html_e('Copied!', 'avif-local-support'); ?></span>
-				</div>
+		<section class="avif-tools-section">
+			<h3><?php esc_html_e( 'LQIP Placeholder Tools', 'avif-local-support' ); ?></h3>
+			<p class="description">
+				<?php esc_html_e( 'Manage LQIP placeholders for existing media items.', 'avif-local-support' ); ?>
+			</p>
 
-				<p class="description" style="max-width:960px;margin-top:0;">
-					<?php esc_html_e('This panel explains what your server supports, what AVIF Local Support will do, and what to check when something is unexpected.', 'avif-local-support'); ?>
-				</p>
+			<table id="aviflosu-thumbhash-stats" class="widefat striped">
+				<tbody>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Media Items', 'avif-local-support' ); ?></th>
+						<td><span id="aviflosu-thumbhash-total">-</span></td>
+					</tr>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'With LQIP', 'avif-local-support' ); ?></th>
+						<td><span id="aviflosu-thumbhash-with">-</span></td>
+					</tr>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Without LQIP', 'avif-local-support' ); ?></th>
+						<td><span id="aviflosu-thumbhash-without">-</span></td>
+					</tr>
+				</tbody>
+			</table>
 
-				<div class="avif-support-panel">
-					<!-- Summary section -->
-					<h3 style="margin:8px 0 6px;"><?php esc_html_e('Summary', 'avif-local-support'); ?></h3>
-					<?php
-					$mode_explain = 'auto' === $engine_mode
-						? esc_html__('Auto: the plugin will try engines in order (CLI → Imagick → GD) until one succeeds.', 'avif-local-support')
-						: esc_html__('Forced: the plugin will use only the selected engine (no fallback).', 'avif-local-support');
-					?>
-					<table class="widefat striped" style="max-width:960px;margin-bottom:10px;">
-						<tbody>
+			<div class="avif-actions-row">
+				<button type="button" id="aviflosu-thumbhash-generate" class="button button-primary"><?php esc_html_e( 'Generate Missing LQIPs', 'avif-local-support' ); ?></button>
+				<button type="button" id="aviflosu-thumbhash-stop" class="button hidden"><?php esc_html_e( 'Stop LQIP Generation', 'avif-local-support' ); ?></button>
+				<button type="button" id="aviflosu-thumbhash-delete" class="button button-secondary"><?php esc_html_e( 'Delete All LQIPs', 'avif-local-support' ); ?></button>
+			</div>
+
+			<div id="aviflosu-thumbhash-result" class="avif-result-row hidden">
+				<span class="spinner" id="aviflosu-thumbhash-spinner"></span>
+				<span id="aviflosu-thumbhash-status" class="description"></span>
+				<span id="aviflosu-thumbhash-progress" class="description hidden">
+					<strong><?php esc_html_e( 'Progress:', 'avif-local-support' ); ?></strong>
+					<span id="aviflosu-thumbhash-progress-with">0</span> / <span id="aviflosu-thumbhash-progress-total">0</span>
+					<?php esc_html_e( 'LQIP placeholders created', 'avif-local-support' ); ?>
+				</span>
+			</div>
+		</section>
+
+		<section class="avif-tools-section">
+			<h3><?php esc_html_e( 'Logs', 'avif-local-support' ); ?></h3>
+			<p class="description">
+				<?php esc_html_e( 'View recent conversion logs including errors, settings used, and performance metrics.', 'avif-local-support' ); ?>
+			</p>
+			<div class="avif-actions-row">
+				<button type="button" class="button" id="avif-local-support-refresh-logs"><?php esc_html_e( 'Refresh Logs', 'avif-local-support' ); ?></button>
+				<button type="button" class="button" id="avif-local-support-copy-logs"><?php esc_html_e( 'Copy Logs', 'avif-local-support' ); ?></button>
+				<button type="button" class="button" id="avif-local-support-clear-logs"><?php esc_html_e( 'Clear Logs', 'avif-local-support' ); ?></button>
+				<label class="avif-logs-filter"><input type="checkbox" id="avif-local-support-logs-only-errors" />
+					<?php esc_html_e( 'Show only errors', 'avif-local-support' ); ?></label>
+				<span class="spinner avif-spinner-inline" id="avif-local-support-logs-spinner"></span>
+				<span id="avif-local-support-copy-status" class="description avif-status-success hidden"><?php esc_html_e( 'Copied!', 'avif-local-support' ); ?></span>
+			</div>
+			<div id="avif-local-support-logs-content" class="avif-logs-container">
+				<?php
+				if ( isset( $logger ) && method_exists( $logger, 'renderLogsContent' ) ) {
+					$logger->renderLogsContent();
+				}
+				?>
+			</div>
+		</section>
+
+		<section class="avif-tools-section">
+			<h3><?php esc_html_e( 'Server Support', 'avif-local-support' ); ?></h3>
+			<div class="avif-actions-row">
+				<button type="button" class="button" id="avif-local-support-copy-support"><?php esc_html_e( 'Copy Server Diagnostics', 'avif-local-support' ); ?></button>
+				<span id="avif-local-support-copy-support-status" class="description avif-status-success hidden"><?php esc_html_e( 'Copied!', 'avif-local-support' ); ?></span>
+			</div>
+
+			<p class="description">
+				<?php esc_html_e( 'This panel explains what your server supports, what AVIF Local Support will do, and what to check when something is unexpected.', 'avif-local-support' ); ?>
+			</p>
+
+			<div class="avif-support-panel">
+				<h3><?php esc_html_e( 'Summary', 'avif-local-support' ); ?></h3>
+				<?php
+				$mode_explain = 'auto' === $engine_mode
+					? esc_html__( 'Auto: the plugin will try engines in order (CLI -> Imagick -> GD) until one succeeds.', 'avif-local-support' )
+					: esc_html__( 'Forced: the plugin will use only the selected engine (no fallback).', 'avif-local-support' );
+				?>
+				<table class="widefat striped">
+					<tbody>
+						<tr>
+							<td><strong><?php esc_html_e( 'AVIF conversion available', 'avif-local-support' ); ?></strong></td>
+							<td><?php echo wp_kses_post( $badge( $avif_support_level, 'Yes', 'No', 'Unconfirmed' ) ); ?></td>
+						</tr>
+						<tr>
+							<td><strong><?php esc_html_e( 'Conversion engine mode', 'avif-local-support' ); ?></strong></td>
+							<td>
+								<code><?php echo esc_html( $engine_mode ); ?></code>
+								<div class="description"><?php echo esc_html( $mode_explain ); ?></div>
+							</td>
+						</tr>
+						<?php if ( 'auto' === $engine_mode ) : ?>
 							<tr>
-								<td style="width:260px;">
-									<strong><?php esc_html_e('AVIF conversion available', 'avif-local-support'); ?></strong>
-								</td>
-								<td><?php echo wp_kses_post($badge($avif_support_level, 'Yes', 'No', 'Unconfirmed')); ?>
-								</td>
-							</tr>
-							<tr>
-								<td><strong><?php esc_html_e('Engine setting', 'avif-local-support'); ?></strong></td>
-								<td><code><?php echo esc_html($engine_mode); ?></code>
-									<div class="description" style="margin-top:4px;">
-										<?php echo esc_html($mode_explain); ?>
-									</div>
-								</td>
-							</tr>
-							<?php
-							if ('auto' === $engine_mode):
-								$first_label = match ($auto_first_attempt) {
-									'cli' => esc_html__('CLI (ImageMagick command-line)', 'avif-local-support'),
-									'imagick' => esc_html__('Imagick (PHP extension)', 'avif-local-support'),
-									'gd' => esc_html__('GD (imageavif)', 'avif-local-support'),
-									default => esc_html__('None', 'avif-local-support'),
-								};
-								?>
-								<tr>
-									<td><strong><?php esc_html_e('Auto mode: first attempt', 'avif-local-support'); ?></strong>
-									</td>
-									<td><?php echo esc_html($first_label); ?>
-										<?php
-										if ($auto_has_fallback):
-											?>
-											<span
-												class="description">(<?php esc_html_e('fallbacks available', 'avif-local-support'); ?>)</span><?php endif; ?>
-									</td>
-								</tr>
-							<?php else: ?>
-								<tr>
-									<td><strong><?php esc_html_e('Fallback behavior', 'avif-local-support'); ?></strong>
-									</td>
-									<td><?php esc_html_e('No fallback in forced mode.', 'avif-local-support'); ?></td>
-								</tr>
-							<?php endif; ?>
-							<tr>
-								<td><strong><?php esc_html_e('Convert on upload', 'avif-local-support'); ?></strong>
-								</td>
-								<td><?php echo wp_kses_post($badge($convert_on_upload, 'Enabled', 'Disabled')); ?>
-								</td>
-							</tr>
-							<tr>
-								<td><strong><?php esc_html_e('Daily scan for missing AVIFs', 'avif-local-support'); ?></strong>
-								</td>
+								<td><strong><?php esc_html_e( 'First engine in Auto mode', 'avif-local-support' ); ?></strong></td>
 								<td>
-									<?php echo wp_kses_post($badge($schedule_enabled, 'Enabled', 'Disabled')); ?>
-									<?php if ($schedule_enabled): ?>
-										<span class="description">(
-										<?php
-										/* translators: %s: Schedule time (e.g., "01:00") */
-										echo esc_html(sprintf(__('scheduled around %s', 'avif-local-support'), $schedule_time));
-										?>
-										)</span>
+									<?php echo esc_html( $auto_first_label ); ?>
+									<?php if ( $auto_has_fallback ) : ?>
+										<span class="description">(<?php esc_html_e( 'fallbacks available', 'avif-local-support' ); ?>)</span>
 									<?php endif; ?>
 								</td>
 							</tr>
+						<?php else : ?>
 							<tr>
-								<td><strong><?php esc_html_e('Front-end AVIF serving', 'avif-local-support'); ?></strong>
-								</td>
-								<td>
-									<?php echo wp_kses_post($badge($frontend_enabled, 'Enabled', 'Disabled')); ?>
-									<div class="description" style="margin-top:4px;">
-										<?php esc_html_e('When enabled, the plugin wraps JPEG outputs in a <picture> tag with an AVIF <source> first.', 'avif-local-support'); ?>
-									</div>
-								</td>
+								<td><strong><?php esc_html_e( 'Fallback behavior', 'avif-local-support' ); ?></strong></td>
+								<td><?php esc_html_e( 'No fallback in forced mode.', 'avif-local-support' ); ?></td>
 							</tr>
-						</tbody>
-					</table>
+						<?php endif; ?>
+						<tr>
+							<td><strong><?php esc_html_e( 'Convert uploads to AVIF', 'avif-local-support' ); ?></strong></td>
+							<td><?php echo wp_kses_post( $badge( $convert_on_upload, 'Enabled', 'Disabled' ) ); ?></td>
+						</tr>
+						<tr>
+							<td><strong><?php esc_html_e( 'Daily background conversion', 'avif-local-support' ); ?></strong></td>
+							<td>
+								<?php echo wp_kses_post( $badge( $schedule_enabled, 'Enabled', 'Disabled' ) ); ?>
+								<?php if ( $schedule_enabled ) : ?>
+									<span class="description">(
+									<?php
+									/* translators: %s: Schedule time (e.g., "01:00") */
+									echo esc_html( sprintf( __( 'scheduled around %s', 'avif-local-support' ), $schedule_time ) );
+									?>
+									)</span>
+								<?php endif; ?>
+							</td>
+						</tr>
+						<tr>
+							<td><strong><?php esc_html_e( 'Front-end AVIF delivery', 'avif-local-support' ); ?></strong></td>
+							<td>
+								<?php echo wp_kses_post( $badge( $frontend_enabled, 'Enabled', 'Disabled' ) ); ?>
+								<div class="description">
+									<?php esc_html_e( 'When enabled, the plugin wraps JPEG outputs in a <picture> tag with an AVIF <source> first.', 'avif-local-support' ); ?>
+								</div>
+							</td>
+						</tr>
+					</tbody>
+				</table>
 
+				<h3><?php esc_html_e( 'Engine Details', 'avif-local-support' ); ?></h3>
+				<?php require __DIR__ . '/partials/engine-details.php'; ?>
 
-					<!-- Engine Details (collapsed by default) -->
-					<h3 style="margin:14px 0 6px;"><?php esc_html_e('Engine details', 'avif-local-support'); ?></h3>
-					<?php require __DIR__ . '/partials/engine-details.php'; ?>
-
-					<!-- Environment (collapsed) -->
-					<details class="avif-support-details">
-						<summary><strong><?php esc_html_e('Environment', 'avif-local-support'); ?></strong></summary>
-						<div class="avif-support-details-body">
-							<?php
-							$php_user = (string) ($system_status['current_user'] ?? @get_current_user());
-							$ob = (string) ($system_status['open_basedir'] ?? ini_get('open_basedir'));
-							$df = (string) ($system_status['disable_functions'] ?? ini_get('disable_functions'));
-							?>
-							<table class="widefat striped" style="max-width:960px;">
-								<tbody>
-									<tr>
-										<td style="width:260px;">
-											<strong><?php esc_html_e('PHP Version', 'avif-local-support'); ?></strong>
-										</td>
-										<td><code><?php echo esc_html(PHP_VERSION); ?></code></td>
-									</tr>
-									<tr>
-										<td><strong><?php esc_html_e('WordPress Version', 'avif-local-support'); ?></strong>
-										</td>
-										<td><code><?php echo esc_html(get_bloginfo('version')); ?></code></td>
-									</tr>
-									<tr>
-										<td><strong><?php esc_html_e('PHP SAPI', 'avif-local-support'); ?></strong>
-										</td>
-										<td><code><?php echo esc_html($system_status['php_sapi'] ?? PHP_SAPI); ?></code>
-										</td>
-									</tr>
-									<tr>
-										<td><strong><?php esc_html_e('Current user', 'avif-local-support'); ?></strong>
-										</td>
-										<td>
-											<code><?php echo esc_html('' !== $php_user ? $php_user : '-'); ?></code>
-											<div class="description" style="margin-top:4px;">
-												<?php esc_html_e('This is the OS user PHP runs as; it must have write access to wp-content/uploads.', 'avif-local-support'); ?>
-											</div>
-										</td>
-									</tr>
-									<tr>
-										<td><strong><?php esc_html_e('open_basedir', 'avif-local-support'); ?></strong>
-										</td>
-										<td><?php echo '' !== $ob ? '<code style="white-space:pre-wrap;word-break:break-word;display:inline-block;max-width:680px;overflow:auto;">' . esc_html($ob) . '</code>' : '-'; ?>
-										</td>
-									</tr>
-									<tr>
-										<td><strong><?php esc_html_e('disable_functions', 'avif-local-support'); ?></strong>
-										</td>
-										<td><?php echo '' !== $df ? '<code style="white-space:pre-wrap;word-break:break-word;display:inline-block;max-width:680px;overflow:auto;">' . esc_html($df) . '</code>' : '-'; ?>
-										</td>
-									</tr>
-								</tbody>
-							</table>
-						</div>
-					</details>
-				</div>
+				<details class="avif-support-details">
+					<summary><strong><?php esc_html_e( 'Environment', 'avif-local-support' ); ?></strong></summary>
+					<div class="avif-support-details-body">
+						<?php
+						$php_user = (string) ( $system_status['current_user'] ?? @get_current_user() );
+						$ob       = (string) ( $system_status['open_basedir'] ?? ini_get( 'open_basedir' ) );
+						$df       = (string) ( $system_status['disable_functions'] ?? ini_get( 'disable_functions' ) );
+						?>
+						<table class="widefat striped">
+							<tbody>
+								<tr>
+									<td><strong><?php esc_html_e( 'PHP Version', 'avif-local-support' ); ?></strong></td>
+									<td><code><?php echo esc_html( PHP_VERSION ); ?></code></td>
+								</tr>
+								<tr>
+									<td><strong><?php esc_html_e( 'WordPress Version', 'avif-local-support' ); ?></strong></td>
+									<td><code><?php echo esc_html( get_bloginfo( 'version' ) ); ?></code></td>
+								</tr>
+								<tr>
+									<td><strong><?php esc_html_e( 'PHP SAPI', 'avif-local-support' ); ?></strong></td>
+									<td><code><?php echo esc_html( $system_status['php_sapi'] ?? PHP_SAPI ); ?></code></td>
+								</tr>
+								<tr>
+									<td><strong><?php esc_html_e( 'Current user', 'avif-local-support' ); ?></strong></td>
+									<td>
+										<code><?php echo esc_html( '' !== $php_user ? $php_user : '-' ); ?></code>
+										<div class="description">
+											<?php esc_html_e( 'This is the OS user PHP runs as; it must have write access to wp-content/uploads.', 'avif-local-support' ); ?>
+										</div>
+									</td>
+								</tr>
+								<tr>
+									<td><strong><?php esc_html_e( 'open_basedir', 'avif-local-support' ); ?></strong></td>
+									<td><?php echo '' !== $ob ? '<code class="avif-code-overflow">' . esc_html( $ob ) . '</code>' : '-'; ?></td>
+								</tr>
+								<tr>
+									<td><strong><?php esc_html_e( 'disable_functions', 'avif-local-support' ); ?></strong></td>
+									<td><?php echo '' !== $df ? '<code class="avif-code-overflow">' . esc_html( $df ) . '</code>' : '-'; ?></td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+				</details>
 			</div>
-		</div>
+		</section>
 
+		<section class="avif-tools-section">
+			<h3><?php esc_html_e( 'Reset Plugin Settings', 'avif-local-support' ); ?></h3>
+			<p class="description">
+				<?php esc_html_e( 'Use this only if you want to return all AVIF and LQIP settings to defaults.', 'avif-local-support' ); ?>
+			</p>
+			<form action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post" onsubmit="return confirm('<?php esc_attr_e( 'Reset all plugin settings to default values?', 'avif-local-support' ); ?>');">
+				<input type="hidden" name="action" value="aviflosu_reset_defaults" />
+				<?php wp_nonce_field( 'aviflosu_reset_defaults', '_wpnonce', false, true ); ?>
+				<button type="submit" class="button"><?php esc_html_e( 'Reset All Plugin Settings', 'avif-local-support' ); ?></button>
+			</form>
+		</section>
 	</div>
 </div>

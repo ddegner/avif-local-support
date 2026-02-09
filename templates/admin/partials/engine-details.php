@@ -40,13 +40,13 @@ if ( 'cli' === $engine_mode ) {
 		<?php echo wp_kses_post( $cli_summary ); ?>
 	</summary>
 	<div class="avif-support-details-body">
-		<p class="description" style="margin-top:0;max-width:960px;">
+		<p class="description">
 			<?php esc_html_e( 'Used for conversion via proc_open() (no shell). This is usually fastest and most reliable if ImageMagick is installed with AVIF support.', 'avif-local-support' ); ?>
 		</p>
-		<table class="widefat striped" style="max-width:960px;">
+		<table class="widefat striped">
 			<tbody>
 				<tr>
-					<td style="width:260px;">
+					<td>
 						<strong><?php esc_html_e( 'proc_open available', 'avif-local-support' ); ?></strong>
 					</td>
 					<td><?php echo wp_kses_post( $badge( $cli_proc_open ) ); ?></td>
@@ -83,7 +83,7 @@ if ( 'cli' === $engine_mode ) {
 					<td><strong><?php esc_html_e( 'AVIF-capable CLI detected', 'avif-local-support' ); ?></strong></td>
 					<td>
 						<?php echo wp_kses_post( $badge( $cli_has_avif_bin, 'Yes (probe)', 'Unknown / No' ) ); ?>
-						<div class="description" style="margin-top:4px;">
+						<div class="description">
 							<?php esc_html_e( 'This is a best-effort probe. A custom path might still work.', 'avif-local-support' ); ?>
 						</div>
 					</td>
@@ -92,9 +92,9 @@ if ( 'cli' === $engine_mode ) {
 		</table>
 
 		<?php if ( ! empty( $cli_detected ) ) : ?>
-			<div style="margin-top:8px;">
+			<div>
 				<strong><?php esc_html_e( 'Detected ImageMagick binaries', 'avif-local-support' ); ?></strong>
-				<ul style="margin:6px 0 0;padding-left:18px;">
+				<ul class="avif-binary-list">
 					<?php
 					foreach ( $cli_detected as $bin ) :
 						$bin_path = isset( $bin['path'] ) ? (string) $bin['path'] : '';
@@ -108,17 +108,16 @@ if ( 'cli' === $engine_mode ) {
 			</div>
 		<?php endif; ?>
 
-		<div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-			<button type="button" class="button"
-				id="avif-local-support-run-magick-test"><?php esc_html_e( 'Run ImageMagick test', 'avif-local-support' ); ?></button>
-			<span class="spinner" id="avif-local-support-magick-test-spinner" style="float:none;margin:0 6px;"></span>
-			<span id="avif-local-support-magick-test-status" class="description"></span>
-		</div>
-		<pre id="avif-local-support-magick-test-output"
-			style="display:none;max-width:960px;white-space:pre-wrap;background:#f6f7f7;padding:10px;border:1px solid #ccd0d4;margin-top:8px;"></pre>
+				<div class="avif-actions-row">
+					<button type="button" class="button"
+						id="avif-local-support-run-magick-test"><?php esc_html_e( 'Run ImageMagick Check', 'avif-local-support' ); ?></button>
+					<span class="spinner avif-spinner-inline" id="avif-local-support-magick-test-spinner"></span>
+					<span id="avif-local-support-magick-test-status" class="description"></span>
+				</div>
+		<pre id="avif-local-support-magick-test-output" class="avif-panel-output hidden"></pre>
 
 		<?php if ( $exec_disabled ) : ?>
-			<p class="description" style="margin-top:8px;">
+			<p class="description">
 				<strong><?php esc_html_e( 'Note:', 'avif-local-support' ); ?></strong>
 				<?php esc_html_e( 'Your PHP has exec disabled. The test button uses exec, but conversions use proc_open—so conversion may still work.', 'avif-local-support' ); ?>
 			</p>
@@ -139,13 +138,13 @@ if ( 'imagick' === $engine_mode ) {
 		<?php echo wp_kses_post( $im_summary ); ?>
 	</summary>
 	<div class="avif-support-details-body">
-		<p class="description" style="margin-top:0;max-width:960px;">
+		<p class="description">
 			<?php esc_html_e( 'Used for conversion inside PHP. Great quality and better profile/metadata handling when ImageMagick has AVIF support.', 'avif-local-support' ); ?>
 		</p>
-		<table class="widefat striped" style="max-width:960px;">
+		<table class="widefat striped">
 			<tbody>
 				<tr>
-					<td style="width:260px;">
+					<td>
 						<strong><?php esc_html_e( 'Imagick extension loaded', 'avif-local-support' ); ?></strong>
 					</td>
 					<td><?php echo wp_kses_post( $badge( ! empty( $system_status['imagick_available'] ), 'Yes', 'No' ) ); ?>
@@ -187,13 +186,13 @@ if ( 'gd' === $engine_mode ) {
 		<?php echo wp_kses_post( $gd_summary ); ?>
 	</summary>
 	<div class="avif-support-details-body">
-		<p class="description" style="margin-top:0;max-width:960px;">
+		<p class="description">
 			<?php esc_html_e( 'Used as a fallback when imageavif() is available. Fast, but does not perform color management and may not preserve metadata.', 'avif-local-support' ); ?>
 		</p>
-		<table class="widefat striped" style="max-width:960px;">
+		<table class="widefat striped">
 			<tbody>
 				<tr>
-					<td style="width:260px;">
+					<td>
 						<strong><?php esc_html_e( 'GD extension loaded', 'avif-local-support' ); ?></strong>
 					</td>
 					<td><?php echo wp_kses_post( $badge( ! empty( $system_status['gd_available'] ), 'Yes', 'No' ) ); ?>
@@ -216,7 +215,7 @@ if ( 'gd' === $engine_mode ) {
 				</tr>
 			</tbody>
 		</table>
-		<p class="description" style="margin-top:8px;">
+		<p class="description">
 			<strong><?php esc_html_e( 'Color management note:', 'avif-local-support' ); ?></strong>
 			<?php esc_html_e( 'GD does not perform color management; non‑sRGB JPEGs may appear desaturated. For accurate color, enable Imagick.', 'avif-local-support' ); ?>
 		</p>

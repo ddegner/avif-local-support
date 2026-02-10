@@ -45,6 +45,7 @@ foreach ($aviflosu_options as $aviflosu_option) {
 delete_transient('aviflosu_file_cache');
 delete_transient('aviflosu_logs');
 delete_transient('aviflosu_stop_conversion');
+delete_transient('aviflosu_stop_lqip_generation');
 
 // Delete ImageMagick CLI cache transients (with wildcard pattern).
 // These use dynamic keys like aviflosu_imc_cand_*, aviflosu_imc_sel_*, aviflosu_imc_def_*.
@@ -57,6 +58,4 @@ if (!wp_using_ext_object_cache()) {
 }
 
 // Delete all ThumbHash post meta entries.
-global $wpdb;
-// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-$wpdb->delete($wpdb->postmeta, array('meta_key' => '_aviflosu_thumbhash'));
+delete_post_meta_by_key('_aviflosu_thumbhash');

@@ -203,6 +203,16 @@ final class RestController
 
 		register_rest_route(
 			self::NAMESPACE ,
+			'/thumbhash/stop',
+			array(
+				'methods' => 'POST',
+				'permission_callback' => array($this, 'permissionManageOptions'),
+				'callback' => array($this, 'thumbhashStop'),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE ,
 			'/thumbhash/delete-all',
 			array(
 				'methods' => 'POST',
@@ -396,14 +406,12 @@ final class RestController
 		// Temporarily disable AVIF conversion during upload by removing the converter's hooks.
 		// Conversions will happen incrementally via the async polling mechanism (uploadTestStatus),
 		// preventing timeouts on large images that can take 30+ seconds per size to convert.
-		\remove_filter('wp_generate_attachment_metadata', array($this->converter, 'convertGeneratedSizes'), 20);
 		\remove_filter('wp_update_attachment_metadata', array($this->converter, 'convertGeneratedSizes'), 20);
 		\remove_filter('wp_handle_upload', array($this->converter, 'convertOriginalOnUpload'), 20);
 
 		$attachment_id = media_handle_sideload($rawFile, 0);
 		if (is_wp_error($attachment_id)) {
 			// Re-add hooks before returning.
-			\add_filter('wp_generate_attachment_metadata', array($this->converter, 'convertGeneratedSizes'), 20, 2);
 			\add_filter('wp_update_attachment_metadata', array($this->converter, 'convertGeneratedSizes'), 20, 2);
 			\add_filter('wp_handle_upload', array($this->converter, 'convertOriginalOnUpload'), 20);
 			return new \WP_REST_Response(array('message' => $attachment_id->get_error_message()), 400);
@@ -418,7 +426,6 @@ final class RestController
 		}
 
 		// Re-add the converter's hooks for normal operations.
-		\add_filter('wp_generate_attachment_metadata', array($this->converter, 'convertGeneratedSizes'), 20, 2);
 		\add_filter('wp_update_attachment_metadata', array($this->converter, 'convertGeneratedSizes'), 20, 2);
 		\add_filter('wp_handle_upload', array($this->converter, 'convertOriginalOnUpload'), 20);
 
@@ -1005,6 +1012,7 @@ final class RestController
 
 	private function getWordPressJpegQuality(): int
 	{
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Core WordPress hook.
 		$quality = (int) apply_filters('wp_editor_set_quality', 82, 'image/jpeg');
 		return max(1, min(100, $quality));
 	}
@@ -1093,6 +1101,15 @@ final class RestController
 	{
 		$result = \Ddegner\AvifLocalSupport\ThumbHash::generateAll();
 		return rest_ensure_response($result);
+	}
+
+	/**
+	 * Request stop for in-progress ThumbHash bulk generation.
+	 */
+	public function thumbhashStop(\WP_REST_Request $request): \WP_REST_Response
+	{
+		\Ddegner\AvifLocalSupport\ThumbHash::requestStop();
+		return rest_ensure_response(array('stopped' => true));
 	}
 
 	/**

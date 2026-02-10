@@ -299,9 +299,16 @@
     if (lqipStopBtn && typeof AVIFLocalSupportData !== 'undefined') {
       lqipStopBtn.addEventListener('click', function (e) {
         e.preventDefault();
+        if (lqipStopRequested) return;
         lqipStopRequested = true;
         lqipStopBtn.disabled = true;
         if (lqipStatusEl) lqipStatusEl.textContent = getI18n('lqipStopping', 'Stopping LQIP generation...');
+        apiFetch({ path: '/aviflosu/v1/thumbhash/stop', method: 'POST' })
+          .catch(function () {
+            if (lqipStatusEl) lqipStatusEl.textContent = getI18n('lqipStopFailed', 'Could not request LQIP stop.');
+            lqipStopRequested = false;
+            lqipStopBtn.disabled = false;
+          });
       });
     }
 
@@ -327,7 +334,10 @@
           apiFetch({ path: '/aviflosu/v1/thumbhash/generate-all', method: 'POST' })
             .then(function (data) {
               if (lqipStatusEl) {
-                lqipStatusEl.textContent = getI18n('lqipComplete', 'LQIP generation complete.') +
+                var headline = data && data.stopped
+                  ? getI18n('lqipStopped', 'LQIP generation stopped.')
+                  : getI18n('lqipComplete', 'LQIP generation complete.');
+                lqipStatusEl.textContent = headline +
                   ' ' + getI18n('lqipGenerated', 'Generated:') + ' ' + (data.generated || 0) +
                   ', ' + getI18n('lqipSkipped', 'Skipped:') + ' ' + (data.skipped || 0) +
                   ', ' + getI18n('lqipFailed', 'Failed:') + ' ' + (data.failed || 0);
@@ -347,20 +357,13 @@
           var MAX_DURATION_MS = 10 * 60 * 1000;
 
           function pollLqipProgress() {
-            if (lqipStopRequested) {
-              if (lqipStatusEl) lqipStatusEl.textContent = getI18n('lqipStopped', 'LQIP generation stopped.');
-              stopLqipPolling();
-              loadLqipStats();
-              return;
-            }
-
             loadLqipStats(function (data) {
               var withHash = data.with_hash || 0;
               var without = data.without_hash || 0;
 
               if (lqipProgressWith) lqipProgressWith.textContent = String(withHash);
 
-              if (without !== 0) {
+              if (!lqipStopRequested && without !== 0) {
                 if (without === prevWithout) {
                   unchangedTicks++;
                 } else {
@@ -385,7 +388,7 @@
     if (lqipDeleteBtn && typeof AVIFLocalSupportData !== 'undefined') {
       lqipDeleteBtn.addEventListener('click', function (e) {
         e.preventDefault();
-        if (!window.confirm(getI18n('confirmDeleteLqips', 'Delete all generated LQIP placeholders?'))) {
+        if (!window.confirm(getI18n('confirmDeleteLqips', 'Delete all generated LQIPs?'))) {
           return;
         }
         if (lqipGenerateBtn) lqipGenerateBtn.disabled = true;

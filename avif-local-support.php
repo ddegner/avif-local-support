@@ -6,7 +6,7 @@ declare(strict_types=1);
  * Plugin Name: AVIF Local Support
  * Plugin URI: https://github.com/ddegner/avif-local-support
  * Description: High-quality AVIF image conversion for WordPress — local, quality-first.
- * Version: 0.5.23
+ * Version: 0.6.0
  * Author: ddegner
  * Author URI: https://www.daviddegner.com
  * License: GPL v2 or later
@@ -21,7 +21,7 @@ declare(strict_types=1);
 \defined('ABSPATH') || exit;
 
 // Define constants
-\define('AVIFLOSU_VERSION', '0.5.23');
+\define('AVIFLOSU_VERSION', '0.6.0');
 \define('AVIFLOSU_PLUGIN_FILE', __FILE__);
 \define('AVIFLOSU_PLUGIN_DIR', plugin_dir_path(__FILE__));
 \define('AVIFLOSU_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -124,6 +124,7 @@ function aviflosu_deactivate(): void
 	// Clear any scheduled events created by this plugin
 	\wp_clear_scheduled_hook('aviflosu_daily_event');
 	\wp_clear_scheduled_hook('aviflosu_run_on_demand');
+	\delete_transient('aviflosu_stop_lqip_generation');
 }
 
 register_activation_hook(__FILE__, 'aviflosu_activate');

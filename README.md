@@ -3,7 +3,7 @@ Contributors: ddegner
 Tags: avif, images, performance, media, optimization
 Requires at least: 6.8
 Tested up to: 6.9
-Stable tag: 0.5.23
+Stable tag: 0.6.0
 Requires PHP: 8.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -205,11 +205,20 @@ LiteSpeed's open_basedir restriction prevents PHP from detecting executables out
 ## Screenshots
 
 1. **AVIF Images** — Configure AVIF delivery, conversion quality, speed, and engine settings
-2. **Placeholders (LQIP)** — Configure ThumbHash placeholder generation and display behavior
+2. **LQIP** — Configure ThumbHash generation and display behavior
 3. **Tools** — Run AVIF/LQIP bulk tools and review server support diagnostics
 4. **About** — Quick reference and version info
 
 ## Changelog
+
+### 0.6.0
+
+- Fix: Removed redundant on-upload AVIF conversion hook path to avoid duplicate work and keep upload conversion predictable.
+- Fix: Improved daily scheduling behavior so overdue events run instead of being pushed to tomorrow, and on-demand AVIF scans always run regardless of schedule toggle state.
+- Feature: Added stop control for bulk LQIP generation (REST endpoint + transient stop signal + admin status updates).
+- Enhancement: Standardized admin LQIP wording and labels, including a short LQIP explanation at the top of the LQIP tab.
+- Fix: Uninstall now clears LQIP stop transient and uses `delete_post_meta_by_key()` for ThumbHash metadata cleanup.
+- Chore: Plugin Check hardening for release by excluding non-distribution files from check scope and clearing stray `.DS_Store` files.
 
 ### 0.5.23
 

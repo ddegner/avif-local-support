@@ -83,16 +83,15 @@ final class Converter {
 			new GdEncoder(),
 		);
 
-		// Convert on upload (toggle).
-		add_filter( 'wp_generate_attachment_metadata', array( $this, 'convertGeneratedSizes' ), 20, 2 );
-		// Also catch edits/regenerations that update metadata outside of generation.
+		// Convert on upload and metadata updates (single hook path).
 		add_filter( 'wp_update_attachment_metadata', array( $this, 'convertGeneratedSizes' ), 20, 2 );
 		add_filter( 'wp_handle_upload', array( $this, 'convertOriginalOnUpload' ), 20 );
 
 		// Scheduling.
-		add_action( 'init', array( $this, 'maybe_schedule_daily' ) );
+		// Run immediately because plugin bootstraps on `init`; registering another init callback here is too late.
+		$this->maybe_schedule_daily();
 		add_action( 'aviflosu_daily_event', array( $this, 'run_daily_scan' ) );
-		add_action( 'aviflosu_run_on_demand', array( $this, 'run_daily_scan' ) );
+		add_action( 'aviflosu_run_on_demand', array( $this, 'run_on_demand_scan' ) );
 
 		// Deletion: keep .avif companions in sync when media is removed.
 		add_action( 'delete_attachment', array( $this, 'deleteAvifsForAttachment' ) );
@@ -105,7 +104,7 @@ final class Converter {
 
 	public function maybe_schedule_daily(): void {
 		$avifEnabled = (bool) get_option( 'aviflosu_convert_via_schedule', true );
-		$lqipEnabled = (bool) get_option( 'aviflosu_lqip_generate_via_schedule', true );
+		$lqipEnabled = (bool) get_option( 'aviflosu_lqip_generate_via_schedule', true ) && ThumbHash::isEnabled();
 
 		if ( ! $avifEnabled && ! $lqipEnabled ) {
 			// Clear if exists.
@@ -131,7 +130,17 @@ final class Converter {
 
 		// Schedule or reschedule if needed (tolerance: 60 seconds).
 		$existing = wp_next_scheduled( 'aviflosu_daily_event' );
-		if ( false === $existing || abs( (int) $existing - (int) $next ) > 60 ) {
+		if ( false === $existing ) {
+			wp_schedule_event( $next, 'daily', 'aviflosu_daily_event' );
+			return;
+		}
+
+		// If an event is already due/overdue, let WP-Cron run it instead of skipping to tomorrow.
+		if ( (int) $existing <= $now ) {
+			return;
+		}
+
+		if ( abs( (int) $existing - (int) $next ) > 60 ) {
 			wp_clear_scheduled_hook( 'aviflosu_daily_event' );
 			wp_schedule_event( $next, 'daily', 'aviflosu_daily_event' );
 		}
@@ -144,6 +153,11 @@ final class Converter {
 		if ( (bool) get_option( 'aviflosu_lqip_generate_via_schedule', true ) && ThumbHash::isEnabled() ) {
 			ThumbHash::generateAll();
 		}
+	}
+
+	public function run_on_demand_scan(): void {
+		// Explicit manual AVIF generation should not depend on daily schedule toggles.
+		$this->convertAllJpegsIfMissingAvif();
 	}
 
 	public function convertGeneratedSizes( array $metadata, int $attachmentId ): array {
@@ -467,6 +481,7 @@ final class Converter {
 			array(
 				'post_type'              => 'attachment',
 				'post_status'            => 'inherit',
+				'post_mime_type'         => array( 'image/jpeg', 'image/jpg' ),
 				'posts_per_page'         => -1,
 				'fields'                 => 'ids',
 				'no_found_rows'          => true,

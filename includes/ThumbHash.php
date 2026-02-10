@@ -23,6 +23,7 @@ final class ThumbHash {
 	 * Post meta key for storing ThumbHash data.
 	 */
 	private const META_KEY = '_aviflosu_thumbhash';
+	private const STOP_TRANSIENT = 'aviflosu_stop_lqip_generation';
 
 	/**
 	 * Maximum dimension for thumbnail before hashing.
@@ -304,6 +305,13 @@ final class ThumbHash {
 	}
 
 	/**
+	 * Request cancellation of an in-progress bulk generation run.
+	 */
+	public static function requestStop(): void {
+		\set_transient( self::STOP_TRANSIENT, true, 300 );
+	}
+
+	/**
 	 * Delete stored ThumbHashes for an attachment.
 	 *
 	 * @param int $attachmentId WordPress attachment ID.
@@ -324,13 +332,16 @@ final class ThumbHash {
 	 * Generate ThumbHashes for all image attachments that don't have them yet.
 	 *
 	 * @param bool $force If true, regenerate even if ThumbHash already exists.
-	 * @return array{generated: int, skipped: int, failed: int}
+	 * @return array{generated: int, skipped: int, failed: int, stopped: bool}
 	 */
 	public static function generateAll( bool $force = false ): array {
+		self::clearStopRequest();
+
 		$result = array(
 			'generated' => 0,
 			'skipped'   => 0,
 			'failed'    => 0,
+			'stopped'   => false,
 		);
 
 		$query = new \WP_Query(
@@ -349,6 +360,11 @@ final class ThumbHash {
 		$logger = class_exists( Logger::class ) ? new Logger() : null;
 
 		foreach ( $query->posts as $attachmentId ) {
+			if ( self::shouldStop() ) {
+				$result['stopped'] = true;
+				break;
+			}
+
 			// Clear object cache for this post to ensure fresh meta data
 			// This prevents stale data from persistent object caching (Redis/Memcached)
 			\clean_post_cache( (int) $attachmentId );
@@ -408,24 +424,39 @@ final class ThumbHash {
 		}
 
 		// Log summary of bulk operation
-		if ( $logger && ( $result['generated'] > 0 || $result['failed'] > 0 || $result['skipped'] > 0 ) ) {
+		if ( $logger && ( $result['generated'] > 0 || $result['failed'] > 0 || $result['skipped'] > 0 || $result['stopped'] ) ) {
+			$summaryDetails = array(
+				'generated' => $result['generated'],
+				'skipped'   => $result['skipped'],
+				'failed'    => $result['failed'],
+			);
+			if ( $result['stopped'] ) {
+				$summaryDetails['stopped'] = true;
+			}
+
 			$logger->addLog(
-				$result['failed'] > 0 ? 'warning' : 'success',
+				( $result['failed'] > 0 || $result['stopped'] ) ? 'warning' : 'success',
 				sprintf(
 					'LQIP bulk generation complete: %d generated, %d skipped, %d failed',
 					$result['generated'],
 					$result['skipped'],
 					$result['failed']
 				),
-				array(
-					'generated' => $result['generated'],
-					'skipped'   => $result['skipped'],
-					'failed'    => $result['failed'],
-				)
+				$summaryDetails
 			);
 		}
 
+		self::clearStopRequest();
+
 		return $result;
+	}
+
+	private static function shouldStop(): bool {
+		return (bool) \get_transient( self::STOP_TRANSIENT );
+	}
+
+	private static function clearStopRequest(): void {
+		\delete_transient( self::STOP_TRANSIENT );
 	}
 
 	/**

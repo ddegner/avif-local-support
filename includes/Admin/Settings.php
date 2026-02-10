@@ -387,7 +387,7 @@ final class Settings
 		// Beta section.
 		add_settings_field(
 			'avif_local_support_thumbhash_enabled',
-			__('Enable LQIP placeholders', 'avif-local-support'),
+			__('Enable LQIP', 'avif-local-support'),
 			array($this, 'renderThumbHashEnabledField'),
 			self::PAGE_SLUG,
 			'aviflosu_beta',
@@ -396,7 +396,7 @@ final class Settings
 
 		add_settings_field(
 			'avif_local_support_lqip_generate_on_upload',
-			__('Generate placeholders on upload', 'avif-local-support'),
+			__('Generate LQIP on upload', 'avif-local-support'),
 			array($this, 'renderLqipGenerateOnUploadField'),
 			self::PAGE_SLUG,
 			'aviflosu_lqip_basic',
@@ -423,7 +423,7 @@ final class Settings
 
 		add_settings_field(
 			'avif_local_support_lqip_pixelated',
-			__('Show pixelated placeholders', 'avif-local-support'),
+			__('Show pixelated LQIP', 'avif-local-support'),
 			array($this, 'renderLqipPixelatedField'),
 			self::PAGE_SLUG,
 			'aviflosu_lqip_advanced',
@@ -661,8 +661,8 @@ final class Settings
 		$value = (bool) get_option('aviflosu_thumbhash_enabled', false);
 		echo '<label for="aviflosu_thumbhash_enabled">';
 		echo '<input id="aviflosu_thumbhash_enabled" type="checkbox" name="aviflosu_thumbhash_enabled" value="1" ' . checked(true, $value, false) . ' /> ';
-		echo esc_html__('Enable LQIP placeholders using ThumbHash', 'avif-local-support');
-		$this->renderHelpTip(__('Generates ultra-compact placeholder data decoded client-side while full images load.', 'avif-local-support'));
+		echo esc_html__('Enable LQIP using ThumbHash', 'avif-local-support');
+		$this->renderHelpTip(__('Generates ultra-compact LQIP data decoded client-side while full images load.', 'avif-local-support'));
 		echo '</label>';
 	}
 
@@ -671,7 +671,7 @@ final class Settings
 		$value = (bool) get_option('aviflosu_lqip_generate_on_upload', true);
 		echo '<label for="aviflosu_lqip_generate_on_upload">';
 		echo '<input id="aviflosu_lqip_generate_on_upload" type="checkbox" name="aviflosu_lqip_generate_on_upload" value="1" ' . checked(true, $value, false) . ' /> ';
-		echo esc_html__('Generate placeholder data on upload', 'avif-local-support');
+		echo esc_html__('Generate LQIP on upload', 'avif-local-support');
 		echo '</label>';
 	}
 
@@ -680,7 +680,7 @@ final class Settings
 		$enabled = (bool) get_option('aviflosu_lqip_generate_via_schedule', true);
 		echo '<label for="aviflosu_lqip_generate_via_schedule">';
 		echo '<input id="aviflosu_lqip_generate_via_schedule" type="checkbox" name="aviflosu_lqip_generate_via_schedule" value="1" ' . checked(true, $enabled, false) . ' /> ';
-		echo esc_html__('Scan daily and generate missing placeholders', 'avif-local-support');
+		echo esc_html__('Scan daily and generate missing LQIP', 'avif-local-support');
 		$this->renderHelpTip(__('Uses the same daily schedule time as AVIF conversion.', 'avif-local-support'));
 		echo '</label>';
 	}
@@ -691,7 +691,7 @@ final class Settings
 		echo '<label for="aviflosu_lqip_fade">';
 		echo '<input id="aviflosu_lqip_fade" type="checkbox" name="aviflosu_lqip_fade" value="1" ' . checked(true, $value, false) . ' /> ';
 		echo esc_html__('Fade in full images', 'avif-local-support');
-		$this->renderHelpTip(__('Adds a smooth transition when the full image replaces the placeholder.', 'avif-local-support'));
+		$this->renderHelpTip(__('Adds a smooth transition when the full image replaces the LQIP.', 'avif-local-support'));
 		echo '</label>';
 	}
 
@@ -700,8 +700,8 @@ final class Settings
 		$value = (bool) get_option('aviflosu_lqip_pixelated', false);
 		echo '<label for="aviflosu_lqip_pixelated">';
 		echo '<input id="aviflosu_lqip_pixelated" type="checkbox" name="aviflosu_lqip_pixelated" value="1" ' . checked(true, $value, false) . ' /> ';
-		echo esc_html__('Show pixelated placeholders instead of blur', 'avif-local-support');
-		$this->renderHelpTip(__('Displays chunky pixels instead of a blur for the placeholder style.', 'avif-local-support'));
+		echo esc_html__('Show pixelated LQIP instead of blur', 'avif-local-support');
+		$this->renderHelpTip(__('Displays chunky pixels instead of a blur for the LQIP style.', 'avif-local-support'));
 		echo '</label>';
 	}
 

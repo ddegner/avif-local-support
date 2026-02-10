@@ -12,7 +12,10 @@ defined( 'ABSPATH' ) || exit;
 	<form action="options.php" method="post" class="avif-settings-form">
 		<?php settings_fields( 'aviflosu_beta_settings' ); ?>
 
-		<h2 class="title"><?php esc_html_e( 'Placeholders', 'avif-local-support' ); ?></h2>
+		<h2 class="title"><?php esc_html_e( 'LQIP', 'avif-local-support' ); ?></h2>
+		<p class="description">
+			<?php esc_html_e( 'LQIP means Low-Quality Image Placeholder. It shows a tiny preview while the full image loads, improving perceived speed.', 'avif-local-support' ); ?>
+		</p>
 		<table class="form-table" role="presentation">
 			<?php do_settings_fields( 'avif-local-support', 'aviflosu_beta' ); ?>
 			<?php do_settings_fields( 'avif-local-support', 'aviflosu_lqip_basic' ); ?>
@@ -28,7 +31,7 @@ defined( 'ABSPATH' ) || exit;
 		</details>
 
 		<div class="avif-actions-row">
-			<?php submit_button( __( 'Save Placeholder Settings', 'avif-local-support' ), 'primary', 'submit', false ); ?>
+			<?php submit_button( __( 'Save LQIP Settings', 'avif-local-support' ), 'primary', 'submit', false ); ?>
 		</div>
 	</form>
 </div>

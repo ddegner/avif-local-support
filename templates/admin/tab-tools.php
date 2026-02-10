@@ -246,9 +246,9 @@ $auto_first_label   = match ( $auto_first_attempt ) {
 		</section>
 
 		<section class="avif-tools-section">
-			<h3><?php esc_html_e( 'LQIP Placeholder Tools', 'avif-local-support' ); ?></h3>
+			<h3><?php esc_html_e( 'LQIP Tools', 'avif-local-support' ); ?></h3>
 			<p class="description">
-				<?php esc_html_e( 'Manage LQIP placeholders for existing media items.', 'avif-local-support' ); ?>
+				<?php esc_html_e( 'Manage LQIP for existing media items.', 'avif-local-support' ); ?>
 			</p>
 
 			<table id="aviflosu-thumbhash-stats" class="widefat striped">
@@ -280,7 +280,7 @@ $auto_first_label   = match ( $auto_first_attempt ) {
 				<span id="aviflosu-thumbhash-progress" class="description hidden">
 					<strong><?php esc_html_e( 'Progress:', 'avif-local-support' ); ?></strong>
 					<span id="aviflosu-thumbhash-progress-with">0</span> / <span id="aviflosu-thumbhash-progress-total">0</span>
-					<?php esc_html_e( 'LQIP placeholders created', 'avif-local-support' ); ?>
+					<?php esc_html_e( 'LQIP created', 'avif-local-support' ); ?>
 				</span>
 			</div>
 		</section>

@@ -104,10 +104,11 @@ final class Diagnostics
 				'posts_per_page' => -1,
 				'fields' => 'ids',
 				'no_found_rows' => true,
-				'update_post_meta_cache' => false,
+				// Prime attachment meta in one query to avoid N+1 calls in get_attached_file/wp_get_attachment_metadata.
+				'update_post_meta_cache' => true,
 				'update_post_term_cache' => false,
 				'cache_results' => false,
-				'post_mime_type' => 'image/jpeg',
+				'post_mime_type' => array('image/jpeg', 'image/jpg'),
 			)
 		);
 
@@ -120,7 +121,7 @@ final class Diagnostics
 					$seenJpegs[$real] = true;
 					++$total;
 					$avif = (string) preg_replace('/\.(jpe?g)$/i', '.avif', $real);
-					if ($avif && file_exists($avif) && filesize($avif) > 512) {
+					if ($avif && file_exists($avif) && filesize($avif) > 0) {
 						++$existing;
 					} else {
 						++$missing;
@@ -152,11 +153,51 @@ final class Diagnostics
 						$seenJpegs[$realP] = true;
 						++$total;
 						$avif = (string) preg_replace('/\.(jpe?g)$/i', '.avif', $realP);
-						if ($avif && file_exists($avif) && filesize($avif) > 512) {
+						if ($avif && file_exists($avif) && filesize($avif) > 0) {
 							++$existing;
 						} else {
 							++$missing;
 						}
+					}
+				}
+			}
+		}
+
+		// Also scan uploads recursively for JPEGs that are not represented in attachment metadata.
+		// This covers theme/plugin-generated derivatives saved directly to uploads.
+		if ('' !== $baseDir && is_dir($baseDir)) {
+			try {
+				$iterator = new \RecursiveIteratorIterator(
+					new \RecursiveDirectoryIterator(
+						$baseDir,
+						\FilesystemIterator::SKIP_DOTS | \FilesystemIterator::CURRENT_AS_FILEINFO
+					),
+					\RecursiveIteratorIterator::LEAVES_ONLY
+				);
+			} catch (\UnexpectedValueException $e) {
+				$iterator = null;
+			}
+
+			if ($iterator instanceof \RecursiveIteratorIterator) {
+				foreach ($iterator as $entry) {
+					if (!($entry instanceof \SplFileInfo) || !$entry->isFile()) {
+						continue;
+					}
+					$p = (string) $entry->getPathname();
+					if (!preg_match('/\.(jpe?g)$/i', $p) || !file_exists($p)) {
+						continue;
+					}
+					$realP = (string) (@realpath($p) ?: $p);
+					if (isset($seenJpegs[$realP])) {
+						continue;
+					}
+					$seenJpegs[$realP] = true;
+					++$total;
+					$avif = (string) preg_replace('/\.(jpe?g)$/i', '.avif', $realP);
+					if ($avif && file_exists($avif) && filesize($avif) > 0) {
+						++$existing;
+					} else {
+						++$missing;
 					}
 				}
 			}
@@ -167,6 +208,142 @@ final class Diagnostics
 			'existing_avifs' => $existing,
 			'missing_avifs' => $missing,
 		);
+	}
+
+	/**
+	 * Get JPEG files that do not have a corresponding AVIF file yet.
+	 *
+	 * @return array{files: array<int, array{jpeg_path: string, jpeg_url: string, avif_path: string, avif_url: string}>, truncated: bool}
+	 */
+	public function getMissingFiles(int $limit = 200): array
+	{
+		$limit = max(1, min(1000, $limit));
+
+		$uploadDir = \wp_upload_dir();
+		$baseDir = \trailingslashit((string) ($uploadDir['basedir'] ?? ''));
+		$baseUrl = \trailingslashit((string) ($uploadDir['baseurl'] ?? ''));
+
+		$seenJpegs = array();
+		$files = array();
+		$truncated = false;
+
+		$considerPath = function (string $path) use (&$seenJpegs, &$files, &$truncated, $limit, $baseDir, $baseUrl): bool {
+			if (!preg_match('/\.(jpe?g)$/i', $path) || !file_exists($path)) {
+				return false;
+			}
+			$realPath = (string) (@realpath($path) ?: $path);
+			if (isset($seenJpegs[$realPath])) {
+				return false;
+			}
+			$seenJpegs[$realPath] = true;
+
+			$avifPath = (string) preg_replace('/\.(jpe?g)$/i', '.avif', $realPath);
+			$hasAvif = $avifPath && file_exists($avifPath) && filesize($avifPath) > 0;
+			if ($hasAvif) {
+				return false;
+			}
+
+			$files[] = array(
+				'jpeg_path' => $realPath,
+				'jpeg_url' => $this->pathToUploadsUrl($realPath, $baseDir, $baseUrl),
+				'avif_path' => $avifPath,
+				'avif_url' => $this->pathToUploadsUrl($avifPath, $baseDir, $baseUrl),
+			);
+
+			if (count($files) >= $limit) {
+				$truncated = true;
+				return true;
+			}
+
+			return false;
+		};
+
+		$query = new \WP_Query(
+			array(
+				'post_type' => 'attachment',
+				'post_status' => 'inherit',
+				'posts_per_page' => -1,
+				'fields' => 'ids',
+				'no_found_rows' => true,
+				'update_post_meta_cache' => true,
+				'update_post_term_cache' => false,
+				'cache_results' => false,
+				'post_mime_type' => array('image/jpeg', 'image/jpg'),
+			)
+		);
+
+		foreach ($query->posts as $attachmentId) {
+			$file = get_attached_file($attachmentId);
+			if ($file && $considerPath((string) $file)) {
+				break;
+			}
+
+			$meta = wp_get_attachment_metadata($attachmentId);
+			if (empty($meta['file'])) {
+				continue;
+			}
+
+			$relative = (string) $meta['file'];
+			$dir = pathinfo($relative, PATHINFO_DIRNAME);
+			if ($dir === '.' || $dir === DIRECTORY_SEPARATOR) {
+				$dir = '';
+			}
+			if (!empty($meta['sizes']) && is_array($meta['sizes'])) {
+				foreach ($meta['sizes'] as $size) {
+					if (empty($size['file'])) {
+						continue;
+					}
+					$p = $baseDir . \trailingslashit($dir) . $size['file'];
+					if ($considerPath((string) $p)) {
+						break 2;
+					}
+				}
+			}
+		}
+
+		if (!$truncated && '' !== $baseDir && is_dir($baseDir)) {
+			try {
+				$iterator = new \RecursiveIteratorIterator(
+					new \RecursiveDirectoryIterator(
+						$baseDir,
+						\FilesystemIterator::SKIP_DOTS | \FilesystemIterator::CURRENT_AS_FILEINFO
+					),
+					\RecursiveIteratorIterator::LEAVES_ONLY
+				);
+			} catch (\UnexpectedValueException $e) {
+				$iterator = null;
+			}
+
+			if ($iterator instanceof \RecursiveIteratorIterator) {
+				foreach ($iterator as $entry) {
+					if (!($entry instanceof \SplFileInfo) || !$entry->isFile()) {
+						continue;
+					}
+					if ($considerPath((string) $entry->getPathname())) {
+						break;
+					}
+				}
+			}
+		}
+
+		return array(
+			'files' => $files,
+			'truncated' => $truncated,
+		);
+	}
+
+	private function pathToUploadsUrl(string $path, string $baseDir, string $baseUrl): string
+	{
+		if ('' === $path || '' === $baseDir || '' === $baseUrl) {
+			return '';
+		}
+		$normalizedPath = str_replace('\\', '/', $path);
+		$normalizedBase = str_replace('\\', '/', $baseDir);
+		if (!str_starts_with($normalizedPath, $normalizedBase)) {
+			return '';
+		}
+		$relative = ltrim(substr($normalizedPath, strlen($normalizedBase)), '/');
+		return '' !== $relative ? $baseUrl . $relative : '';
 	}
 
 	/**

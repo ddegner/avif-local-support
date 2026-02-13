@@ -148,12 +148,12 @@ class ImagickEncoder implements AvifEncoderInterface {
 			$im->writeImage( $destination );
 			$im->destroy();
 
-			if ( file_exists( $destination ) && filesize( $destination ) > 512 ) {
+			if ( file_exists( $destination ) && filesize( $destination ) > 0 ) {
 				return ConversionResult::success();
 			}
 
 			return ConversionResult::failure(
-				'Imagick produced invalid AVIF',
+				'Imagick did not produce a usable AVIF',
 				'Your ImageMagick build may lack AVIF write support.'
 			);
 

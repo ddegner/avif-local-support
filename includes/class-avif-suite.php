@@ -100,6 +100,13 @@ final class Plugin {
 				'avifDeleting'              => __( 'Deleting AVIF files...', 'avif-local-support' ),
 				'avifDeletedPrefix'         => __( 'Deleted AVIF files:', 'avif-local-support' ),
 				'avifFailedPrefix'          => __( 'Failed:', 'avif-local-support' ),
+				'avifStatsLoading'          => __( 'Loading AVIF stats...', 'avif-local-support' ),
+				'avifStatsLoadFailed'       => __( 'Could not load AVIF stats.', 'avif-local-support' ),
+				'missingFilesLoading'       => __( 'Loading files without AVIF...', 'avif-local-support' ),
+				'missingFilesNone'          => __( 'All discovered JPEG files already have AVIF.', 'avif-local-support' ),
+				'missingFilesListed'        => __( 'files without AVIF listed.', 'avif-local-support' ),
+				'missingFilesTruncated'     => __( 'Showing first 200.', 'avif-local-support' ),
+				'missingFilesLoadFailed'    => __( 'Could not load files without AVIF.', 'avif-local-support' ),
 				'lqipStopping'             => __( 'Stopping LQIP generation...', 'avif-local-support' ),
 				'lqipStopped'              => __( 'LQIP generation stopped.', 'avif-local-support' ),
 				'lqipStopFailed'           => __( 'Could not request LQIP stop.', 'avif-local-support' ),
@@ -198,17 +205,8 @@ final class Plugin {
 		}
 		ob_end_clean();
 
-		ob_start();
-		try {
-			$stats = $this->diagnostics->computeMissingCounts();
-		} catch ( \Throwable $e ) {
-			$stats = array(
-				'total_jpegs'    => 0,
-				'existing_avifs' => 0,
-				'missing_avifs'  => 0,
-			);
-		}
-		ob_end_clean();
+		// AVIF counts are lazy-loaded via REST in admin.js to keep initial page load fast.
+		$stats = array();
 
 		$settings = array(
 			'engine_mode'       => (string) get_option( 'aviflosu_engine_mode', 'auto' ),

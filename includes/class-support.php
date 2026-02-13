@@ -257,6 +257,37 @@ final class Support {
 		$picture->appendChild( $img );
 	}
 
+	/**
+	 * Find the nearest ancestor anchor for a node.
+	 */
+	private function nearestAnchor( \DOMNode $node ): ?\DOMElement {
+		$current = $node->parentNode;
+		while ( $current ) {
+			if ( $current instanceof \DOMElement && 'a' === strtolower( $current->nodeName ) ) {
+				return $current;
+			}
+			$current = $current->parentNode;
+		}
+		return null;
+	}
+
+	/**
+	 * Update common lightbox data attributes to point at AVIF when available.
+	 */
+	private function rewriteLightboxImageData( \DOMElement $img ): void {
+		$attrs = array( 'data-full-image', 'data-light-image' );
+		foreach ( $attrs as $attr ) {
+			$val = (string) $img->getAttribute( $attr );
+			if ( '' === $val ) {
+				continue;
+			}
+			$avif = $this->avifUrlFor( $val );
+			if ( $avif ) {
+				$img->setAttribute( $attr, $avif );
+			}
+		}
+	}
+
 	private function wrapHtmlImages( string $htmlInput ): string {
 		$html = '<?xml encoding="utf-8" ?>' . $htmlInput;
 		$dom  = new \DOMDocument();
@@ -276,11 +307,9 @@ final class Support {
 			if ( ! ( $img instanceof \DOMElement ) ) {
 				continue;
 			}
-			if ( $this->isInsidePicture( $img ) ) {
-				continue;
-			}
 			$src     = (string) $img->getAttribute( 'src' );
 			$avifUrl = $this->avifUrlFor( $src );
+			$this->rewriteLightboxImageData( $img );
 
 			// Extract attachment ID from wp-image-{ID} class for ThumbHash lookup
 			$thumbhash = null;
@@ -297,16 +326,24 @@ final class Support {
 			}
 
 			// Check if the image is wrapped in a link to a JPEG that also has an AVIF version.
-			$parent = $img->parentNode;
-			if ( $parent instanceof \DOMElement && strtolower( $parent->nodeName ) === 'a' ) {
-				$href = (string) $parent->getAttribute( 'href' );
+			$anchor = $this->nearestAnchor( $img );
+			if ( $anchor ) {
+				$href = (string) $anchor->getAttribute( 'href' );
 				// Only process if href looks like a JPEG
 				if ( preg_match( '/\.(jpe?g)$/i', $href ) ) {
 					$avifHref = $this->avifUrlFor( $href );
 					if ( $avifHref ) {
-						$parent->setAttribute( 'href', $avifHref );
+						$anchor->setAttribute( 'href', $avifHref );
 					}
 				}
+			}
+
+			// If image is already in <picture>, still keep lightbox data/href in sync, but skip re-wrapping.
+			if ( $this->isInsidePicture( $img ) ) {
+				if ( $thumbhash !== null && $thumbhash !== '' ) {
+					$img->setAttribute( 'data-thumbhash', $thumbhash );
+				}
+				continue;
 			}
 
 			$srcset     = (string) $img->getAttribute( 'srcset' );

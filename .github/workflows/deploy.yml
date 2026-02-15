@@ -4,6 +4,10 @@ on:
     tags:
       - "*"
 
+concurrency:
+  group: wporg-svn-${{ github.repository }}
+  cancel-in-progress: false
+
 jobs:
   tag:
     name: New tag

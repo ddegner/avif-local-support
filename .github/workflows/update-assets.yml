@@ -10,6 +10,10 @@ on:
       - '.github/workflows/update-assets.yml'
   workflow_dispatch:
 
+concurrency:
+  group: wporg-svn-${{ github.repository }}
+  cancel-in-progress: false
+
 jobs:
   assets:
     name: Update plugin assets

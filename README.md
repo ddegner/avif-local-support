@@ -3,7 +3,7 @@ Contributors: ddegner
 Tags: avif, images, performance, media, optimization
 Requires at least: 6.8
 Tested up to: 6.9
-Stable tag: 0.6.0
+Stable tag: 0.6.1
 Requires PHP: 8.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -210,6 +210,13 @@ LiteSpeed's open_basedir restriction prevents PHP from detecting executables out
 4. **About** — Quick reference and version info
 
 ## Changelog
+
+### 0.6.1
+
+- Fix: Clear Logs now reliably clears stored logs and prevents stale long-running processes from repopulating old entries.
+- Enhancement: Logs panel now refreshes from server state after clearing, so UI always matches stored data.
+- Enhancement: Clear Logs button is temporarily disabled while the clear request is in progress to prevent duplicate requests.
+- Chore: Uninstall now removes the logs-generation option used by the clear-logs protection.
 
 ### 0.6.0
 

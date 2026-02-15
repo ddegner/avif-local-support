@@ -695,17 +695,24 @@
       return header + body;
     }
 
+    function refreshLogsContent() {
+      return apiFetch({ path: '/aviflosu/v1/logs', method: 'GET' })
+        .then(function (json) {
+          if (!logsContent) return;
+          if (json && typeof json.content === 'string' && json.content !== '') {
+            logsContent.innerHTML = json.content;
+          } else {
+            logsContent.innerHTML = '<p class="description">' + getI18n('logsNone', 'No logs available.') + '</p>';
+          }
+          applyLogsFilter();
+        });
+    }
+
     if (refreshLogsBtn && typeof AVIFLocalSupportData !== 'undefined') {
       refreshLogsBtn.addEventListener('click', function (e) {
         e.preventDefault();
         if (logsSpinner) logsSpinner.classList.add('is-active');
-        apiFetch({ path: '/aviflosu/v1/logs', method: 'GET' })
-          .then(function (json) {
-            if (json && json.content && logsContent) {
-              logsContent.innerHTML = json.content;
-              applyLogsFilter();
-            }
-          })
+        refreshLogsContent()
           .catch(function () {
             if (logsContent) {
               logsContent.innerHTML = '<p class="description avif-error-text">' + getI18n('logsRefreshFailed', 'Could not refresh logs. Please try again.') + '</p>';
@@ -724,12 +731,15 @@
           return;
         }
 
+        clearLogsBtn.disabled = true;
         if (logsSpinner) logsSpinner.classList.add('is-active');
         apiFetch({ path: '/aviflosu/v1/logs/clear', method: 'POST' })
           .then(function () {
-            if (logsContent) {
-              logsContent.innerHTML = '<p class="description">' + getI18n('logsNone', 'No logs available.') + '</p>';
-            }
+            return refreshLogsContent().catch(function () {
+              if (logsContent) {
+                logsContent.innerHTML = '<p class="description avif-error-text">' + getI18n('logsRefreshFailed', 'Could not refresh logs. Please try again.') + '</p>';
+              }
+            });
           })
           .catch(function () {
             if (logsContent) {
@@ -738,6 +748,7 @@
           })
           .finally(function () {
             if (logsSpinner) logsSpinner.classList.remove('is-active');
+            clearLogsBtn.disabled = false;
           });
       });
     }

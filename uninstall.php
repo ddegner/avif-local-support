@@ -21,6 +21,7 @@ $aviflosu_options = array(
 	'aviflosu_cli_path',
 	'aviflosu_cli_args',
 	'aviflosu_cli_env',
+	'aviflosu_logs_generation',
 	// LQIP (ThumbHash) settings
 	'aviflosu_thumbhash_enabled',
 	'aviflosu_lqip_generate_on_upload',

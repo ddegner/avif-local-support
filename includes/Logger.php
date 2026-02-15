@@ -14,16 +14,34 @@ final class Logger {
 
 
 	private const TRANSIENT_KEY = 'aviflosu_logs';
+	private const GENERATION_OPTION_KEY = 'aviflosu_logs_generation';
 	private const MAX_ENTRIES   = 50;
 
 	/**
 	 * Get all logs from storage.
 	 *
-	 * @return array<int, array{timestamp: int, status: string, message: string, details: array}>
+	 * @return array<int, array{timestamp: int, status: string, message: string, details: array, generation?: int}>
 	 */
 	public function getLogs(): array {
 		$logs = get_transient( self::TRANSIENT_KEY );
-		return is_array( $logs ) ? $logs : array();
+		if ( ! is_array( $logs ) ) {
+			return array();
+		}
+
+		$generation = $this->getGeneration();
+		return array_values(
+			array_filter(
+				$logs,
+				static function ( $log ) use ( $generation ): bool {
+					if ( ! is_array( $log ) ) {
+						return false;
+					}
+
+					$entryGeneration = isset( $log['generation'] ) ? (int) $log['generation'] : 0;
+					return $entryGeneration === $generation;
+				}
+			)
+		);
 	}
 
 	/**
@@ -35,6 +53,7 @@ final class Logger {
 	 */
 	public function addLog( string $status, string $message, array $details = array() ): void {
 		$logs = $this->getLogs();
+		$generation = $this->getGeneration();
 
 		// Validate status to ensure consistent data
 		$status = strtolower( $status );
@@ -47,6 +66,7 @@ final class Logger {
 			'status'    => $status,
 			'message'   => $message,
 			'details'   => $details,
+			'generation' => $generation,
 		);
 
 		// Prepend to show newest first
@@ -63,7 +83,16 @@ final class Logger {
 	 * Clear all logs.
 	 */
 	public function clearLogs(): void {
+		update_option( self::GENERATION_OPTION_KEY, $this->getGeneration() + 1, false );
 		delete_transient( self::TRANSIENT_KEY );
+	}
+
+	/**
+	 * Get the active log generation.
+	 */
+	private function getGeneration(): int {
+		$generation = get_option( self::GENERATION_OPTION_KEY, 0 );
+		return is_numeric( $generation ) ? max( 0, (int) $generation ) : 0;
 	}
 
 	/**

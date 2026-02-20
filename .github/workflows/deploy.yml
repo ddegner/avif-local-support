@@ -11,6 +11,7 @@ concurrency:
 jobs:
   tag:
     name: New tag
+    if: ${{ !startsWith(github.ref_name, 'beta-') }}
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@master

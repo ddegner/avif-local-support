@@ -1,0 +1,64 @@
+name: Build Beta Package
+
+on:
+  push:
+    branches:
+      - "**"
+    tags-ignore:
+      - "*"
+  workflow_dispatch:
+
+concurrency:
+  group: beta-build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build beta ZIP
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate readme.txt
+        uses: tarosky/workflows/actions/wp-readme@main
+
+      - name: Build beta ZIP
+        run: |
+          set -euo pipefail
+          short_sha="${GITHUB_SHA::7}"
+          package="avif-local-support-beta-${short_sha}"
+          beta_tag="beta-${short_sha}"
+
+          mkdir -p _build/avif-local-support
+          grep -vE '^(#|$)' .distignore > .rsync_ignore
+          rsync -rc --exclude-from=.rsync_ignore . _build/avif-local-support/
+          cd _build
+          zip -r "../${package}.zip" avif-local-support
+          cd ..
+          rm -rf _build .rsync_ignore
+
+          echo "PACKAGE=${package}" >> "$GITHUB_ENV"
+          echo "BETA_TAG=${beta_tag}" >> "$GITHUB_ENV"
+
+      - name: Upload beta artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PACKAGE }}
+          path: ${{ env.PACKAGE }}.zip
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Create beta prerelease
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ env.BETA_TAG }}
+          name: Beta ${{ env.BETA_TAG }}
+          prerelease: true
+          target_commitish: ${{ github.sha }}
+          files: ${{ env.PACKAGE }}.zip
+          fail_on_unmatched_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

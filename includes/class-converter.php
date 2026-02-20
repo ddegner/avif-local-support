@@ -485,7 +485,8 @@ final class Converter {
 				'posts_per_page'         => -1,
 				'fields'                 => 'ids',
 				'no_found_rows'          => true,
-				'update_post_meta_cache' => false,
+				// Prime metadata once to avoid per-attachment lookups inside the loop.
+				'update_post_meta_cache' => true,
 				'update_post_term_cache' => false,
 				'cache_results'          => false,
 			)
@@ -514,9 +515,75 @@ final class Converter {
 			}
 			++$count;
 		}
+		$uploadsCount = $this->scanUploadsJpegsIfMissingAvif( $count, $cli );
 		if ( $cli && defined( 'WP_CLI' ) && \WP_CLI ) {
-			\WP_CLI::success( "Scanned attachments: {$count}" );
+			\WP_CLI::success( "Scanned attachments: {$count}; scanned uploads JPEGs: {$uploadsCount}" );
 		}
+	}
+
+	/**
+	 * Scan wp-content/uploads recursively and convert any JPEG without a matching AVIF.
+	 * This catches files created outside attachment metadata (for example theme/plugin-generated sizes).
+	 *
+	 * @param int  $startingCount Number of attachments already processed, for stop/log messaging.
+	 * @param bool $cli Whether the scan is running in WP-CLI context.
+	 * @return int Number of JPEG files scanned in uploads.
+	 */
+	private function scanUploadsJpegsIfMissingAvif( int $startingCount, bool $cli ): int {
+		$uploadDir = wp_upload_dir();
+		$baseDir   = trailingslashit( (string) ( $uploadDir['basedir'] ?? '' ) );
+		if ( '' === $baseDir || ! is_dir( $baseDir ) ) {
+			return 0;
+		}
+
+		try {
+			$iterator = new \RecursiveIteratorIterator(
+				new \RecursiveDirectoryIterator(
+					$baseDir,
+					\FilesystemIterator::SKIP_DOTS | \FilesystemIterator::CURRENT_AS_FILEINFO
+				),
+				\RecursiveIteratorIterator::LEAVES_ONLY
+			);
+		} catch ( \UnexpectedValueException $e ) {
+			return 0;
+		}
+
+		$count = 0;
+		$seen  = array();
+		foreach ( $iterator as $entry ) {
+			if ( ! ( $entry instanceof \SplFileInfo ) || ! $entry->isFile() ) {
+				continue;
+			}
+
+			// Respect stop requests during long recursive scans.
+			if ( \get_transient( 'aviflosu_stop_conversion' ) ) {
+				if ( $cli && defined( 'WP_CLI' ) && \WP_CLI ) {
+					$processed = $startingCount + $count;
+					\WP_CLI::warning( "Conversion stopped by user after {$processed} files." );
+				}
+				\delete_transient( 'aviflosu_stop_conversion' );
+				return $count;
+			}
+
+			$path = (string) $entry->getPathname();
+			if ( ! preg_match( '/\.(jpe?g)$/i', $path ) ) {
+				continue;
+			}
+			if ( ! file_exists( $path ) ) {
+				continue;
+			}
+
+			$realPath = (string) ( @realpath( $path ) ?: $path );
+			if ( isset( $seen[ $realPath ] ) ) {
+				continue;
+			}
+			$seen[ $realPath ] = true;
+
+			$this->checkMissingAvif( $realPath );
+			++$count;
+		}
+
+		return $count;
 	}
 
 	private function convertGeneratedSizesForce( array $metadata, int $attachmentId ): void {

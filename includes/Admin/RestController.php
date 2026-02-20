@@ -52,6 +52,24 @@ final class RestController
 
 		register_rest_route(
 			self::NAMESPACE ,
+			'/missing-files',
+			array(
+				'methods' => 'GET',
+				'permission_callback' => array($this, 'permissionManageOptions'),
+				'callback' => array($this, 'missingFiles'),
+				'args' => array(
+					'limit' => array(
+						'required' => false,
+						'type' => 'integer',
+						'default' => 200,
+						'sanitize_callback' => 'absint',
+					),
+				),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE ,
 			'/convert-now',
 			array(
 				'methods' => 'POST',
@@ -230,6 +248,15 @@ final class RestController
 	public function scanMissing(\WP_REST_Request $request): \WP_REST_Response
 	{
 		return rest_ensure_response($this->diagnostics->computeMissingCounts());
+	}
+
+	public function missingFiles(\WP_REST_Request $request): \WP_REST_Response
+	{
+		$limit = (int) $request->get_param('limit');
+		if ($limit <= 0) {
+			$limit = 200;
+		}
+		return rest_ensure_response($this->diagnostics->getMissingFiles($limit));
 	}
 
 	public function convertNow(\WP_REST_Request $request): \WP_REST_Response

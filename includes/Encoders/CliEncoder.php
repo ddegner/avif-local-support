@@ -263,9 +263,9 @@ class CliEncoder implements AvifEncoderInterface {
 			return $this->analyzeError();
 		}
 
-		if ( ! file_exists( $destination ) || filesize( $destination ) <= 512 ) {
+		if ( ! file_exists( $destination ) || filesize( $destination ) <= 0 ) {
 			return ConversionResult::failure(
-				'CLI reported success but file is missing or empty.',
+				'CLI reported success but file is missing or zero bytes.',
 				'Verify that your ImageMagick build supports AVIF writing.'
 			);
 		}

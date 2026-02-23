@@ -25,11 +25,68 @@ final class Support {
 		add_filter( 'the_content', array( $this, 'wrapContentImages' ), 15 );
 		add_filter( 'post_thumbnail_html', array( $this, 'wrapContentImages' ), 15 );
 		add_action( 'shutdown', array( $this, 'saveCache' ) );
+		add_action( 'wp_head', array( $this, 'printEnviraAvifSrcSwapScript' ), 5 );
 
 		// Enqueue ThumbHash decoder if enabled - inline in head for early execution.
 		if ( ThumbHash::isEnabled() && ! \is_admin() ) {
 			add_action( 'wp_head', array( $this, 'inlineThumbHashDecoder' ), 1 );
 		}
+	}
+
+	/**
+	 * Envira keeps JPG in img[src] for lazy placeholders.
+	 * For AVIF-capable browsers, promote data-envira-src AVIF into img[src]
+	 * so thumbnails do not fetch JPG first.
+	 */
+	public function printEnviraAvifSrcSwapScript(): void {
+		if ( \is_admin() || ! (bool) \get_option( 'aviflosu_enable_support', true ) ) {
+			return;
+		}
+		?>
+		<script id="aviflosu-envira-src-swap">
+		(function () {
+			var supportsAvif = false;
+			try {
+				var canvas = document.createElement('canvas');
+				if (canvas.getContext && canvas.toDataURL) {
+					supportsAvif = canvas.toDataURL('image/avif').indexOf('data:image/avif') === 0;
+				}
+			} catch (e) {}
+			if (!supportsAvif) {
+				return;
+			}
+
+			function swap(root) {
+				var scope = root || document;
+				var imgs = scope.querySelectorAll('img.envira-gallery-image[data-envira-src$=".avif"]');
+				for (var i = 0; i < imgs.length; i++) {
+					var img = imgs[i];
+					var avif = img.getAttribute('data-envira-src');
+					if (!avif) {
+						continue;
+					}
+					if (img.getAttribute('src') !== avif) {
+						img.setAttribute('src', avif);
+					}
+				}
+			}
+
+			swap(document);
+			document.addEventListener('DOMContentLoaded', function () { swap(document); });
+			var mo = new MutationObserver(function (mutations) {
+				for (var i = 0; i < mutations.length; i++) {
+					for (var j = 0; j < mutations[i].addedNodes.length; j++) {
+						var node = mutations[i].addedNodes[j];
+						if (node && node.nodeType === 1) {
+							swap(node);
+						}
+					}
+				}
+			});
+			mo.observe(document.documentElement, { childList: true, subtree: true });
+		}());
+		</script>
+		<?php
 	}
 
 	/**
@@ -257,6 +314,45 @@ final class Support {
 		$picture->appendChild( $img );
 	}
 
+	/**
+	 * Find the nearest ancestor anchor for a node.
+	 */
+	private function nearestAnchor( \DOMNode $node ): ?\DOMElement {
+		$current = $node->parentNode;
+		while ( $current ) {
+			if ( $current instanceof \DOMElement && 'a' === strtolower( $current->nodeName ) ) {
+				return $current;
+			}
+			$current = $current->parentNode;
+		}
+		return null;
+	}
+
+	/**
+	 * Update common lightbox data attributes to point at AVIF when available.
+	 */
+	private function rewriteLightboxImageData( \DOMElement $img ): void {
+		$attrs = array( 'data-full-image', 'data-light-image', 'data-envira-src' );
+		foreach ( $attrs as $attr ) {
+			$val = (string) $img->getAttribute( $attr );
+			if ( '' === $val ) {
+				continue;
+			}
+			$avif = $this->avifUrlFor( $val );
+			if ( $avif ) {
+				$img->setAttribute( $attr, $avif );
+			}
+		}
+
+		$enviraSrcset = (string) $img->getAttribute( 'data-envira-srcset' );
+		if ( '' !== $enviraSrcset ) {
+			$avifSrcset = $this->convertSrcsetToAvif( $enviraSrcset );
+			if ( '' !== $avifSrcset ) {
+				$img->setAttribute( 'data-envira-srcset', $avifSrcset );
+			}
+		}
+	}
+
 	private function wrapHtmlImages( string $htmlInput ): string {
 		$html = '<?xml encoding="utf-8" ?>' . $htmlInput;
 		$dom  = new \DOMDocument();
@@ -276,11 +372,9 @@ final class Support {
 			if ( ! ( $img instanceof \DOMElement ) ) {
 				continue;
 			}
-			if ( $this->isInsidePicture( $img ) ) {
-				continue;
-			}
 			$src     = (string) $img->getAttribute( 'src' );
 			$avifUrl = $this->avifUrlFor( $src );
+			$this->rewriteLightboxImageData( $img );
 
 			// Extract attachment ID from wp-image-{ID} class for ThumbHash lookup
 			$thumbhash = null;
@@ -297,16 +391,33 @@ final class Support {
 			}
 
 			// Check if the image is wrapped in a link to a JPEG that also has an AVIF version.
-			$parent = $img->parentNode;
-			if ( $parent instanceof \DOMElement && strtolower( $parent->nodeName ) === 'a' ) {
-				$href = (string) $parent->getAttribute( 'href' );
+			$anchor = $this->nearestAnchor( $img );
+			if ( $anchor ) {
+				$href = (string) $anchor->getAttribute( 'href' );
+				$class = (string) $anchor->getAttribute( 'class' );
+				$isEnviraLink = str_contains( $class, 'envira-gallery-link' ) || '' !== (string) $anchor->getAttribute( 'data-envira-caption' );
+
+				// Envira lightbox can break when href/data attrs are rewritten to AVIF.
+				// Keep Envira anchor href untouched for compatibility.
+				if ( $isEnviraLink ) {
+					$href = '';
+				}
+
 				// Only process if href looks like a JPEG
 				if ( preg_match( '/\.(jpe?g)$/i', $href ) ) {
 					$avifHref = $this->avifUrlFor( $href );
 					if ( $avifHref ) {
-						$parent->setAttribute( 'href', $avifHref );
+						$anchor->setAttribute( 'href', $avifHref );
 					}
 				}
+			}
+
+			// If image is already in <picture>, still keep lightbox data/href in sync, but skip re-wrapping.
+			if ( $this->isInsidePicture( $img ) ) {
+				if ( $thumbhash !== null && $thumbhash !== '' ) {
+					$img->setAttribute( 'data-thumbhash', $thumbhash );
+				}
+				continue;
 			}
 
 			$srcset     = (string) $img->getAttribute( 'srcset' );

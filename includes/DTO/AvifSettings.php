@@ -27,11 +27,12 @@ final class AvifSettings {
 	public bool $convertViaSchedule;
 	public string $cliArgs;
 	public string $cliEnv;
+	public int $cliThreads;
 	public int $maxDimension;
 
 	public function __construct(
-		int $quality = 85,
-		int $speed = 1,
+		int $quality = 83,
+		int $speed = 0,
 		string $subsampling = '420',
 		string $bitDepth = '8',
 		string $engineMode = 'auto',
@@ -42,6 +43,7 @@ final class AvifSettings {
 		bool $convertViaSchedule = true,
 		string $cliArgs = '',
 		string $cliEnv = '',
+		int $cliThreads = 0,
 		int $maxDimension = 4096
 	) {
 		$this->quality            = $quality;
@@ -56,12 +58,13 @@ final class AvifSettings {
 		$this->convertViaSchedule = $convertViaSchedule;
 		$this->cliArgs            = $cliArgs;
 		$this->cliEnv             = $cliEnv;
+		$this->cliThreads         = $cliThreads;
 		$this->maxDimension       = $maxDimension;
 	}
 
 	public static function fromOptions(): self {
-		$quality = max( 0, min( 100, (int) get_option( 'aviflosu_quality', 85 ) ) );
-		$speed   = max( 0, min( 10, (int) get_option( 'aviflosu_speed', 1 ) ) );
+		$quality = max( 0, min( 100, (int) get_option( 'aviflosu_quality', 83 ) ) );
+		$speed   = max( 0, min( 10, (int) get_option( 'aviflosu_speed', 0 ) ) );
 
 		$subsampling = (string) get_option( 'aviflosu_subsampling', '420' );
 		if ( ! in_array( $subsampling, array( '420', '422', '444' ), true ) ) {
@@ -85,6 +88,7 @@ final class AvifSettings {
 		// Default environment if not set
 		$defaultEnv = Environment::buildDefaultEnvString();
 		$cliEnv     = (string) get_option( 'aviflosu_cli_env', $defaultEnv );
+		$cliThreads = max( 0, min( 256, (int) get_option( 'aviflosu_cli_threads', 0 ) ) );
 
 		// Auto-detect ImageMagick CLI when not explicitly configured.
 		// This enables Auto mode to use CLI on servers where ImageMagick is installed but the user didn't set a path.
@@ -104,7 +108,8 @@ final class AvifSettings {
 			convertOnUpload: $convertOnUpload,
 			convertViaSchedule: $convertViaSchedule,
 			cliArgs: $cliArgs,
-			cliEnv: $cliEnv
+			cliEnv: $cliEnv,
+			cliThreads: $cliThreads
 		);
 	}
 
@@ -122,6 +127,7 @@ final class AvifSettings {
 			'convert_via_schedule' => $this->convertViaSchedule,
 			'cli_args'             => $this->cliArgs,
 			'cli_env'              => $this->cliEnv,
+			'cli_threads'          => $this->cliThreads,
 		);
 	}
 

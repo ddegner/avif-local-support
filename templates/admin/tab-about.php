@@ -154,7 +154,7 @@ if ( file_exists( $readme_path ) && is_readable( $readme_path ) ) {
 }
 
 $version     = '';
-$plugin_data = get_file_data( \AVIFLOSU_PLUGIN_DIR . 'avif-local-support.php', array( 'Version' => 'Version' ) );
+$plugin_data = get_file_data( \AVIFLOSU_PLUGIN_FILE, array( 'Version' => 'Version' ) );
 if ( ! empty( $plugin_data['Version'] ) ) {
 	$version = $plugin_data['Version'];
 }

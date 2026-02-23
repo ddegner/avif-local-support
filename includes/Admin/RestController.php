@@ -52,11 +52,49 @@ final class RestController
 
 		register_rest_route(
 			self::NAMESPACE ,
+			'/missing-files',
+			array(
+				'methods' => 'GET',
+				'permission_callback' => array($this, 'permissionManageOptions'),
+				'callback' => array($this, 'missingFiles'),
+				'args' => array(
+					'limit' => array(
+						'required' => false,
+						'type' => 'integer',
+						'default' => 200,
+						'sanitize_callback' => 'absint',
+					),
+				),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE ,
 			'/convert-now',
 			array(
 				'methods' => 'POST',
 				'permission_callback' => array($this, 'permissionManageOptions'),
 				'callback' => array($this, 'convertNow'),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE ,
+			'/conversion-state',
+			array(
+				'methods' => 'GET',
+				'permission_callback' => array($this, 'permissionManageOptions'),
+				'callback' => array($this, 'conversionState'),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE ,
+			'/apply-recommended-defaults',
+			array(
+				'methods' => 'POST',
+				'permission_callback' => array($this, 'permissionManageOptions'),
+				'callback' => array($this, 'applyRecommendedDefaults'),
 			)
 		);
 
@@ -232,14 +270,55 @@ final class RestController
 		return rest_ensure_response($this->diagnostics->computeMissingCounts());
 	}
 
+	public function missingFiles(\WP_REST_Request $request): \WP_REST_Response
+	{
+		$limit = (int) $request->get_param('limit');
+		if ($limit <= 0) {
+			$limit = 200;
+		}
+		return rest_ensure_response($this->diagnostics->getMissingFiles($limit));
+	}
+
 	public function convertNow(\WP_REST_Request $request): \WP_REST_Response
 	{
+		if ($this->converter->isConversionJobActive()) {
+			return rest_ensure_response(
+				array(
+					'queued' => false,
+					'reason' => 'already_running',
+				)
+			);
+		}
+
 		$queued = false;
 		if (!\wp_next_scheduled('aviflosu_run_on_demand')) {
 			\wp_schedule_single_event(time() + 5, 'aviflosu_run_on_demand');
 			$queued = true;
 		}
 		return rest_ensure_response(array('queued' => $queued));
+	}
+
+	public function conversionState(\WP_REST_Request $request): \WP_REST_Response
+	{
+		return rest_ensure_response(
+			array(
+				'active' => $this->converter->isConversionJobActive(),
+				'state' => $this->converter->getConversionJobState(),
+				'last_run' => $this->converter->getLastRunSummary(),
+			)
+		);
+	}
+
+	public function applyRecommendedDefaults(\WP_REST_Request $request): \WP_REST_Response
+	{
+		\update_option('aviflosu_quality', 83);
+		\update_option('aviflosu_speed', 0);
+		return rest_ensure_response(
+			array(
+				'quality' => 83,
+				'speed' => 0,
+			)
+		);
 	}
 
 	public function stopConvert(\WP_REST_Request $request): \WP_REST_Response
@@ -710,8 +789,8 @@ final class RestController
 
 	private function sanitizePlaygroundSettings(array $raw): array
 	{
-		$quality = isset($raw['quality']) ? (int) $raw['quality'] : (int) get_option('aviflosu_quality', 85);
-		$speed = isset($raw['speed']) ? (int) $raw['speed'] : (int) get_option('aviflosu_speed', 1);
+		$quality = isset($raw['quality']) ? (int) $raw['quality'] : (int) get_option('aviflosu_quality', 83);
+		$speed = isset($raw['speed']) ? (int) $raw['speed'] : (int) get_option('aviflosu_speed', 0);
 		$subsampling = isset($raw['subsampling']) ? (string) $raw['subsampling'] : (string) get_option('aviflosu_subsampling', '420');
 		$bitDepth = isset($raw['bit_depth']) ? (string) $raw['bit_depth'] : (string) get_option('aviflosu_bit_depth', '8');
 		$engineMode = isset($raw['engine_mode']) ? (string) $raw['engine_mode'] : (string) get_option('aviflosu_engine_mode', 'auto');

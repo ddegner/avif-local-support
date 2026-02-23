@@ -49,6 +49,26 @@
   margin-bottom: 12px;
 }
 
+.avif-stats-columns th,
+.avif-stats-columns td {
+  width: 33.33%;
+  text-align: center;
+}
+
+.avif-stats-columns td span {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.avif-current-mode {
+  margin-top: 8px;
+  font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+.avif-last-run-table {
+  margin-top: 8px;
+}
+
 .avif-result-row {
   margin-top: 15px;
 }
@@ -237,6 +257,19 @@
   margin: 0;
 }
 
+.avif-log-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 10px;
+}
+
+.avif-log-chip.is-active {
+  background: #2271b1;
+  border-color: #2271b1;
+  color: #fff;
+}
+
 .avif-logs-container {
   max-height: 400px;
   overflow-y: auto;
@@ -269,8 +302,36 @@
 }
 
 .avif-log-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
   font-weight: 600;
   margin-bottom: 4px;
+}
+
+.avif-log-file {
+  font-family: Consolas, Monaco, monospace;
+}
+
+.avif-log-meta {
+  font-size: 11px;
+  color: #8c8f94;
+  font-weight: 500;
+}
+
+.avif-log-meta.is-smaller {
+  color: #46b450;
+}
+
+.avif-log-meta.is-larger {
+  color: #b32d2e;
+}
+
+.avif-log-time {
+  margin-left: auto;
+  font-weight: 400;
+  color: #666;
 }
 
 .avif-log-status.error {
@@ -293,6 +354,38 @@
   line-height: 1.4;
 }
 
+.avif-log-links {
+  margin: 4px 0 6px;
+  font-size: 12px;
+}
+
+.avif-log-links a {
+  text-decoration: none;
+}
+
+.avif-logs-compact .avif-log-entry {
+  padding: 7px 10px;
+}
+
+.avif-logs-compact .avif-log-header {
+  cursor: pointer;
+  margin-bottom: 0;
+}
+
+.avif-logs-compact .avif-log-message,
+.avif-logs-compact .avif-log-links,
+.avif-logs-compact .avif-log-suggestion,
+.avif-logs-compact .avif-log-details {
+  display: none;
+}
+
+.avif-logs-compact .avif-log-entry.is-expanded .avif-log-message,
+.avif-logs-compact .avif-log-entry.is-expanded .avif-log-links,
+.avif-logs-compact .avif-log-entry.is-expanded .avif-log-suggestion,
+.avif-logs-compact .avif-log-entry.is-expanded .avif-log-details {
+  display: block;
+}
+
 .avif-log-suggestion {
   margin: 6px 0;
   padding: 6px 8px;
@@ -305,6 +398,10 @@
 
 .avif-support-panel .widefat td {
   vertical-align: top;
+}
+
+.avif-tools-section .avif-engine-details-heading {
+  margin: 8px 0;
 }
 
 .avif-support-details {
@@ -409,6 +506,51 @@
 /* Hide log entries that appear in wrong location (direct children of .wrap) */
 .wrap>.avif-log-entry {
   display: none !important;
+}
+
+.avif-tools-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.avif-tools-section-playground {
+  order: 999;
+}
+
+.avif-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+}
+
+.avif-modal.hidden {
+  display: none;
+}
+
+.avif-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.avif-modal__dialog {
+  position: relative;
+  max-width: 980px;
+  max-height: 80vh;
+  overflow: auto;
+  margin: 6vh auto;
+  background: #fff;
+  border: 1px solid #c3c4c7;
+  border-radius: 6px;
+  padding: 14px;
+}
+
+.avif-modal__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
 }
 
 @media (max-width: 782px) {

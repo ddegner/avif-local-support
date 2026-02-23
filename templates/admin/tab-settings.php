@@ -29,6 +29,8 @@ defined( 'ABSPATH' ) || exit;
 		</details>
 
 		<div class="avif-actions-row">
+			<button type="button" class="button" id="avif-local-support-apply-recommended-defaults"><?php esc_html_e( 'Apply Recommended Defaults (83/0)', 'avif-local-support' ); ?></button>
+			<span id="avif-local-support-recommended-defaults-status" class="description"></span>
 			<?php submit_button( __( 'Save AVIF Settings', 'avif-local-support' ), 'primary', 'submit', false ); ?>
 		</div>
 	</form>

@@ -101,6 +101,12 @@ class CliEncoder implements AvifEncoderInterface {
 		$env = Environment::parseEnvString( $settings->cliEnv );
 		$env = Environment::normalizeEnv( $env );
 
+		$cliThreads = max( 0, (int) $settings->cliThreads );
+		if ( $cliThreads > 0 && empty( $env['MAGICK_THREAD_LIMIT'] ) ) {
+			// Resource-level cap for ImageMagick process threads.
+			$env['MAGICK_THREAD_LIMIT'] = (string) $cliThreads;
+		}
+
 		// Build arguments.
 		$args = array();
 
@@ -120,6 +126,12 @@ class CliEncoder implements AvifEncoderInterface {
 			$args[] = $tW . 'x' . $tH;
 		} else {
 			$args[] = '-auto-orient';
+		}
+
+		if ( $cliThreads > 0 ) {
+			$args[] = '-limit';
+			$args[] = 'thread';
+			$args[] = (string) $cliThreads;
 		}
 
 		// Preserve all metadata (EXIF, XMP, IPTC, ICC profiles).
@@ -263,9 +275,9 @@ class CliEncoder implements AvifEncoderInterface {
 			return $this->analyzeError();
 		}
 
-		if ( ! file_exists( $destination ) || filesize( $destination ) <= 512 ) {
+		if ( ! file_exists( $destination ) || filesize( $destination ) <= 0 ) {
 			return ConversionResult::failure(
-				'CLI reported success but file is missing or empty.',
+				'CLI reported success but file is missing or zero bytes.',
 				'Verify that your ImageMagick build supports AVIF writing.'
 			);
 		}

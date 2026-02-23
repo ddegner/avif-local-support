@@ -100,7 +100,7 @@ final class Settings
 			'aviflosu_quality',
 			array(
 				'type' => 'integer',
-				'default' => 85,
+				'default' => 83,
 				'sanitize_callback' => 'absint',
 				'show_in_rest' => true,
 			)
@@ -111,8 +111,19 @@ final class Settings
 			'aviflosu_speed',
 			array(
 				'type' => 'integer',
-				'default' => 1,
+				'default' => 0,
 				'sanitize_callback' => array($this, 'sanitizeSpeed'),
+				'show_in_rest' => true,
+			)
+		);
+
+		register_setting(
+			self::OPTION_GROUP,
+			'aviflosu_logs_max_entries',
+			array(
+				'type' => 'integer',
+				'default' => 50,
+				'sanitize_callback' => array($this, 'sanitizeLogsMaxEntries'),
 				'show_in_rest' => true,
 			)
 		);
@@ -201,6 +212,17 @@ final class Settings
 				'type' => 'string',
 				'default' => '',
 				'sanitize_callback' => array($this, 'sanitizeCliEnv'),
+				'show_in_rest' => true,
+			)
+		);
+
+		register_setting(
+			self::OPTION_GROUP,
+			'aviflosu_cli_threads',
+			array(
+				'type' => 'integer',
+				'default' => 0,
+				'sanitize_callback' => array($this, 'sanitizeCliThreads'),
 				'show_in_rest' => true,
 			)
 		);
@@ -365,6 +387,15 @@ final class Settings
 			array('label_for' => 'aviflosu_disable_memory_check')
 		);
 
+		add_settings_field(
+			'avif_local_support_logs_max_entries',
+			__('Logs retention', 'avif-local-support'),
+			array($this, 'renderLogsMaxEntriesField'),
+			self::PAGE_SLUG,
+			'aviflosu_conversion_advanced',
+			array('label_for' => 'aviflosu_logs_max_entries')
+		);
+
 		// Engine section.
 		add_settings_field(
 			'avif_local_support_engine_mode',
@@ -471,6 +502,18 @@ final class Settings
 		return trim(wp_strip_all_tags((string) ($value ?? '')));
 	}
 
+	public function sanitizeLogsMaxEntries($value): int
+	{
+		$sanitized = (int) ($value ?? 50);
+		return max(10, min(1000, $sanitized));
+	}
+
+	public function sanitizeCliThreads($value): int
+	{
+		$sanitized = (int) ($value ?? 0);
+		return max(0, min(256, $sanitized));
+	}
+
 	// =========================================================================
 	// Field Renderers
 	// =========================================================================
@@ -523,7 +566,7 @@ final class Settings
 
 	public function renderQualityField(): void
 	{
-		$value = (int) get_option('aviflosu_quality', 85);
+		$value = (int) get_option('aviflosu_quality', 83);
 		echo '<input id="aviflosu_quality" type="range" name="aviflosu_quality" min="0" max="100" value="' . esc_attr((string) $value) . '" oninput="this.nextElementSibling.innerText=this.value" /> ';
 		echo '<span>' . esc_html((string) $value) . '</span>';
 		$this->renderHelpTip(__('Higher values improve quality and increase file size.', 'avif-local-support'));
@@ -531,10 +574,22 @@ final class Settings
 
 	public function renderSpeedField(): void
 	{
-		$value = max(0, min(8, (int) get_option('aviflosu_speed', 1)));
+		$value = max(0, min(8, (int) get_option('aviflosu_speed', 0)));
 		echo '<input id="aviflosu_speed" type="range" name="aviflosu_speed" min="0" max="8" value="' . esc_attr((string) $value) . '" oninput="this.nextElementSibling.innerText=this.value" /> ';
 		echo '<span>' . esc_html((string) $value) . '</span>';
 		$this->renderHelpTip(__('Lower values are slower with better compression. Higher values are faster with larger files.', 'avif-local-support'));
+	}
+
+	public function renderLogsMaxEntriesField(): void
+	{
+		$value = (int) get_option('aviflosu_logs_max_entries', 50);
+		$value = max(10, min(1000, $value));
+		echo '<select id="aviflosu_logs_max_entries" name="aviflosu_logs_max_entries">';
+		foreach (array(50, 100, 250, 500, 1000) as $option) {
+			echo '<option value="' . esc_attr((string) $option) . '" ' . selected($option, $value, false) . '>' . esc_html((string) $option) . '</option>';
+		}
+		echo '</select>';
+		$this->renderHelpTip(__('Maximum number of recent log entries to keep.', 'avif-local-support'));
 	}
 
 	public function renderSubsamplingField(): void
@@ -600,6 +655,9 @@ final class Settings
 	{
 		$cliPath = (string) get_option('aviflosu_cli_path', '');
 		$cliArgs = (string) get_option('aviflosu_cli_args', '');
+		$cliThreads = max(0, min(256, (int) get_option('aviflosu_cli_threads', 0)));
+		$cpuCores = Environment::detectCpuCoreCount();
+		$suggestedThreads = max(1, $cpuCores - 1);
 
 		// Suppress any output/errors from diagnostic methods.
 		ob_start();
@@ -652,6 +710,18 @@ final class Settings
 			echo '<p class="description"><small>' . esc_html__('Suggested values:', 'avif-local-support');
 			echo ' <a href="#" class="aviflosu-apply-suggestion" data-target="aviflosu_cli_env" data-value="' . esc_attr($suggestedEnv) . '">[' . esc_html__('Use suggested', 'avif-local-support') . ']</a></small></p>';
 		}
+
+		// CLI Thread cap.
+		echo '<p><label for="aviflosu_cli_threads">' . esc_html__('CLI thread limit', 'avif-local-support');
+		$this->renderHelpTip(__('Limits ImageMagick CLI thread usage. 0 = automatic (no explicit cap).', 'avif-local-support'));
+		echo '</label><br>';
+		echo '<input type="number" id="aviflosu_cli_threads" name="aviflosu_cli_threads" min="0" max="256" value="' . esc_attr((string) $cliThreads) . '" class="small-text" />';
+		echo '<br><small class="description">' . sprintf(
+			/* translators: 1: detected core count, 2: suggested thread count */
+			esc_html__('Detected CPU cores: %1$d. Suggested cap to reduce CPU spikes: %2$d.', 'avif-local-support'),
+			$cpuCores,
+			$suggestedThreads
+		) . '</small></p>';
 
 		echo '</div>';
 	}

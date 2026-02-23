@@ -14,16 +14,35 @@ final class Logger {
 
 
 	private const TRANSIENT_KEY = 'aviflosu_logs';
-	private const MAX_ENTRIES   = 50;
+	private const GENERATION_OPTION_KEY = 'aviflosu_logs_generation';
+	private const MAX_ENTRIES_OPTION_KEY = 'aviflosu_logs_max_entries';
+	private const MAX_ENTRIES_DEFAULT    = 50;
 
 	/**
 	 * Get all logs from storage.
 	 *
-	 * @return array<int, array{timestamp: int, status: string, message: string, details: array}>
+	 * @return array<int, array{timestamp: int, status: string, message: string, details: array, generation?: int}>
 	 */
 	public function getLogs(): array {
 		$logs = get_transient( self::TRANSIENT_KEY );
-		return is_array( $logs ) ? $logs : array();
+		if ( ! is_array( $logs ) ) {
+			return array();
+		}
+
+		$generation = $this->getGeneration();
+		return array_values(
+			array_filter(
+				$logs,
+				static function ( $log ) use ( $generation ): bool {
+					if ( ! is_array( $log ) ) {
+						return false;
+					}
+
+					$entryGeneration = isset( $log['generation'] ) ? (int) $log['generation'] : 0;
+					return $entryGeneration === $generation;
+				}
+			)
+		);
 	}
 
 	/**
@@ -35,6 +54,7 @@ final class Logger {
 	 */
 	public function addLog( string $status, string $message, array $details = array() ): void {
 		$logs = $this->getLogs();
+		$generation = $this->getGeneration();
 
 		// Validate status to ensure consistent data
 		$status = strtolower( $status );
@@ -47,13 +67,15 @@ final class Logger {
 			'status'    => $status,
 			'message'   => $message,
 			'details'   => $details,
+			'generation' => $generation,
 		);
 
 		// Prepend to show newest first
 		array_unshift( $logs, $logEntry );
 
-		// Keep only last N entries to prevent unlimited growth
-		$logs = array_slice( $logs, 0, self::MAX_ENTRIES );
+		// Keep only last N entries to prevent unlimited growth.
+		$maxEntries = $this->getMaxEntries();
+		$logs       = array_slice( $logs, 0, $maxEntries );
 
 		// Store for 24 hours (temporary logs)
 		set_transient( self::TRANSIENT_KEY, $logs, DAY_IN_SECONDS );
@@ -63,7 +85,28 @@ final class Logger {
 	 * Clear all logs.
 	 */
 	public function clearLogs(): void {
+		update_option( self::GENERATION_OPTION_KEY, $this->getGeneration() + 1, false );
 		delete_transient( self::TRANSIENT_KEY );
+	}
+
+	/**
+	 * Get the active log generation.
+	 */
+	private function getGeneration(): int {
+		$generation = get_option( self::GENERATION_OPTION_KEY, 0 );
+		return is_numeric( $generation ) ? max( 0, (int) $generation ) : 0;
+	}
+
+	/**
+	 * Get max retained log entries.
+	 */
+	private function getMaxEntries(): int {
+		$maxEntries = get_option( self::MAX_ENTRIES_OPTION_KEY, self::MAX_ENTRIES_DEFAULT );
+		if ( ! is_numeric( $maxEntries ) ) {
+			return self::MAX_ENTRIES_DEFAULT;
+		}
+		$max = (int) $maxEntries;
+		return max( 10, min( 1000, $max ) );
 	}
 
 	/**
@@ -86,14 +129,64 @@ final class Logger {
 
 			$timeDisplay = $timestamp > 0 ? wp_date( 'Y-m-d H:i:s', $timestamp ) : '-';
 
-			echo '<div class="avif-log-entry ' . esc_attr( $status ) . '" data-status="' . esc_attr( $status ) . '">';
+			$sourceSize = isset( $details['source_size'] ) ? (int) $details['source_size'] : 0;
+			$targetSize = isset( $details['target_size'] ) ? (int) $details['target_size'] : 0;
+			$sourceFile = isset( $details['source_file'] ) ? (string) $details['source_file'] : '';
+			$targetFile = isset( $details['target_file'] ) ? (string) $details['target_file'] : '';
+			$attachmentId = isset( $details['attachment_id'] ) ? (int) $details['attachment_id'] : 0;
+			$engineUsed = isset( $details['engine_used'] ) ? (string) $details['engine_used'] : '';
+			$sizeDeltaPct = null;
+			if ( 'success' === $status && $sourceSize > 0 && $targetSize >= 0 ) {
+				$sizeDeltaPct = round( ( ( $targetSize - $sourceSize ) / $sourceSize ) * 100, 1 );
+			}
+
+			$searchText = strtolower( trim( implode( ' ', array_filter( array( $message, $sourceFile, $targetFile, $engineUsed, (string) ( $details['error'] ?? '' ) ) ) ) ) );
+
+			$sourceUrl = ( isset( $details['source_url'] ) && is_string( $details['source_url'] ) ) ? $details['source_url'] : '';
+			$targetUrl = ( isset( $details['target_url'] ) && is_string( $details['target_url'] ) ) ? $details['target_url'] : '';
+
+			$hasAvifContext = isset( $details['quality'] )
+				|| isset( $details['speed'] )
+				|| isset( $details['engine_used'] )
+				|| isset( $details['source_file'] )
+				|| isset( $details['target_file'] );
+			$qualityUsed = isset( $details['quality'] ) ? (int) $details['quality'] : (int) get_option( 'aviflosu_quality', 83 );
+			$speedUsed   = isset( $details['speed'] ) ? (int) $details['speed'] : (int) get_option( 'aviflosu_speed', 0 );
+
+			echo '<div class="avif-log-entry ' . esc_attr( $status ) . '" data-status="' . esc_attr( $status ) . '" data-filename="' . esc_attr( strtolower( $sourceFile ) ) . '" data-search="' . esc_attr( $searchText ) . '">';
 			echo '  <div class="avif-log-header">';
-			echo '    <span class="avif-log-status ' . esc_attr( $status ) . '">' . esc_html( strtoupper( $status ) ) . '</span>';
-			echo '    - ' . esc_html( $timeDisplay );
+			$statusLabel = strtoupper( $status );
+			echo '    <span class="avif-log-status ' . esc_attr( $status ) . '">' . esc_html( $statusLabel ) . '</span>';
+			if ( '' !== $sourceFile ) {
+				echo '    <span class="avif-log-file">' . esc_html( $sourceFile ) . '</span>';
+			} elseif ( $attachmentId > 0 ) {
+				echo '    <span class="avif-log-file">#' . esc_html( (string) $attachmentId ) . '</span>';
+			}
+			$metaBits = array();
+			$metaClass = 'avif-log-meta';
+			if ( null !== $sizeDeltaPct ) {
+				$deltaPrefix = $sizeDeltaPct > 0 ? '+' : '';
+				$metaBits[] = $deltaPrefix . number_format( $sizeDeltaPct, 1, '.', '' ) . '%';
+				if ( $sizeDeltaPct > 0 ) {
+					$metaClass .= ' is-larger';
+				} elseif ( $sizeDeltaPct < 0 ) {
+					$metaClass .= ' is-smaller';
+				}
+			}
+			if ( $hasAvifContext ) {
+				$metaBits[] = 'q=' . $qualityUsed;
+				$metaBits[] = 's=' . $speedUsed;
+			}
+			if ( ! empty( $metaBits ) ) {
+				echo '    <span class="' . esc_attr( $metaClass ) . '">' . esc_html( implode( ' ', $metaBits ) ) . '</span>';
+			}
+			echo '    <span class="avif-log-time">' . esc_html( $timeDisplay ) . '</span>';
 			echo '  </div>';
 			echo '  <div class="avif-log-message">' . esc_html( $message ) . '</div>';
 
 			if ( ! empty( $details ) ) {
+				unset( $details['source_url'], $details['target_url'] );
+
 				// Highlight suggestion if present
 				if ( isset( $details['error_suggestion'] ) ) {
 					echo '<div class="avif-log-suggestion">';
@@ -106,7 +199,15 @@ final class Logger {
 				foreach ( $details as $key => $value ) {
 					if ( is_scalar( $value ) ) {
 						$displayValue = is_bool( $value ) ? ( $value ? 'true' : 'false' ) : (string) $value;
-						echo '<div><strong>' . esc_html( $key ) . ':</strong> ' . esc_html( $displayValue ) . '</div>';
+						echo '<div><strong>' . esc_html( $key ) . ':</strong> ';
+						if ( 'source_file' === $key && '' !== $sourceUrl ) {
+							echo '<a href="' . esc_url( $sourceUrl ) . '" target="_blank" rel="noopener">' . esc_html( $displayValue ) . '</a>';
+						} elseif ( 'target_file' === $key && '' !== $targetUrl ) {
+							echo '<a href="' . esc_url( $targetUrl ) . '" target="_blank" rel="noopener">' . esc_html( $displayValue ) . '</a>';
+						} else {
+							echo esc_html( $displayValue );
+						}
+						echo '</div>';
 					}
 				}
 				echo '</div>';

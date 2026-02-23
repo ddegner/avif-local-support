@@ -20,6 +20,9 @@ final class Converter {
 
 
 	private const JPEG_MIMES = array( 'image/jpeg', 'image/jpg' );
+	private const JOB_LOCK_TRANSIENT = 'aviflosu_conversion_lock';
+	private const JOB_STATE_OPTION   = 'aviflosu_conversion_job_state';
+	private const LAST_RUN_OPTION    = 'aviflosu_last_run_summary';
 
 	private ?Plugin $plugin = null;
 	private ?Logger $logger = null;
@@ -215,10 +218,10 @@ final class Converter {
 
 		// Determine better source based on WordPress logic (if enabled).
 		[$sourcePath, $targetDimensions] = $this->getConversionData( $path );
-		return $this->convertToAvif( $sourcePath, $avifPath, $targetDimensions );
+		return $this->convertToAvif( $sourcePath, $avifPath, $targetDimensions, null, $path );
 	}
 
-	private function convertToAvif( string $sourcePath, string $avifPath, ?array $targetDimensions, ?AvifSettings $settings = null ): ConversionResult {
+	private function convertToAvif( string $sourcePath, string $avifPath, ?array $targetDimensions, ?AvifSettings $settings = null, ?string $referenceJpegPath = null ): ConversionResult {
 		$start_time = microtime( true );
 		$settings   = $settings ?? AvifSettings::fromOptions();
 
@@ -232,7 +235,7 @@ final class Converter {
 		if ( ! $settings->disableMemoryCheck ) {
 			$memoryWarning = $this->check_memory_safe( $sourcePath );
 			if ( $memoryWarning ) {
-				$this->log_conversion( 'error', $sourcePath, $avifPath, 'none', $start_time, $memoryWarning, $settings->toArray() );
+				$this->log_conversion( 'error', $sourcePath, $avifPath, 'none', $start_time, $memoryWarning, $settings->toArray(), $referenceJpegPath );
 				return ConversionResult::failure( $memoryWarning );
 			}
 		}
@@ -274,26 +277,39 @@ final class Converter {
 
 		if ( empty( $encodersToTry ) ) {
 			$msg = 'No available encoders found.';
-			$this->log_conversion( 'error', $sourcePath, $avifPath, 'none', $start_time, $msg, $settings->toArray() );
+			$this->log_conversion( 'error', $sourcePath, $avifPath, 'none', $start_time, $msg, $settings->toArray(), $referenceJpegPath );
 			return ConversionResult::failure( $msg );
 		}
 
 		$lastResult = null;
 		$engineUsed = 'none';
 
+		$maxAttemptsPerEncoder = 3;
 		foreach ( $encodersToTry as $encoder ) {
 			$engineUsed = $encoder->getName();
 
-			$result = $encoder->convert( $sourcePath, $avifPath, $settings, $targetDimensions );
+			for ( $attempt = 1; $attempt <= $maxAttemptsPerEncoder; $attempt++ ) {
+				$result = $encoder->convert( $sourcePath, $avifPath, $settings, $targetDimensions );
 
-			if ( $result->success ) {
-				// Invalidate file existence cache for this path so Support class sees the new file.
-				$this->invalidateFileCache( $avifPath );
-				$this->log_conversion( 'success', $sourcePath, $avifPath, $engineUsed, $start_time, null, $settings->toArray() );
-				return ConversionResult::success();
+				if ( $result->success ) {
+					$validationError = '';
+					if ( ! $this->validateGeneratedAvif( $avifPath, $validationError ) ) {
+						$this->deleteInvalidAvifFile( $avifPath );
+						$lastResult = ConversionResult::failure(
+							'Generated AVIF failed validation: ' . $validationError,
+							'The encoder produced a corrupted AVIF. Try a different engine in settings.'
+						);
+						continue;
+					}
+
+					// Invalidate file existence cache for this path so Support class sees the new file.
+					$this->invalidateFileCache( $avifPath );
+					$this->log_conversion( 'success', $sourcePath, $avifPath, $engineUsed, $start_time, null, $settings->toArray(), $referenceJpegPath );
+					return ConversionResult::success();
+				}
+
+				$lastResult = $result;
 			}
-
-			$lastResult = $result;
 			// If user forced CLI, do not fallback (loop will end since only CLI is in list).
 		}
 
@@ -306,8 +322,116 @@ final class Converter {
 			$details['error_suggestion'] = $suggestion;
 		}
 
-		$this->log_conversion( 'error', $sourcePath, $avifPath, $engineUsed, $start_time, $errorMsg, $details );
+		$this->log_conversion( 'error', $sourcePath, $avifPath, $engineUsed, $start_time, $errorMsg, $details, $referenceJpegPath );
 		return ConversionResult::failure( $errorMsg ?? 'Unknown error', $suggestion );
+	}
+
+	/**
+	 * Validate a generated AVIF output to prevent serving broken files.
+	 * Validation order:
+	 * 1) file existence/size
+	 * 2) decoder-based probe (getimagesize/Imagick/imagecreatefromavif)
+	 * 3) container signature fallback
+	 */
+	private function validateGeneratedAvif( string $path, string &$reason = '' ): bool {
+		$reason = '';
+		if ( '' === $path || ! file_exists( $path ) ) {
+			$reason = 'File missing after conversion.';
+			return false;
+		}
+
+		$size = @filesize( $path );
+		if ( ! is_int( $size ) || $size <= 0 ) {
+			$reason = 'File is empty.';
+			return false;
+		}
+
+		// Prefer decoder-based validation when available.
+		$info = @getimagesize( $path );
+		if ( is_array( $info ) ) {
+			$width  = isset( $info[0] ) ? (int) $info[0] : 0;
+			$height = isset( $info[1] ) ? (int) $info[1] : 0;
+			$mime   = isset( $info['mime'] ) ? strtolower( (string) $info['mime'] ) : '';
+			if ( $width > 0 && $height > 0 && in_array( $mime, array( 'image/avif', 'image/heif', 'image/heic' ), true ) ) {
+				return true;
+			}
+		}
+
+		// Fallback to Imagick decode probe.
+		if ( class_exists( '\Imagick' ) ) {
+			try {
+				$im = new \Imagick( $path );
+				$w  = (int) $im->getImageWidth();
+				$h  = (int) $im->getImageHeight();
+				$im->clear();
+				$im->destroy();
+				if ( $w > 0 && $h > 0 ) {
+					return true;
+				}
+			} catch ( \Throwable $e ) {
+				// Fall through to signature check.
+			}
+		}
+
+		// GD AVIF decoder probe if available.
+		if ( function_exists( 'imagecreatefromavif' ) ) {
+			$gd = @imagecreatefromavif( $path );
+			if ( false !== $gd ) {
+				@imagedestroy( $gd );
+				return true;
+			}
+		}
+
+		if ( $this->hasLikelyAvifSignature( $path ) ) {
+			// Signature looks right, but we still failed decoder probes.
+			// Treat as invalid to avoid serving potentially broken output.
+			$reason = 'Container signature present but decoding failed.';
+			return false;
+		}
+
+		$reason = 'Invalid AVIF/HEIF container signature.';
+		return false;
+	}
+
+	/**
+	 * Quick AVIF/HEIF container signature check for ISO BMFF files.
+	 */
+	private function hasLikelyAvifSignature( string $path ): bool {
+		$fh = @fopen( $path, 'rb' );
+		if ( false === $fh ) {
+			return false;
+		}
+		$header = (string) @fread( $fh, 64 );
+		@fclose( $fh );
+
+		// ISO BMFF: 4 bytes size + "ftyp" + major brand.
+		if ( strlen( $header ) < 16 || substr( $header, 4, 4 ) !== 'ftyp' ) {
+			return false;
+		}
+
+		$majorBrand = strtolower( substr( $header, 8, 4 ) );
+		if ( in_array( $majorBrand, array( 'avif', 'avis' ), true ) ) {
+			return true;
+		}
+
+		// Also inspect compatible brands region for avif/avis.
+		$brandsRegion = strtolower( substr( $header, 16 ) );
+		return false !== strpos( $brandsRegion, 'avif' ) || false !== strpos( $brandsRegion, 'avis' );
+	}
+
+	/**
+	 * Delete invalid output while being resilient across environments.
+	 */
+	private function deleteInvalidAvifFile( string $path ): void {
+		if ( '' === $path || ! file_exists( $path ) ) {
+			return;
+		}
+		if ( function_exists( 'wp_delete_file' ) ) {
+			@wp_delete_file( $path );
+		}
+		if ( file_exists( $path ) ) {
+			@unlink( $path );
+		}
 	}
 
 	/**
@@ -323,7 +447,7 @@ final class Converter {
 		}
 
 		[$sourcePath, $targetDimensions] = $this->getConversionData( $jpegPath );
-		return $this->convertToAvif( $sourcePath, $avifPath, $targetDimensions, $settings );
+		return $this->convertToAvif( $sourcePath, $avifPath, $targetDimensions, $settings, $jpegPath );
 	}
 
 	/**
@@ -473,50 +597,253 @@ final class Converter {
 		$this->convertAllJpegsIfMissingAvif( true );
 	}
 
-	private function convertAllJpegsIfMissingAvif( bool $cli = false ): void {
-		// Clear any previous stop flag when starting
-		\delete_transient( 'aviflosu_stop_conversion' );
+	/**
+	 * Check if a conversion job is already active.
+	 */
+	public function isConversionJobActive(): bool {
+		return (bool) \get_transient( self::JOB_LOCK_TRANSIENT );
+	}
 
-		$query = new \WP_Query(
+	/**
+	 * Get current conversion job state.
+	 *
+	 * @return array<string, mixed>
+	 */
+	public function getConversionJobState(): array {
+		$state = \get_option( self::JOB_STATE_OPTION, array() );
+		return is_array( $state ) ? $state : array();
+	}
+
+	/**
+	 * Get last run summary.
+	 *
+	 * @return array<string, mixed>
+	 */
+	public function getLastRunSummary(): array {
+		$summary = \get_option( self::LAST_RUN_OPTION, array() );
+		return is_array( $summary ) ? $summary : array();
+	}
+
+	/**
+	 * Update conversion job state and lock.
+	 */
+	private function beginConversionJob( bool $cli ): bool {
+		if ( $this->isConversionJobActive() ) {
+			return false;
+		}
+
+		\set_transient( self::JOB_LOCK_TRANSIENT, 1, HOUR_IN_SECONDS );
+		\update_option(
+			self::JOB_STATE_OPTION,
 			array(
-				'post_type'              => 'attachment',
-				'post_status'            => 'inherit',
-				'post_mime_type'         => array( 'image/jpeg', 'image/jpg' ),
-				'posts_per_page'         => -1,
-				'fields'                 => 'ids',
-				'no_found_rows'          => true,
-				'update_post_meta_cache' => false,
-				'update_post_term_cache' => false,
-				'cache_results'          => false,
+				'status'      => 'running',
+				'started_at'  => time(),
+				'mode'        => $cli ? 'cli' : 'web',
+				'processed'   => 0,
+				'attachments' => 0,
+				'uploads'     => 0,
+			),
+			false
+		);
+
+		return true;
+	}
+
+	private function updateConversionJobState( array $patch ): void {
+		$state = $this->getConversionJobState();
+		$state = array_merge( $state, $patch );
+		\update_option( self::JOB_STATE_OPTION, $state, false );
+	}
+
+	private function endConversionJob( string $status, array $summary ): void {
+		$endedAt = time();
+		$this->updateConversionJobState(
+			array_merge(
+				array(
+					'status'   => $status,
+					'ended_at' => $endedAt,
+				),
+				$summary
 			)
 		);
+		\update_option(
+			self::LAST_RUN_OPTION,
+			array_merge(
+				$summary,
+				array(
+					'status'    => $status,
+					'ended_at'  => $endedAt,
+					'started_at' => (int) ( $this->getConversionJobState()['started_at'] ?? $endedAt ),
+				)
+			),
+			false
+		);
+		\delete_transient( self::JOB_LOCK_TRANSIENT );
+	}
+
+	private function convertAllJpegsIfMissingAvif( bool $cli = false ): void {
+		if ( ! $this->beginConversionJob( $cli ) ) {
+			return;
+		}
+
+		// Clear any previous stop flag when starting
+		\delete_transient( 'aviflosu_stop_conversion' );
+		$status = 'completed';
 		$count = 0;
-		foreach ( $query->posts as $attachmentId ) {
-			// Check for stop flag
-			if ( \get_transient( 'aviflosu_stop_conversion' ) ) {
-				if ( $cli && defined( 'WP_CLI' ) && \WP_CLI ) {
-					\WP_CLI::warning( "Conversion stopped by user after {$count} attachments." );
+		$uploadsCount = 0;
+
+		try {
+			$query = new \WP_Query(
+				array(
+					'post_type'              => 'attachment',
+					'post_status'            => 'inherit',
+					'post_mime_type'         => array( 'image/jpeg', 'image/jpg' ),
+					'posts_per_page'         => -1,
+					'fields'                 => 'ids',
+					'no_found_rows'          => true,
+					// Prime metadata once to avoid per-attachment lookups inside the loop.
+					'update_post_meta_cache' => true,
+					'update_post_term_cache' => false,
+					'cache_results'          => false,
+				)
+			);
+			foreach ( $query->posts as $attachmentId ) {
+				// Check for stop flag
+				if ( \get_transient( 'aviflosu_stop_conversion' ) ) {
+					$status = 'stopped';
+					if ( $cli && defined( 'WP_CLI' ) && \WP_CLI ) {
+						\WP_CLI::warning( "Conversion stopped by user after {$count} attachments." );
+					}
+					\delete_transient( 'aviflosu_stop_conversion' );
+					break;
 				}
-				\delete_transient( 'aviflosu_stop_conversion' );
-				return;
+
+				if ( ! $this->isJpegMime( get_post_mime_type( $attachmentId ) ) ) {
+					continue;
+				}
+				$path = get_attached_file( $attachmentId );
+				if ( $path ) {
+					$this->checkMissingAvif( $path );
+				}
+				$meta = wp_get_attachment_metadata( $attachmentId );
+				if ( $meta ) {
+					$this->convertGeneratedSizesForce( $meta, $attachmentId );
+				}
+				++$count;
+				$this->updateConversionJobState(
+					array(
+						'attachments' => $count,
+						'processed'   => $count + $uploadsCount,
+					)
+				);
 			}
 
-			if ( ! $this->isJpegMime( get_post_mime_type( $attachmentId ) ) ) {
+			if ( 'stopped' !== $status ) {
+				$uploadsCount = $this->scanUploadsJpegsIfMissingAvif( $count, $cli );
+				$currentState = $this->getConversionJobState();
+				if ( 'stopped' === (string) ( $currentState['status'] ?? '' ) ) {
+					$status = 'stopped';
+				}
+			}
+
+			if ( $cli && defined( 'WP_CLI' ) && \WP_CLI ) {
+				\WP_CLI::success( "Scanned attachments: {$count}; scanned uploads JPEGs: {$uploadsCount}" );
+			}
+		} catch ( \Throwable $e ) {
+			$status = 'error';
+			$this->log_conversion(
+				'error',
+				'',
+				'',
+				'none',
+				microtime( true ),
+				'Batch conversion failed: ' . $e->getMessage(),
+				array(
+					'result' => 'batch_error',
+				)
+			);
+		} finally {
+			$this->endConversionJob(
+				$status,
+				array(
+					'attachments' => $count,
+					'uploads'     => $uploadsCount,
+					'processed'   => $count + $uploadsCount,
+				)
+			);
+		}
+	}
+
+	/**
+	 * Scan wp-content/uploads recursively and convert any JPEG without a matching AVIF.
+	 * This catches files created outside attachment metadata (for example theme/plugin-generated sizes).
+	 *
+	 * @param int  $startingCount Number of attachments already processed, for stop/log messaging.
+	 * @param bool $cli Whether the scan is running in WP-CLI context.
+	 * @return int Number of JPEG files scanned in uploads.
+	 */
+	private function scanUploadsJpegsIfMissingAvif( int $startingCount, bool $cli ): int {
+		$uploadDir = wp_upload_dir();
+		$baseDir   = trailingslashit( (string) ( $uploadDir['basedir'] ?? '' ) );
+		if ( '' === $baseDir || ! is_dir( $baseDir ) ) {
+			return 0;
+		}
+
+		try {
+			$iterator = new \RecursiveIteratorIterator(
+				new \RecursiveDirectoryIterator(
+					$baseDir,
+					\FilesystemIterator::SKIP_DOTS | \FilesystemIterator::CURRENT_AS_FILEINFO
+				),
+				\RecursiveIteratorIterator::LEAVES_ONLY
+			);
+		} catch ( \UnexpectedValueException $e ) {
+			return 0;
+		}
+
+		$count = 0;
+		$seen  = array();
+		foreach ( $iterator as $entry ) {
+			if ( ! ( $entry instanceof \SplFileInfo ) || ! $entry->isFile() ) {
 				continue;
 			}
-			$path = get_attached_file( $attachmentId );
-			if ( $path ) {
-				$this->checkMissingAvif( $path );
+
+			// Respect stop requests during long recursive scans.
+			if ( \get_transient( 'aviflosu_stop_conversion' ) ) {
+				if ( $cli && defined( 'WP_CLI' ) && \WP_CLI ) {
+					$processed = $startingCount + $count;
+					\WP_CLI::warning( "Conversion stopped by user after {$processed} files." );
+				}
+				$this->updateConversionJobState( array( 'status' => 'stopped' ) );
+				\delete_transient( 'aviflosu_stop_conversion' );
+				return $count;
 			}
-			$meta = wp_get_attachment_metadata( $attachmentId );
-			if ( $meta ) {
-				$this->convertGeneratedSizesForce( $meta, $attachmentId );
+
+			$path = (string) $entry->getPathname();
+			if ( ! preg_match( '/\.(jpe?g)$/i', $path ) ) {
+				continue;
 			}
+			if ( ! file_exists( $path ) ) {
+				continue;
+			}
+
+			$realPath = (string) ( @realpath( $path ) ?: $path );
+			if ( isset( $seen[ $realPath ] ) ) {
+				continue;
+			}
+			$seen[ $realPath ] = true;
+
+			$this->checkMissingAvif( $realPath );
 			++$count;
+			$this->updateConversionJobState(
+				array(
+					'uploads'   => $count,
+					'processed' => $startingCount + $count,
+				)
+			);
 		}
-		if ( $cli && defined( 'WP_CLI' ) && \WP_CLI ) {
-			\WP_CLI::success( "Scanned attachments: {$count}" );
-		}
+
+		return $count;
 	}
 
 	private function convertGeneratedSizesForce( array $metadata, int $attachmentId ): void {
@@ -789,7 +1116,7 @@ final class Converter {
 	/**
 	 * Log conversion attempt with all relevant details
 	 */
-	private function log_conversion( string $status, string $sourcePath, string $avifPath, string $engine_used, float $start_time, ?string $error_message = null, ?array $details = null ): void {
+	private function log_conversion( string $status, string $sourcePath, string $avifPath, string $engine_used, float $start_time, ?string $error_message = null, ?array $details = null, ?string $referenceJpegPath = null ): void {
 		// Skip logging if neither plugin nor logger is available
 		if ( ! $this->plugin && ! $this->logger ) {
 			return;
@@ -798,14 +1125,39 @@ final class Converter {
 		$end_time = microtime( true );
 		$duration = round( ( $end_time - $start_time ) * 1000, 2 ); // Convert to milliseconds
 
+		$comparisonPath = ( is_string( $referenceJpegPath ) && '' !== $referenceJpegPath && file_exists( $referenceJpegPath ) )
+			? $referenceJpegPath
+			: $sourcePath;
+		$sourceSize = file_exists( $comparisonPath ) ? (int) filesize( $comparisonPath ) : 0;
+		$targetSize = file_exists( $avifPath ) ? (int) filesize( $avifPath ) : 0;
+
 		$logDetails = array(
-			'source_file' => basename( $sourcePath ),
+			'result'      => $status,
+			'source_file' => basename( $comparisonPath ),
 			'target_file' => basename( $avifPath ),
 			'engine_used' => $engine_used,
 			'duration_ms' => $duration,
-			'source_size' => file_exists( $sourcePath ) ? filesize( $sourcePath ) : 0,
-			'target_size' => file_exists( $avifPath ) ? filesize( $avifPath ) : 0,
+			'source_size' => $sourceSize,
+			'target_size' => $targetSize,
 		);
+		if ( '' !== $comparisonPath ) {
+			$attachmentId = (int) \attachment_url_to_postid( $this->pathToUploadsUrl( $comparisonPath ) );
+			if ( $attachmentId > 0 ) {
+				$logDetails['attachment_id'] = $attachmentId;
+			}
+		}
+		if ( basename( $comparisonPath ) !== basename( $sourcePath ) ) {
+			$logDetails['encoded_from'] = basename( $sourcePath );
+		}
+
+		$sourceUrl = $this->pathToUploadsUrl( $comparisonPath );
+		if ( '' !== $sourceUrl ) {
+			$logDetails['source_url'] = $sourceUrl;
+		}
+		$targetUrl = $this->pathToUploadsUrl( $avifPath );
+		if ( '' !== $targetUrl ) {
+			$logDetails['target_url'] = $targetUrl;
+		}
 
 		if ( $details !== null ) {
 			// Avoid logging overly noisy or sensitive details (env vars / secrets).
@@ -815,11 +1167,14 @@ final class Converter {
 		// Add error message if provided
 		if ( $error_message ) {
 			$logDetails['error'] = $error_message;
+			if ( ! isset( $logDetails['error_suggestion'] ) ) {
+				$logDetails['error_suggestion'] = $this->getErrorSuggestion( $error_message );
+			}
 		}
 
 		$message = $status === 'success'
-			? 'Successfully converted ' . basename( $sourcePath ) . " to AVIF using $engine_used"
-			: 'Failed to convert ' . basename( $sourcePath ) . " to AVIF using $engine_used";
+			? 'Successfully converted ' . basename( $comparisonPath ) . " to AVIF using $engine_used"
+			: 'Failed to convert ' . basename( $comparisonPath ) . " to AVIF using $engine_used";
 
 		if ( $error_message ) {
 			$message .= ": $error_message";
@@ -831,6 +1186,31 @@ final class Converter {
 		} elseif ( $this->plugin ) {
 			$this->plugin->add_log( $status, $message, $logDetails );
 		}
+	}
+
+	/**
+	 * Convert an absolute uploads path into a public uploads URL.
+	 */
+	private function pathToUploadsUrl( string $path ): string {
+		if ( '' === $path ) {
+			return '';
+		}
+
+		$uploads = wp_upload_dir();
+		$baseDir = trailingslashit( (string) ( $uploads['basedir'] ?? '' ) );
+		$baseUrl = trailingslashit( (string) ( $uploads['baseurl'] ?? '' ) );
+		if ( '' === $baseDir || '' === $baseUrl ) {
+			return '';
+		}
+
+		$normalizedPath = str_replace( '\\', '/', $path );
+		$normalizedBase = str_replace( '\\', '/', $baseDir );
+		if ( ! str_starts_with( $normalizedPath, $normalizedBase ) ) {
+			return '';
+		}
+
+		$relative = ltrim( substr( $normalizedPath, strlen( $normalizedBase ) ), '/' );
+		return $baseUrl . str_replace( ' ', '%20', $relative );
 	}
 
 	/**
@@ -872,5 +1252,22 @@ final class Converter {
 		}
 
 		return $details;
+	}
+
+	/**
+	 * Provide a concise next action for common conversion failures.
+	 */
+	private function getErrorSuggestion( string $error ): string {
+		$err = strtolower( $error );
+		if ( str_contains( $err, 'memory' ) ) {
+			return 'Reduce image dimensions, increase PHP memory_limit, or keep memory safety enabled.';
+		}
+		if ( str_contains( $err, 'imagick' ) || str_contains( $err, 'magick' ) || str_contains( $err, 'cli' ) ) {
+			return 'Verify engine settings, CLI path, and PHP extension availability in Server Support.';
+		}
+		if ( str_contains( $err, 'permission' ) || str_contains( $err, 'write' ) ) {
+			return 'Check write permissions for wp-content/uploads.';
+		}
+		return 'Check Server Support diagnostics and plugin logs for engine/path details.';
 	}
 }

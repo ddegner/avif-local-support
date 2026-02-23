@@ -99,4 +99,39 @@ final class Environment {
 
 		return $env;
 	}
+
+	/**
+	 * Best-effort CPU core count detection.
+	 * Returns at least 1 when detection is unavailable.
+	 */
+	public static function detectCpuCoreCount(): int {
+		// Prefer explicitly reported CPU count on Windows.
+		$winCount = (int) ( getenv( 'NUMBER_OF_PROCESSORS' ) ?: 0 );
+		if ( $winCount > 0 ) {
+			return $winCount;
+		}
+
+		// Try POSIX-style commands when shell execution is available.
+		if ( function_exists( 'shell_exec' ) ) {
+			$commands = array();
+			if ( 'Darwin' === PHP_OS_FAMILY || 'BSD' === PHP_OS_FAMILY ) {
+				$commands[] = 'sysctl -n hw.ncpu 2>/dev/null';
+			}
+			$commands[] = 'nproc 2>/dev/null';
+			$commands[] = 'getconf _NPROCESSORS_ONLN 2>/dev/null';
+
+			foreach ( $commands as $command ) {
+				$output = @shell_exec( $command );
+				if ( ! is_string( $output ) ) {
+					continue;
+				}
+				$count = (int) trim( $output );
+				if ( $count > 0 ) {
+					return $count;
+				}
+			}
+		}
+
+		return 1;
+	}
 }

@@ -118,6 +118,7 @@
     var qualityInput = document.querySelector('#aviflosu_quality');
     var speedInput = document.querySelector('#aviflosu_speed');
     var pollingTimerLocal = null;
+    var AVIF_PROGRESS_POLL_INTERVAL_MS = 5000;
 
     function updateRecommendedDefaultsButtonState() {
       if (!applyRecommendedDefaultsBtn) return;
@@ -139,6 +140,85 @@
       toggleHidden(progressEl, true);
       if (spinner) spinner.classList.remove('is-active');
       if (convertBtn) convertBtn.disabled = false;
+    }
+
+    function startAvifProgressPolling(initialStatusText) {
+      toggleHidden(resultContainer, false);
+      toggleHidden(progressEl, false);
+      toggleHidden(stopBtn, false);
+      if (spinner) spinner.classList.add('is-active');
+      if (statusEl && initialStatusText) statusEl.textContent = initialStatusText;
+
+      var prevMissing = null;
+      var unchangedTicks = 0;
+      var startTime = Date.now();
+      var MAX_UNCHANGED_TICKS = 20;
+      var MAX_DURATION_MS = 10 * 60 * 1000; // 10 minutes safety
+
+      function stopIfNoActiveJob() {
+        apiFetch({ path: '/aviflosu/v1/conversion-state', method: 'GET' })
+          .then(function (stateResponse) {
+            var isActive = !!(stateResponse && stateResponse.active);
+            if (isActive) {
+              // Job is still running; keep polling counters even if unchanged.
+              unchangedTicks = 0;
+              if (statusEl) statusEl.textContent = getI18n('avifContinuingBackground', 'AVIF generation is continuing in the background.');
+              return;
+            }
+            if (statusEl) statusEl.textContent = getI18n('avifContinuingBackground', 'AVIF generation is continuing in the background.');
+            stopPolling();
+          })
+          .catch(function () {
+            if (statusEl) statusEl.textContent = getI18n('avifContinuingBackground', 'AVIF generation is continuing in the background.');
+            stopPolling();
+          });
+      }
+
+      function updateLocal() {
+        apiFetch({ path: '/aviflosu/v1/scan-missing', method: 'POST' })
+          .then(function (data) {
+            var total = data.total_jpegs || 0;
+            var avifs = data.existing_avifs || 0;
+            var missing = data.missing_avifs || 0;
+
+            // Update top stats display too
+            var totalEl = document.querySelector('#avif-local-support-total-jpegs');
+            var avifsEl = document.querySelector('#avif-local-support-existing-avifs');
+            var missingEl = document.querySelector('#avif-local-support-missing-avifs');
+            if (totalEl) totalEl.textContent = String(total);
+            if (avifsEl) avifsEl.textContent = String(avifs);
+            if (missingEl) missingEl.textContent = String(missing);
+
+            // Update progress counter
+            if (progressAvifs) progressAvifs.textContent = String(avifs);
+            if (progressJpegs) progressJpegs.textContent = String(total);
+
+            // Stop conditions: finished, stalled, or too long
+            if (missing === 0) {
+              if (statusEl) statusEl.textContent = getI18n('avifComplete', 'AVIF generation complete.');
+              loadMissingFiles();
+              stopPolling();
+            } else {
+              if (prevMissing !== null && missing === prevMissing) {
+                unchangedTicks++;
+              } else {
+                unchangedTicks = 0;
+              }
+              prevMissing = missing;
+              if (unchangedTicks >= MAX_UNCHANGED_TICKS || (Date.now() - startTime) > MAX_DURATION_MS) {
+                stopIfNoActiveJob();
+              }
+            }
+          })
+          .catch(function () {
+            if (statusEl) statusEl.textContent = getI18n('avifContinuingBackground', 'AVIF generation is continuing in the background.');
+            stopPolling();
+          });
+      }
+
+      if (pollingTimerLocal) window.clearInterval(pollingTimerLocal);
+      pollingTimerLocal = window.setInterval(updateLocal, AVIF_PROGRESS_POLL_INTERVAL_MS);
+      updateLocal();
     }
 
     function loadAvifStats(callback) {
@@ -317,69 +397,32 @@
       convertBtn.addEventListener('click', function (e) {
         e.preventDefault();
         convertBtn.disabled = true;
+        toggleHidden(resultContainer, false);
+        toggleHidden(progressEl, true);
+        if (spinner) spinner.classList.add('is-active');
+        if (statusEl) statusEl.textContent = getI18n('avifStarting', 'Starting AVIF generation...');
+
         apiFetch({ path: '/aviflosu/v1/convert-now', method: 'POST' })
           .then(function (convertResponse) {
             if (convertResponse && convertResponse.reason === 'already_running') {
-              if (statusEl) statusEl.textContent = 'A conversion job is already running.';
-              convertBtn.disabled = false;
+              startAvifProgressPolling(getI18n('avifAlreadyRunning', 'A conversion job is already running. Progress is continuing in the background.'));
               return;
             }
-            toggleHidden(resultContainer, false);
-            if (spinner) spinner.classList.add('is-active');
-            if (statusEl) statusEl.textContent = getI18n('avifConverting', 'Generating missing AVIF files...');
-            toggleHidden(progressEl, true);
-            toggleHidden(stopBtn, false);
-            // Show inline counter progress
-            toggleHidden(progressEl, false);
-            var prevMissing = null;
-            var unchangedTicks = 0;
-            var startTime = Date.now();
-            var MAX_UNCHANGED_TICKS = 20;
-            var MAX_DURATION_MS = 10 * 60 * 1000; // 10 minutes safety
-            function updateLocal() {
-              apiFetch({ path: '/aviflosu/v1/scan-missing', method: 'POST' })
-                .then(function (data) {
-                  var total = data.total_jpegs || 0;
-                  var avifs = data.existing_avifs || 0;
-                  var missing = data.missing_avifs || 0;
 
-                  // Update top stats display too
-                  var totalEl = document.querySelector('#avif-local-support-total-jpegs');
-                  var avifsEl = document.querySelector('#avif-local-support-existing-avifs');
-                  var missingEl = document.querySelector('#avif-local-support-missing-avifs');
-                  if (totalEl) totalEl.textContent = String(total);
-                  if (avifsEl) avifsEl.textContent = String(avifs);
-                  if (missingEl) missingEl.textContent = String(missing);
-
-                  // Update progress counter
-                  if (progressAvifs) progressAvifs.textContent = String(avifs);
-                  if (progressJpegs) progressJpegs.textContent = String(total);
-
-                  // Stop conditions: finished, stalled, or too long
-                  if (missing === 0) {
-                    if (statusEl) statusEl.textContent = getI18n('avifComplete', 'AVIF generation complete.');
-                    loadMissingFiles();
-                    stopPolling();
-                  } else {
-                    if (prevMissing !== null && missing === prevMissing) {
-                      unchangedTicks++;
-                    } else {
-                      unchangedTicks = 0;
-                    }
-                    prevMissing = missing;
-                    if (unchangedTicks >= MAX_UNCHANGED_TICKS || (Date.now() - startTime) > MAX_DURATION_MS) {
-                      if (statusEl) statusEl.textContent = getI18n('avifContinuingBackground', 'AVIF generation is continuing in the background.');
-                      stopPolling();
-                    }
-                  }
-                })
-                .catch(function () { });
+            if (convertResponse && convertResponse.reason === 'already_scheduled') {
+              startAvifProgressPolling(getI18n('avifAlreadyScheduled', 'A conversion job is already queued. It will continue in the background shortly.'));
+              return;
             }
-            if (pollingTimerLocal) window.clearInterval(pollingTimerLocal);
-            pollingTimerLocal = window.setInterval(updateLocal, 1500);
-            updateLocal();
+
+            if (convertResponse && convertResponse.queued === false) {
+              if (statusEl) statusEl.textContent = getI18n('avifQueueFailed', 'Could not queue AVIF generation. Check WP-Cron and try again.');
+              stopPolling();
+              return;
+            }
+
+            startAvifProgressPolling(getI18n('avifConverting', 'Generating missing AVIF files...'));
           })
-          .catch(function (err) {
+          .catch(function () {
             if (statusEl) statusEl.textContent = getI18n('avifFailed', 'AVIF generation failed.');
             stopPolling();
           })

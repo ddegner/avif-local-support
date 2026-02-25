@@ -290,12 +290,21 @@ final class RestController
 			);
 		}
 
-		$queued = false;
-		if (!\wp_next_scheduled('aviflosu_run_on_demand')) {
-			\wp_schedule_single_event(time() + 5, 'aviflosu_run_on_demand');
-			$queued = true;
+		if (\wp_next_scheduled('aviflosu_run_on_demand')) {
+			return rest_ensure_response(
+				array(
+					'queued' => false,
+					'reason' => 'already_scheduled',
+				)
+			);
 		}
-		return rest_ensure_response(array('queued' => $queued));
+
+		\wp_schedule_single_event(time() + 5, 'aviflosu_run_on_demand');
+		return rest_ensure_response(
+			array(
+				'queued' => true,
+			)
+		);
 	}
 
 	public function conversionState(\WP_REST_Request $request): \WP_REST_Response

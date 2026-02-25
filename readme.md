@@ -4,7 +4,7 @@
 **Tags:** avif, images, performance, media, optimization  
 **Requires at least:** 6.8  
 **Tested up to:** 6.9  
-**Stable tag:** 0.6.4  
+**Stable tag:** 0.6.4-extended.3  
 **Requires PHP:** 8.3  
 **License:** GPLv2 or later  
 **License URI:** https://www.gnu.org/licenses/gpl-2.0.html
@@ -79,3 +79,11 @@ This fork remains licensed under the **GNU General Public License v2 or later (G
 ### 0.6.2
 - Synced with upstream 0.6.1 log-clearing reliability changes.
 - Added periodic server-backed auto-refresh for the logs panel in Tools.
+
+### 0.6.4-extended.2
+- Added AVIF size-policy controls: keep-larger toggle, retry count, and quality-step settings.
+- Added retry conversion flow that lowers quality and keeps the smallest valid AVIF result.
+- Improved conversion progress/status feedback and stale-job recovery behavior.
+
+### 0.6.4-extended.3
+- Updated logs header quality display to show final retry quality used for AVIF output.

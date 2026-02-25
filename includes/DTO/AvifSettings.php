@@ -28,6 +28,9 @@ final class AvifSettings {
 	public string $cliArgs;
 	public string $cliEnv;
 	public int $cliThreads;
+	public bool $keepLargerAvif;
+	public int $largerRetryCount;
+	public int $largerRetryQualityStep;
 	public int $maxDimension;
 
 	public function __construct(
@@ -44,6 +47,9 @@ final class AvifSettings {
 		string $cliArgs = '',
 		string $cliEnv = '',
 		int $cliThreads = 0,
+		bool $keepLargerAvif = true,
+		int $largerRetryCount = 3,
+		int $largerRetryQualityStep = 4,
 		int $maxDimension = 4096
 	) {
 		$this->quality            = $quality;
@@ -59,6 +65,9 @@ final class AvifSettings {
 		$this->cliArgs            = $cliArgs;
 		$this->cliEnv             = $cliEnv;
 		$this->cliThreads         = $cliThreads;
+		$this->keepLargerAvif     = $keepLargerAvif;
+		$this->largerRetryCount   = $largerRetryCount;
+		$this->largerRetryQualityStep = $largerRetryQualityStep;
 		$this->maxDimension       = $maxDimension;
 	}
 
@@ -89,6 +98,9 @@ final class AvifSettings {
 		$defaultEnv = Environment::buildDefaultEnvString();
 		$cliEnv     = (string) get_option( 'aviflosu_cli_env', $defaultEnv );
 		$cliThreads = max( 0, min( 256, (int) get_option( 'aviflosu_cli_threads', 0 ) ) );
+		$keepLargerAvif       = (bool) get_option( 'aviflosu_keep_larger_avif', true );
+		$largerRetryCount     = max( 0, min( 10, (int) get_option( 'aviflosu_larger_retry_count', 3 ) ) );
+		$largerRetryQualityStep = max( 1, min( 20, (int) get_option( 'aviflosu_larger_retry_quality_step', 4 ) ) );
 
 		// Auto-detect ImageMagick CLI when not explicitly configured.
 		// This enables Auto mode to use CLI on servers where ImageMagick is installed but the user didn't set a path.
@@ -109,7 +121,10 @@ final class AvifSettings {
 			convertViaSchedule: $convertViaSchedule,
 			cliArgs: $cliArgs,
 			cliEnv: $cliEnv,
-			cliThreads: $cliThreads
+			cliThreads: $cliThreads,
+			keepLargerAvif: $keepLargerAvif,
+			largerRetryCount: $largerRetryCount,
+			largerRetryQualityStep: $largerRetryQualityStep
 		);
 	}
 
@@ -128,6 +143,9 @@ final class AvifSettings {
 			'cli_args'             => $this->cliArgs,
 			'cli_env'              => $this->cliEnv,
 			'cli_threads'          => $this->cliThreads,
+			'keep_larger_avif'     => $this->keepLargerAvif,
+			'larger_retry_count'   => $this->largerRetryCount,
+			'larger_retry_quality_step' => $this->largerRetryQualityStep,
 		);
 	}
 

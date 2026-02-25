@@ -227,6 +227,39 @@ final class Settings
 			)
 		);
 
+		register_setting(
+			self::OPTION_GROUP,
+			'aviflosu_keep_larger_avif',
+			array(
+				'type' => 'boolean',
+				'default' => true,
+				'sanitize_callback' => 'rest_sanitize_boolean',
+				'show_in_rest' => true,
+			)
+		);
+
+		register_setting(
+			self::OPTION_GROUP,
+			'aviflosu_larger_retry_count',
+			array(
+				'type' => 'integer',
+				'default' => 3,
+				'sanitize_callback' => array($this, 'sanitizeLargerRetryCount'),
+				'show_in_rest' => true,
+			)
+		);
+
+		register_setting(
+			self::OPTION_GROUP,
+			'aviflosu_larger_retry_quality_step',
+			array(
+				'type' => 'integer',
+				'default' => 4,
+				'sanitize_callback' => array($this, 'sanitizeLargerRetryQualityStep'),
+				'show_in_rest' => true,
+			)
+		);
+
 		// Beta features - use separate option group to avoid form conflicts.
 		register_setting(
 			self::BETA_OPTION_GROUP,
@@ -396,6 +429,33 @@ final class Settings
 			array('label_for' => 'aviflosu_logs_max_entries')
 		);
 
+		add_settings_field(
+			'avif_local_support_keep_larger_avif',
+			__('Keep AVIF when larger', 'avif-local-support'),
+			array($this, 'renderKeepLargerAvifField'),
+			self::PAGE_SLUG,
+			'aviflosu_conversion_advanced',
+			array('label_for' => 'aviflosu_keep_larger_avif')
+		);
+
+		add_settings_field(
+			'avif_local_support_larger_retry_count',
+			__('Larger-file retries', 'avif-local-support'),
+			array($this, 'renderLargerRetryCountField'),
+			self::PAGE_SLUG,
+			'aviflosu_conversion_advanced',
+			array('label_for' => 'aviflosu_larger_retry_count')
+		);
+
+		add_settings_field(
+			'avif_local_support_larger_retry_quality_step',
+			__('Quality step per retry', 'avif-local-support'),
+			array($this, 'renderLargerRetryQualityStepField'),
+			self::PAGE_SLUG,
+			'aviflosu_conversion_advanced',
+			array('label_for' => 'aviflosu_larger_retry_quality_step')
+		);
+
 		// Engine section.
 		add_settings_field(
 			'avif_local_support_engine_mode',
@@ -514,6 +574,18 @@ final class Settings
 		return max(0, min(256, $sanitized));
 	}
 
+	public function sanitizeLargerRetryCount($value): int
+	{
+		$sanitized = (int) ($value ?? 3);
+		return max(0, min(10, $sanitized));
+	}
+
+	public function sanitizeLargerRetryQualityStep($value): int
+	{
+		$sanitized = (int) ($value ?? 4);
+		return max(1, min(20, $sanitized));
+	}
+
 	// =========================================================================
 	// Field Renderers
 	// =========================================================================
@@ -590,6 +662,30 @@ final class Settings
 		}
 		echo '</select>';
 		$this->renderHelpTip(__('Maximum number of recent log entries to keep.', 'avif-local-support'));
+	}
+
+	public function renderKeepLargerAvifField(): void
+	{
+		$value = (bool) get_option('aviflosu_keep_larger_avif', true);
+		echo '<label for="aviflosu_keep_larger_avif">';
+		echo '<input id="aviflosu_keep_larger_avif" type="checkbox" name="aviflosu_keep_larger_avif" value="1" ' . checked(true, $value, false) . ' /> ';
+		echo esc_html__('Always keep AVIF output, even when larger than the JPEG source', 'avif-local-support');
+		$this->renderHelpTip(__('If enabled, plugin still tries lower quality retries first, then keeps the smallest AVIF found.', 'avif-local-support'));
+		echo '</label>';
+	}
+
+	public function renderLargerRetryCountField(): void
+	{
+		$value = max(0, min(10, (int) get_option('aviflosu_larger_retry_count', 3)));
+		echo '<input id="aviflosu_larger_retry_count" type="number" name="aviflosu_larger_retry_count" min="0" max="10" value="' . esc_attr((string) $value) . '" class="small-text" /> ';
+		$this->renderHelpTip(__('When AVIF is larger than JPEG, retry this many times with lower quality.', 'avif-local-support'));
+	}
+
+	public function renderLargerRetryQualityStepField(): void
+	{
+		$value = max(1, min(20, (int) get_option('aviflosu_larger_retry_quality_step', 4)));
+		echo '<input id="aviflosu_larger_retry_quality_step" type="number" name="aviflosu_larger_retry_quality_step" min="1" max="20" value="' . esc_attr((string) $value) . '" class="small-text" /> ';
+		$this->renderHelpTip(__('Quality decrease applied on each larger-file retry attempt.', 'avif-local-support'));
 	}
 
 	public function renderSubsamplingField(): void

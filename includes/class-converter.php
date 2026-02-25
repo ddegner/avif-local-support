@@ -23,6 +23,7 @@ final class Converter {
 	private const JOB_LOCK_TRANSIENT = 'aviflosu_conversion_lock';
 	private const JOB_STATE_OPTION   = 'aviflosu_conversion_job_state';
 	private const LAST_RUN_OPTION    = 'aviflosu_last_run_summary';
+	private const JOB_STALE_SECONDS  = 1800; // 30 minutes without heartbeat/progress.
 
 	private ?Plugin $plugin = null;
 	private ?Logger $logger = null;
@@ -291,22 +292,46 @@ final class Converter {
 			for ( $attempt = 1; $attempt <= $maxAttemptsPerEncoder; $attempt++ ) {
 				$result = $encoder->convert( $sourcePath, $avifPath, $settings, $targetDimensions );
 
-				if ( $result->success ) {
-					$validationError = '';
-					if ( ! $this->validateGeneratedAvif( $avifPath, $validationError ) ) {
-						$this->deleteInvalidAvifFile( $avifPath );
+					if ( $result->success ) {
+						$validationError = '';
+						if ( ! $this->validateGeneratedAvif( $avifPath, $validationError ) ) {
+							$this->deleteInvalidAvifFile( $avifPath );
 						$lastResult = ConversionResult::failure(
 							'Generated AVIF failed validation: ' . $validationError,
 							'The encoder produced a corrupted AVIF. Try a different engine in settings.'
 						);
-						continue;
-					}
+							continue;
+						}
 
-					// Invalidate file existence cache for this path so Support class sees the new file.
-					$this->invalidateFileCache( $avifPath );
-					$this->log_conversion( 'success', $sourcePath, $avifPath, $engineUsed, $start_time, null, $settings->toArray(), $referenceJpegPath );
-					return ConversionResult::success();
-				}
+						$comparisonJpegPath = ( is_string( $referenceJpegPath ) && '' !== $referenceJpegPath && file_exists( $referenceJpegPath ) )
+							? $referenceJpegPath
+							: $sourcePath;
+						$sizePolicy = $this->applyLargerOutputPolicy(
+							$encoder,
+							$sourcePath,
+							$avifPath,
+							$comparisonJpegPath,
+							$targetDimensions,
+							$settings
+						);
+						if ( empty( $sizePolicy['ok'] ) ) {
+							$lastResult = ConversionResult::failure(
+								(string) ( $sizePolicy['error'] ?? 'AVIF output rejected by size policy.' ),
+								(string) ( $sizePolicy['suggestion'] ?? '' )
+							);
+							continue;
+						}
+
+						$logDetails = array_merge(
+							$settings->toArray(),
+							is_array( $sizePolicy['details'] ?? null ) ? $sizePolicy['details'] : array()
+						);
+
+						// Invalidate file existence cache for this path so Support class sees the new file.
+						$this->invalidateFileCache( $avifPath );
+						$this->log_conversion( 'success', $sourcePath, $avifPath, $engineUsed, $start_time, null, $logDetails, $referenceJpegPath );
+						return ConversionResult::success();
+					}
 
 				$lastResult = $result;
 			}
@@ -324,6 +349,160 @@ final class Converter {
 
 		$this->log_conversion( 'error', $sourcePath, $avifPath, $engineUsed, $start_time, $errorMsg, $details, $referenceJpegPath );
 		return ConversionResult::failure( $errorMsg ?? 'Unknown error', $suggestion );
+	}
+
+	/**
+	 * Apply "larger than source" policy:
+	 * - Retry conversion at lower quality when AVIF is larger than JPEG.
+	 * - Keep smallest valid AVIF variant.
+	 * - Optionally reject larger AVIF outputs if configured.
+	 *
+	 * @return array{ok:bool,details:array<string,mixed>,error?:string,suggestion?:string}
+	 */
+	private function applyLargerOutputPolicy(
+		AvifEncoderInterface $encoder,
+		string $sourcePath,
+		string $avifPath,
+		string $comparisonJpegPath,
+		?array $targetDimensions,
+		AvifSettings $settings
+	): array {
+		$jpegSize = $this->getPositiveFileSize( $comparisonJpegPath );
+		$bestSize = $this->getPositiveFileSize( $avifPath );
+		$details  = array(
+			'comparison_jpeg_path'          => $comparisonJpegPath,
+			'comparison_jpeg_size_bytes'    => $jpegSize,
+			'avif_size_bytes'               => $bestSize,
+			'larger_file_retries_attempted' => 0,
+			'larger_file_retries_succeeded' => 0,
+			'larger_file_final_quality'     => $settings->quality,
+			'larger_than_source'            => ( $jpegSize > 0 && $bestSize > $jpegSize ),
+		);
+
+		// If size comparison isn't possible, keep the valid AVIF we already produced.
+		if ( $jpegSize <= 0 || $bestSize <= 0 || $bestSize <= $jpegSize ) {
+			return array(
+				'ok'      => true,
+				'details' => $details,
+			);
+		}
+
+		$maxRetries = max( 0, (int) $settings->largerRetryCount );
+		$step       = max( 1, (int) $settings->largerRetryQualityStep );
+
+		$bestTemp = function_exists( 'wp_tempnam' ) ? (string) \wp_tempnam( $avifPath ) : '';
+		if ( '' === $bestTemp ) {
+			$tmp = @tempnam( sys_get_temp_dir(), 'aviflosu_best_' );
+			if ( is_string( $tmp ) ) {
+				$bestTemp = $tmp;
+			}
+		}
+		if ( '' !== $bestTemp ) {
+			@copy( $avifPath, $bestTemp );
+		}
+
+		$bestQuality       = (int) $settings->quality;
+		$attemptedQualities = array( $bestQuality => true );
+
+		for ( $retry = 1; $retry <= $maxRetries; $retry++ ) {
+			$nextQuality = max( 0, (int) $settings->quality - ( $retry * $step ) );
+			if ( isset( $attemptedQualities[ $nextQuality ] ) ) {
+				continue;
+			}
+			$attemptedQualities[ $nextQuality ] = true;
+			$details['larger_file_retries_attempted'] = (int) $details['larger_file_retries_attempted'] + 1;
+
+			$retrySettings = $this->withQuality( $settings, $nextQuality );
+			$retryResult   = $encoder->convert( $sourcePath, $avifPath, $retrySettings, $targetDimensions );
+			if ( ! $retryResult->success ) {
+				if ( 0 === $nextQuality ) {
+					break;
+				}
+				continue;
+			}
+
+			$retryValidationError = '';
+			if ( ! $this->validateGeneratedAvif( $avifPath, $retryValidationError ) ) {
+				$this->deleteInvalidAvifFile( $avifPath );
+				if ( 0 === $nextQuality ) {
+					break;
+				}
+				continue;
+			}
+
+			$details['larger_file_retries_succeeded'] = (int) $details['larger_file_retries_succeeded'] + 1;
+			$candidateSize = $this->getPositiveFileSize( $avifPath );
+			if ( $candidateSize > 0 && $candidateSize < $bestSize ) {
+				$bestSize                  = $candidateSize;
+				$bestQuality               = $nextQuality;
+				$details['avif_size_bytes'] = $bestSize;
+				if ( '' !== $bestTemp ) {
+					@copy( $avifPath, $bestTemp );
+				}
+				if ( $bestSize <= $jpegSize ) {
+					break;
+				}
+			}
+
+			if ( 0 === $nextQuality ) {
+				break;
+			}
+		}
+
+		if ( '' !== $bestTemp && file_exists( $bestTemp ) ) {
+			@copy( $bestTemp, $avifPath );
+			@unlink( $bestTemp );
+		}
+
+		$finalSize = $this->getPositiveFileSize( $avifPath );
+		if ( $finalSize > 0 ) {
+			$bestSize = $finalSize;
+		}
+		$details['avif_size_bytes']           = $bestSize;
+		$details['larger_file_final_quality'] = $bestQuality;
+		$details['larger_than_source']        = ( $bestSize > $jpegSize );
+
+		if ( $bestSize > $jpegSize && ! $settings->keepLargerAvif ) {
+			$this->deleteInvalidAvifFile( $avifPath );
+			return array(
+				'ok'         => false,
+				'details'    => $details,
+				'error'      => 'AVIF output is larger than source JPEG and keep-larger policy is disabled.',
+				'suggestion' => 'Enable "Keep AVIF when larger" or increase retries/quality step to reduce output size.',
+			);
+		}
+
+		return array(
+			'ok'      => true,
+			'details' => $details,
+		);
+	}
+
+	private function getPositiveFileSize( string $path ): int {
+		$size = @filesize( $path );
+		return ( is_int( $size ) && $size > 0 ) ? $size : 0;
+	}
+
+	private function withQuality( AvifSettings $settings, int $quality ): AvifSettings {
+		return new AvifSettings(
+			quality: max( 0, min( 100, $quality ) ),
+			speed: $settings->speed,
+			subsampling: $settings->subsampling,
+			bitDepth: $settings->bitDepth,
+			engineMode: $settings->engineMode,
+			cliPath: $settings->cliPath,
+			disableMemoryCheck: $settings->disableMemoryCheck,
+			lossless: $quality >= 100,
+			convertOnUpload: $settings->convertOnUpload,
+			convertViaSchedule: $settings->convertViaSchedule,
+			cliArgs: $settings->cliArgs,
+			cliEnv: $settings->cliEnv,
+			cliThreads: $settings->cliThreads,
+			keepLargerAvif: $settings->keepLargerAvif,
+			largerRetryCount: $settings->largerRetryCount,
+			largerRetryQualityStep: $settings->largerRetryQualityStep,
+			maxDimension: $settings->maxDimension
+		);
 	}
 
 	/**
@@ -601,7 +780,31 @@ final class Converter {
 	 * Check if a conversion job is already active.
 	 */
 	public function isConversionJobActive(): bool {
-		return (bool) \get_transient( self::JOB_LOCK_TRANSIENT );
+		$active = (bool) \get_transient( self::JOB_LOCK_TRANSIENT );
+		if ( ! $active ) {
+			return false;
+		}
+
+		$state       = $this->getConversionJobState();
+		$heartbeatAt = (int) ( $state['heartbeat_at'] ?? $state['started_at'] ?? 0 );
+		if ( $heartbeatAt > 0 && ( time() - $heartbeatAt ) > self::JOB_STALE_SECONDS ) {
+			// Recover from stale locks so users can start a fresh run.
+			\delete_transient( self::JOB_LOCK_TRANSIENT );
+			\update_option(
+				self::JOB_STATE_OPTION,
+				array_merge(
+					$state,
+					array(
+						'status'   => 'stale',
+						'ended_at' => time(),
+					)
+				),
+				false
+			);
+			return false;
+		}
+
+		return true;
 	}
 
 	/**
@@ -632,12 +835,14 @@ final class Converter {
 			return false;
 		}
 
+		$now = time();
 		\set_transient( self::JOB_LOCK_TRANSIENT, 1, HOUR_IN_SECONDS );
 		\update_option(
 			self::JOB_STATE_OPTION,
 			array(
 				'status'      => 'running',
-				'started_at'  => time(),
+				'started_at'  => $now,
+				'heartbeat_at'=> $now,
 				'mode'        => $cli ? 'cli' : 'web',
 				'processed'   => 0,
 				'attachments' => 0,
@@ -651,7 +856,13 @@ final class Converter {
 
 	private function updateConversionJobState( array $patch ): void {
 		$state = $this->getConversionJobState();
-		$state = array_merge( $state, $patch );
+		$state = array_merge(
+			$state,
+			$patch,
+			array(
+				'heartbeat_at' => time(),
+			)
+		);
 		\update_option( self::JOB_STATE_OPTION, $state, false );
 	}
 

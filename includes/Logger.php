@@ -151,6 +151,9 @@ final class Logger {
 				|| isset( $details['source_file'] )
 				|| isset( $details['target_file'] );
 			$qualityUsed = isset( $details['quality'] ) ? (int) $details['quality'] : (int) get_option( 'aviflosu_quality', 83 );
+			if ( isset( $details['larger_file_final_quality'] ) ) {
+				$qualityUsed = (int) $details['larger_file_final_quality'];
+			}
 			$speedUsed   = isset( $details['speed'] ) ? (int) $details['speed'] : (int) get_option( 'aviflosu_speed', 0 );
 
 			echo '<div class="avif-log-entry ' . esc_attr( $status ) . '" data-status="' . esc_attr( $status ) . '" data-filename="' . esc_attr( strtolower( $sourceFile ) ) . '" data-search="' . esc_attr( $searchText ) . '">';

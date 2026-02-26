@@ -104,6 +104,18 @@
     var progressEl = document.querySelector('#avif-local-support-convert-progress');
     var progressAvifs = document.querySelector('#avif-local-support-progress-avifs');
     var progressJpegs = document.querySelector('#avif-local-support-progress-jpegs');
+    var insightStatus = document.querySelector('#avif-local-support-insight-status');
+    var insightStarted = document.querySelector('#avif-local-support-insight-started');
+    var insightHeartbeat = document.querySelector('#avif-local-support-insight-heartbeat');
+    var insightProgress = document.querySelector('#avif-local-support-insight-progress');
+    var insightThroughput = document.querySelector('#avif-local-support-insight-throughput');
+    var insightEta = document.querySelector('#avif-local-support-insight-eta');
+    var insightQuality = document.querySelector('#avif-local-support-insight-quality');
+    var insightResults = document.querySelector('#avif-local-support-insight-results');
+    var insightSize = document.querySelector('#avif-local-support-insight-size');
+    var insightHealth = document.querySelector('#avif-local-support-insight-health');
+    var insightQueue = document.querySelector('#avif-local-support-insight-queue');
+    var insightError = document.querySelector('#avif-local-support-insight-error');
     var statsLoadingEl = document.querySelector('#avif-local-support-stats-loading');
     var missingFilesPanel = document.querySelector('#avif-local-support-missing-files-panel');
     var missingFilesModal = document.querySelector('#avif-local-support-missing-files-modal');
@@ -119,6 +131,161 @@
     var speedInput = document.querySelector('#aviflosu_speed');
     var pollingTimerLocal = null;
     var AVIF_PROGRESS_POLL_INTERVAL_MS = 5000;
+    var INSIGHTS_POLL_INTERVAL_MS = 10000;
+    var insightsTimer = null;
+    var insightBaselineRunId = '';
+    var insightBaselineExistingAvifs = null;
+
+    function formatDateTime(ts) {
+      if (!ts) return '-';
+      var d = new Date(Number(ts) * 1000);
+      if (isNaN(d.getTime())) return '-';
+      return d.toLocaleString();
+    }
+
+    function formatRelative(ts) {
+      if (!ts) return '-';
+      var diff = Math.max(0, Math.floor(Date.now() / 1000) - Number(ts));
+      if (diff < 60) return diff + 's ago';
+      if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+      return Math.floor(diff / 3600) + 'h ago';
+    }
+
+    function formatDuration(seconds) {
+      var s = Math.max(0, Math.floor(seconds || 0));
+      if (s < 60) return s + 's';
+      if (s < 3600) return Math.floor(s / 60) + 'm';
+      var h = Math.floor(s / 3600);
+      var m = Math.floor((s % 3600) / 60);
+      return h + 'h ' + m + 'm';
+    }
+
+    function updateInsightsPanel() {
+      if (!insightStatus) return;
+
+      Promise.all([
+        apiFetch({ path: '/aviflosu/v1/conversion-state', method: 'GET' }),
+        apiFetch({ path: '/aviflosu/v1/scan-missing', method: 'POST' })
+      ]).then(function (responses) {
+        var conversion = responses[0] || {};
+        var counts = responses[1] || {};
+        var state = conversion.state || {};
+        var lastRun = conversion.last_run || {};
+
+        var isActive = !!conversion.active;
+        var status = String((isActive ? (state.status || 'running') : (state.status || lastRun.status || 'idle'))).toLowerCase();
+        if (insightStatus) insightStatus.textContent = status;
+
+        var startedAt = Number(state.started_at || lastRun.started_at || 0);
+        var heartbeatAt = Number(state.heartbeat_at || 0);
+        var endedAt = Number(lastRun.ended_at || 0);
+
+        var runId = startedAt > 0 ? String(startedAt) : 'none';
+        if (runId !== insightBaselineRunId) {
+          insightBaselineRunId = runId;
+          insightBaselineExistingAvifs = null;
+        }
+
+        if (insightStarted) {
+          insightStarted.textContent = startedAt ? (formatDateTime(startedAt) + ' (' + formatRelative(startedAt) + ')') : '-';
+        }
+        if (insightHeartbeat) {
+          insightHeartbeat.textContent = heartbeatAt ? (formatDateTime(heartbeatAt) + ' (' + formatRelative(heartbeatAt) + ')') : '-';
+        }
+
+        var processed = Number(state.processed || lastRun.processed || 0);
+        var existingAvifs = Number(counts.existing_avifs || 0);
+        var total = Number(counts.total_jpegs || 0);
+        if (isActive && insightBaselineExistingAvifs === null) {
+          insightBaselineExistingAvifs = existingAvifs;
+        }
+        var createdByCoverage = (insightBaselineExistingAvifs !== null)
+          ? Math.max(0, existingAvifs - Number(insightBaselineExistingAvifs))
+          : 0;
+        var pct = total > 0 ? ((existingAvifs / total) * 100) : 0;
+        if (pct > 100) pct = 100;
+        if (insightProgress) {
+          insightProgress.textContent = existingAvifs + ' / ' + total + ' (' + pct.toFixed(1) + '%) • this run scanned ' +
+            processed + ' files (attachments ' + Number(state.attachments || lastRun.attachments || 0) +
+            ', uploads ' + Number(state.uploads || lastRun.uploads || 0) + ')';
+        }
+
+        var created = Number(state.created || lastRun.created || 0);
+        if (created <= 0 && createdByCoverage > 0) {
+          created = createdByCoverage;
+        }
+
+        var elapsedSec = startedAt ? Math.max(1, Math.floor(Date.now() / 1000) - startedAt) : 0;
+        var createdThroughput = elapsedSec > 0 ? (created / (elapsedSec / 60)) : 0;
+        var scannedThroughput = elapsedSec > 0 ? (processed / (elapsedSec / 60)) : 0;
+        if (insightThroughput) {
+          insightThroughput.textContent = createdThroughput > 0
+            ? (createdThroughput.toFixed(1) + ' created/min (scan ' + scannedThroughput.toFixed(1) + '/min)')
+            : '-';
+        }
+
+        var remaining = Math.max(0, Number(counts.missing_avifs || 0));
+        var etaMinutes = createdThroughput > 0 ? (remaining / createdThroughput) : 0;
+        if (insightEta) insightEta.textContent = (createdThroughput > 0 && remaining > 0) ? (Math.ceil(etaMinutes) + ' min') : '-';
+
+        var cfgQuality = Number(state.quality || 0) || Number(lastRun.quality || 0) || Number((qualityInput && qualityInput.value) || 0);
+        var cfgSpeed = Number(state.speed || 0) || Number(lastRun.speed || 0) || Number((speedInput && speedInput.value) || 0);
+        var retryCount = Number(state.retry_quality_count || lastRun.retry_quality_count || 0);
+        var retryAvg = retryCount > 0 ? (Number(state.retry_quality_sum || lastRun.retry_quality_sum || 0) / retryCount) : 0;
+        if (insightQuality) {
+          insightQuality.textContent = 'Configured q=' + cfgQuality + ', s=' + cfgSpeed +
+            (retryCount > 0 ? (' • Avg final retry q=' + retryAvg.toFixed(1)) : '');
+        }
+
+        var existing = Number(state.existing || lastRun.existing || 0);
+        var failedValidation = Number(state.failed_validation || lastRun.failed_validation || 0);
+        var errors = Number(state.errors || lastRun.errors || 0);
+        if (existing <= 0 && processed > 0) {
+          existing = Math.max(0, processed - created - errors);
+        }
+        var stopped = status === 'stopped' ? 1 : 0;
+        if (insightResults) {
+          insightResults.textContent = 'created ' + created + ', already existed ' + existing + ', failed validation ' +
+            failedValidation + ', errors ' + errors + ', stopped by user ' + stopped;
+        }
+
+        var bytesJpeg = Number(state.bytes_jpeg_compared || lastRun.bytes_jpeg_compared || 0);
+        var bytesAvif = Number(state.bytes_avif_generated || lastRun.bytes_avif_generated || 0);
+        var largerCount = Number(state.larger_than_source || lastRun.larger_than_source || 0);
+        var deltaPct = bytesJpeg > 0 ? (((bytesAvif - bytesJpeg) / bytesJpeg) * 100) : 0;
+        if (insightSize) {
+          if (bytesJpeg <= 0 && bytesAvif <= 0) {
+            var sizeHint = created > 0
+              ? 'Byte totals unavailable for this run state'
+              : 'Waiting for first newly created AVIF';
+            insightSize.textContent = sizeHint + ' • larger-than-source ' + largerCount;
+          } else {
+            insightSize.textContent = 'JPEG ' + bytesJpeg + ' B vs AVIF ' + bytesAvif + ' B' +
+              (bytesJpeg > 0 ? (' (' + (deltaPct >= 0 ? '+' : '') + deltaPct.toFixed(1) + '%)') : '') +
+              ' • larger-than-source ' + largerCount;
+          }
+        }
+
+        var lockAge = heartbeatAt ? Math.max(0, Math.floor(Date.now() / 1000) - heartbeatAt) : 0;
+        var health = 'idle';
+        if (isActive && lockAge <= 90) health = 'healthy';
+        else if (isActive && lockAge <= 600) health = 'slow';
+        else if (isActive) health = 'stale risk';
+        if (insightHealth) insightHealth.textContent = health + (lockAge > 0 ? (' • lock age ' + formatDuration(lockAge)) : '');
+
+        var nextOnDemand = Number(conversion.next_on_demand || 0);
+        var nextDaily = Number(conversion.next_daily || 0);
+        if (insightQueue) {
+          insightQueue.textContent = 'on-demand ' + (nextOnDemand ? formatDateTime(nextOnDemand) : 'none') +
+            ' • daily ' + (nextDaily ? formatDateTime(nextDaily) : 'none');
+        }
+
+        var lastError = String(state.last_error || lastRun.last_error || '');
+        if (insightError) insightError.textContent = lastError || '-';
+      }).catch(function () {
+        if (insightStatus) insightStatus.textContent = 'unavailable';
+      });
+    }
 
     function updateRecommendedDefaultsButtonState() {
       if (!applyRecommendedDefaultsBtn) return;
@@ -311,6 +478,11 @@
       document.querySelector('#avif-local-support-missing-avifs')
     ) {
       loadAvifStats();
+    }
+    if (insightStatus) {
+      updateInsightsPanel();
+      if (insightsTimer) window.clearInterval(insightsTimer);
+      insightsTimer = window.setInterval(updateInsightsPanel, INSIGHTS_POLL_INTERVAL_MS);
     }
     if (missingFilesRefreshBtn) {
       missingFilesRefreshBtn.addEventListener('click', function (e) {

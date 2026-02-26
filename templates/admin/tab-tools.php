@@ -122,6 +122,21 @@ $last_run_processed = isset( $last_run['processed'] ) ? (int) $last_run['process
 			<p class="description">
 				<?php esc_html_e( 'Generate or remove AVIF files for existing JPEG media.', 'avif-local-support' ); ?>
 			</p>
+			<p class="description">
+				<?php
+				echo esc_html(
+					sprintf(
+						/* translators: 1: engine mode 2: quality 3: speed 4: schedule status 5: upload conversion status */
+						__( 'Current mode: Engine %1$s, Quality %2$d, Speed %3$d, Schedule %4$s, Upload conversion %5$s', 'avif-local-support' ),
+						$engine_mode,
+						(int) ( $settings['quality'] ?? 83 ),
+						(int) ( $settings['speed'] ?? 0 ),
+						$schedule_enabled ? __( 'On', 'avif-local-support' ) : __( 'Off', 'avif-local-support' ),
+						$convert_on_upload ? __( 'On', 'avif-local-support' ) : __( 'Off', 'avif-local-support' )
+					)
+				);
+				?>
+			</p>
 			<table id="avif-local-support-stats" class="widefat striped">
 				<tbody>
 					<tr>
@@ -160,44 +175,6 @@ $last_run_processed = isset( $last_run['processed'] ) ? (int) $last_run['process
 				</span>
 			</div>
 
-			<p class="description avif-current-mode">
-				<strong><?php esc_html_e( 'Current mode:', 'avif-local-support' ); ?></strong>
-				<?php
-				echo esc_html(
-					sprintf(
-						/* translators: 1: engine mode 2: quality 3: speed 4: schedule status 5: upload conversion status */
-						__( 'Engine %1$s, Quality %2$d, Speed %3$d, Schedule %4$s, Upload conversion %5$s', 'avif-local-support' ),
-						$engine_mode,
-						(int) ( $settings['quality'] ?? 83 ),
-						(int) ( $settings['speed'] ?? 0 ),
-						$schedule_enabled ? __( 'On', 'avif-local-support' ) : __( 'Off', 'avif-local-support' ),
-						$convert_on_upload ? __( 'On', 'avif-local-support' ) : __( 'Off', 'avif-local-support' )
-					)
-				);
-				?>
-			</p>
-
-			<table class="widefat striped avif-last-run-table">
-				<tbody>
-					<tr>
-						<th scope="row"><?php esc_html_e( 'Last AVIF run', 'avif-local-support' ); ?></th>
-						<td>
-							<?php echo esc_html( 'none' !== $last_run_status ? $last_run_status : __( 'No runs recorded', 'avif-local-support' ) ); ?>
-							<?php if ( $last_run_started > 0 ) : ?>
-								<div class="description"><?php echo esc_html( wp_date( 'Y-m-d H:i:s', $last_run_started ) ); ?></div>
-							<?php endif; ?>
-						</td>
-					</tr>
-					<tr>
-						<th scope="row"><?php esc_html_e( 'Last run finished', 'avif-local-support' ); ?></th>
-						<td><?php echo esc_html( $last_run_ended > 0 ? wp_date( 'Y-m-d H:i:s', $last_run_ended ) : '-' ); ?></td>
-					</tr>
-					<tr>
-						<th scope="row"><?php esc_html_e( 'Files processed', 'avif-local-support' ); ?></th>
-						<td><?php echo esc_html( (string) $last_run_processed ); ?></td>
-					</tr>
-				</tbody>
-			</table>
 		</section>
 
 			<section class="avif-tools-section avif-tools-section-playground">
@@ -373,6 +350,27 @@ $last_run_processed = isset( $last_run['processed'] ) ? (int) $last_run['process
 				}
 				?>
 			</div>
+		</section>
+
+		<section class="avif-tools-section">
+			<h3><?php esc_html_e( 'Conversion Insights', 'avif-local-support' ); ?></h3>
+			<p class="description"><?php esc_html_e( 'Live run health and queue details for AVIF conversion.', 'avif-local-support' ); ?></p>
+			<table class="widefat striped">
+				<tbody>
+					<tr><th scope="row"><?php esc_html_e( 'Current status', 'avif-local-support' ); ?></th><td id="avif-local-support-insight-status">-</td></tr>
+					<tr><th scope="row"><?php esc_html_e( 'Run started', 'avif-local-support' ); ?></th><td id="avif-local-support-insight-started">-</td></tr>
+					<tr><th scope="row"><?php esc_html_e( 'Last heartbeat', 'avif-local-support' ); ?></th><td id="avif-local-support-insight-heartbeat">-</td></tr>
+					<tr><th scope="row"><?php esc_html_e( 'Progress', 'avif-local-support' ); ?></th><td id="avif-local-support-insight-progress">-</td></tr>
+					<tr><th scope="row"><?php esc_html_e( 'Conversion throughput', 'avif-local-support' ); ?></th><td id="avif-local-support-insight-throughput">-</td></tr>
+					<tr><th scope="row"><?php esc_html_e( 'ETA', 'avif-local-support' ); ?></th><td id="avif-local-support-insight-eta">-</td></tr>
+					<tr><th scope="row"><?php esc_html_e( 'Output quality summary', 'avif-local-support' ); ?></th><td id="avif-local-support-insight-quality">-</td></tr>
+					<tr><th scope="row"><?php esc_html_e( 'Result counters', 'avif-local-support' ); ?></th><td id="avif-local-support-insight-results">-</td></tr>
+					<tr><th scope="row"><?php esc_html_e( 'Size impact', 'avif-local-support' ); ?></th><td id="avif-local-support-insight-size">-</td></tr>
+					<tr><th scope="row"><?php esc_html_e( 'Job health', 'avif-local-support' ); ?></th><td id="avif-local-support-insight-health">-</td></tr>
+					<tr><th scope="row"><?php esc_html_e( 'Queue state', 'avif-local-support' ); ?></th><td id="avif-local-support-insight-queue">-</td></tr>
+					<tr><th scope="row"><?php esc_html_e( 'Last error', 'avif-local-support' ); ?></th><td id="avif-local-support-insight-error">-</td></tr>
+				</tbody>
+			</table>
 		</section>
 
 		<section class="avif-tools-section">

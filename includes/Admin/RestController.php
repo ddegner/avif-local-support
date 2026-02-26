@@ -309,11 +309,15 @@ final class RestController
 
 	public function conversionState(\WP_REST_Request $request): \WP_REST_Response
 	{
+		$nextOnDemand = \wp_next_scheduled('aviflosu_run_on_demand');
+		$nextDaily = \wp_next_scheduled('aviflosu_daily_event');
 		return rest_ensure_response(
 			array(
 				'active' => $this->converter->isConversionJobActive(),
 				'state' => $this->converter->getConversionJobState(),
 				'last_run' => $this->converter->getLastRunSummary(),
+				'next_on_demand' => $nextOnDemand ? (int) $nextOnDemand : 0,
+				'next_daily' => $nextDaily ? (int) $nextDaily : 0,
 			)
 		);
 	}

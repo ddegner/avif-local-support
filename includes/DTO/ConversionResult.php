@@ -15,19 +15,22 @@ final class ConversionResult {
 	public bool $success;
 	public ?string $error;
 	public ?string $suggestion;
+	public array $details;
 
 	public function __construct(
 		bool $success,
 		?string $error = null,
-		?string $suggestion = null
+		?string $suggestion = null,
+		array $details = array()
 	) {
 		$this->success    = $success;
 		$this->error      = $error;
 		$this->suggestion = $suggestion;
+		$this->details    = $details;
 	}
 
-	public static function success(): self {
-		return new self( true );
+	public static function success( array $details = array() ): self {
+		return new self( true, null, null, $details );
 	}
 
 	public static function failure( string $error, ?string $suggestion = null ): self {

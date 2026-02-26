@@ -330,7 +330,7 @@ final class Converter {
 						// Invalidate file existence cache for this path so Support class sees the new file.
 						$this->invalidateFileCache( $avifPath );
 						$this->log_conversion( 'success', $sourcePath, $avifPath, $engineUsed, $start_time, null, $logDetails, $referenceJpegPath );
-						return ConversionResult::success();
+						return ConversionResult::success( $logDetails );
 					}
 
 				$lastResult = $result;
@@ -503,6 +503,89 @@ final class Converter {
 			largerRetryQualityStep: $settings->largerRetryQualityStep,
 			maxDimension: $settings->maxDimension
 		);
+	}
+
+	/**
+	 * Process a single JPEG candidate and return normalized job counters.
+	 *
+	 * @return array<string,int|string>
+	 */
+	private function processJpegCandidate( string $jpegPath ): array {
+		$stats = array(
+			'processed'             => 0,
+			'existing'              => 0,
+			'created'               => 0,
+			'errors'                => 0,
+			'failed_validation'     => 0,
+			'larger_than_source'    => 0,
+			'bytes_jpeg_compared'   => 0,
+			'bytes_avif_generated'  => 0,
+			'retry_quality_sum'     => 0,
+			'retry_quality_count'   => 0,
+			'last_error'            => '',
+		);
+
+		if ( '' === $jpegPath || ! file_exists( $jpegPath ) || ! preg_match( '/\.(jpe?g)$/i', $jpegPath ) ) {
+			return $stats;
+		}
+
+		$stats['processed'] = 1;
+		$jpegSize           = $this->getPositiveFileSize( $jpegPath );
+		$avifPath           = (string) preg_replace( '/\.(jpe?g)$/i', '.avif', $jpegPath );
+		$hadAvif            = ( '' !== $avifPath && file_exists( $avifPath ) && $this->getPositiveFileSize( $avifPath ) > 0 );
+		if ( $hadAvif ) {
+			$stats['existing'] = 1;
+			return $stats;
+		}
+
+		$result = $this->checkMissingAvif( $jpegPath );
+		if ( $result && $result->success ) {
+			$stats['created'] = 1;
+			$details          = is_array( $result->details ) ? $result->details : array();
+			$avifSize         = $this->getPositiveFileSize( $avifPath );
+			if ( $jpegSize > 0 ) {
+				$stats['bytes_jpeg_compared'] = $jpegSize;
+			}
+			if ( $avifSize > 0 ) {
+				$stats['bytes_avif_generated'] = $avifSize;
+			}
+			if ( ! empty( $details['larger_than_source'] ) ) {
+				$stats['larger_than_source'] = 1;
+			}
+			if ( isset( $details['larger_file_final_quality'] ) ) {
+				$stats['retry_quality_sum']   = (int) $details['larger_file_final_quality'];
+				$stats['retry_quality_count'] = 1;
+			}
+			return $stats;
+		}
+
+		if ( $result && ! $result->success ) {
+			$stats['errors'] = 1;
+			$errorMessage    = (string) ( $result->error ?? '' );
+			$stats['last_error'] = $errorMessage;
+			if ( false !== stripos( $errorMessage, 'failed validation' ) ) {
+				$stats['failed_validation'] = 1;
+			}
+		}
+
+		return $stats;
+	}
+
+	/**
+	 * Merge per-file stats into running job stats.
+	 *
+	 * @param array<string,int|string> $jobStats
+	 * @param array<string,int|string> $fileStats
+	 */
+	private function mergeJobStats( array &$jobStats, array $fileStats ): void {
+		foreach ( array( 'processed', 'existing', 'created', 'errors', 'failed_validation', 'larger_than_source', 'bytes_jpeg_compared', 'bytes_avif_generated', 'retry_quality_sum', 'retry_quality_count' ) as $key ) {
+			$jobStats[ $key ] = (int) ( $jobStats[ $key ] ?? 0 ) + (int) ( $fileStats[ $key ] ?? 0 );
+		}
+
+		$lastError = (string) ( $fileStats['last_error'] ?? '' );
+		if ( '' !== $lastError ) {
+			$jobStats['last_error'] = $lastError;
+		}
 	}
 
 	/**
@@ -755,17 +838,25 @@ final class Converter {
 	/**
 	 * Shared: Convert original and generated size JPEGs found in attachment metadata.
 	 */
-	private function convertFromMetadata( array $metadata, string $baseDir ): void {
+	private function convertFromMetadata( array $metadata, string $baseDir, ?array &$jobStats = null ): void {
 		if ( ! empty( $metadata['file'] ) && is_string( $metadata['file'] ) ) {
 			$originalPath = $baseDir . $metadata['file'];
-			$this->checkMissingAvif( $originalPath );
+			if ( is_array( $jobStats ) ) {
+				$this->mergeJobStats( $jobStats, $this->processJpegCandidate( $originalPath ) );
+			} else {
+				$this->checkMissingAvif( $originalPath );
+			}
 		}
 		if ( ! empty( $metadata['sizes'] ) && is_array( $metadata['sizes'] ) ) {
 			$relativeDir = $this->getMetadataDir( $metadata );
 			foreach ( $metadata['sizes'] as $sizeData ) {
 				if ( ! empty( $sizeData['file'] ) ) {
 					$sizePath = $baseDir . trailingslashit( $relativeDir ) . $sizeData['file'];
-					$this->checkMissingAvif( $sizePath );
+					if ( is_array( $jobStats ) ) {
+						$this->mergeJobStats( $jobStats, $this->processJpegCandidate( $sizePath ) );
+					} else {
+						$this->checkMissingAvif( $sizePath );
+					}
 				}
 			}
 		}
@@ -847,6 +938,16 @@ final class Converter {
 				'processed'   => 0,
 				'attachments' => 0,
 				'uploads'     => 0,
+				'created'     => 0,
+				'existing'    => 0,
+				'errors'      => 0,
+				'failed_validation' => 0,
+				'larger_than_source' => 0,
+				'bytes_jpeg_compared' => 0,
+				'bytes_avif_generated' => 0,
+				'retry_quality_sum' => 0,
+				'retry_quality_count' => 0,
+				'last_error'  => '',
 			),
 			false
 		);
@@ -902,6 +1003,19 @@ final class Converter {
 		$status = 'completed';
 		$count = 0;
 		$uploadsCount = 0;
+		$jobStats = array(
+			'processed'             => 0,
+			'existing'              => 0,
+			'created'               => 0,
+			'errors'                => 0,
+			'failed_validation'     => 0,
+			'larger_than_source'    => 0,
+			'bytes_jpeg_compared'   => 0,
+			'bytes_avif_generated'  => 0,
+			'retry_quality_sum'     => 0,
+			'retry_quality_count'   => 0,
+			'last_error'            => '',
+		);
 
 		try {
 			$query = new \WP_Query(
@@ -932,28 +1046,38 @@ final class Converter {
 				if ( ! $this->isJpegMime( get_post_mime_type( $attachmentId ) ) ) {
 					continue;
 				}
-				$path = get_attached_file( $attachmentId );
-				if ( $path ) {
-					$this->checkMissingAvif( $path );
+					$path = get_attached_file( $attachmentId );
+					if ( $path ) {
+						$this->mergeJobStats( $jobStats, $this->processJpegCandidate( (string) $path ) );
+					}
+					$meta = wp_get_attachment_metadata( $attachmentId );
+					if ( $meta ) {
+						$this->convertGeneratedSizesForce( $meta, $attachmentId, $jobStats );
+					}
+					++$count;
+					$this->updateConversionJobState(
+						array(
+							'attachments' => $count,
+							'processed'   => $count + $uploadsCount,
+							'created'     => (int) $jobStats['created'],
+							'existing'    => (int) $jobStats['existing'],
+							'errors'      => (int) $jobStats['errors'],
+							'failed_validation' => (int) $jobStats['failed_validation'],
+							'larger_than_source' => (int) $jobStats['larger_than_source'],
+							'bytes_jpeg_compared' => (int) $jobStats['bytes_jpeg_compared'],
+							'bytes_avif_generated' => (int) $jobStats['bytes_avif_generated'],
+							'retry_quality_sum' => (int) $jobStats['retry_quality_sum'],
+							'retry_quality_count' => (int) $jobStats['retry_quality_count'],
+							'last_error'  => (string) $jobStats['last_error'],
+						)
+					);
 				}
-				$meta = wp_get_attachment_metadata( $attachmentId );
-				if ( $meta ) {
-					$this->convertGeneratedSizesForce( $meta, $attachmentId );
-				}
-				++$count;
-				$this->updateConversionJobState(
-					array(
-						'attachments' => $count,
-						'processed'   => $count + $uploadsCount,
-					)
-				);
-			}
 
-			if ( 'stopped' !== $status ) {
-				$uploadsCount = $this->scanUploadsJpegsIfMissingAvif( $count, $cli );
-				$currentState = $this->getConversionJobState();
-				if ( 'stopped' === (string) ( $currentState['status'] ?? '' ) ) {
-					$status = 'stopped';
+				if ( 'stopped' !== $status ) {
+					$uploadsCount = $this->scanUploadsJpegsIfMissingAvif( $count, $cli, $jobStats );
+					$currentState = $this->getConversionJobState();
+					if ( 'stopped' === (string) ( $currentState['status'] ?? '' ) ) {
+						$status = 'stopped';
 				}
 			}
 
@@ -976,14 +1100,24 @@ final class Converter {
 		} finally {
 			$this->endConversionJob(
 				$status,
-				array(
-					'attachments' => $count,
-					'uploads'     => $uploadsCount,
-					'processed'   => $count + $uploadsCount,
-				)
-			);
+					array(
+						'attachments' => $count,
+						'uploads'     => $uploadsCount,
+						'processed'   => $count + $uploadsCount,
+						'created'     => (int) $jobStats['created'],
+						'existing'    => (int) $jobStats['existing'],
+						'errors'      => (int) $jobStats['errors'],
+						'failed_validation' => (int) $jobStats['failed_validation'],
+						'larger_than_source' => (int) $jobStats['larger_than_source'],
+						'bytes_jpeg_compared' => (int) $jobStats['bytes_jpeg_compared'],
+						'bytes_avif_generated' => (int) $jobStats['bytes_avif_generated'],
+						'retry_quality_sum' => (int) $jobStats['retry_quality_sum'],
+						'retry_quality_count' => (int) $jobStats['retry_quality_count'],
+						'last_error'  => (string) $jobStats['last_error'],
+					)
+				);
+			}
 		}
-	}
 
 	/**
 	 * Scan wp-content/uploads recursively and convert any JPEG without a matching AVIF.
@@ -993,7 +1127,7 @@ final class Converter {
 	 * @param bool $cli Whether the scan is running in WP-CLI context.
 	 * @return int Number of JPEG files scanned in uploads.
 	 */
-	private function scanUploadsJpegsIfMissingAvif( int $startingCount, bool $cli ): int {
+	private function scanUploadsJpegsIfMissingAvif( int $startingCount, bool $cli, array &$jobStats ): int {
 		$uploadDir = wp_upload_dir();
 		$baseDir   = trailingslashit( (string) ( $uploadDir['basedir'] ?? '' ) );
 		if ( '' === $baseDir || ! is_dir( $baseDir ) ) {
@@ -1044,20 +1178,30 @@ final class Converter {
 			}
 			$seen[ $realPath ] = true;
 
-			$this->checkMissingAvif( $realPath );
-			++$count;
-			$this->updateConversionJobState(
-				array(
-					'uploads'   => $count,
-					'processed' => $startingCount + $count,
-				)
-			);
-		}
+				$this->mergeJobStats( $jobStats, $this->processJpegCandidate( $realPath ) );
+				++$count;
+				$this->updateConversionJobState(
+					array(
+						'uploads'   => $count,
+						'processed' => $startingCount + $count,
+						'created'     => (int) $jobStats['created'],
+						'existing'    => (int) $jobStats['existing'],
+						'errors'      => (int) $jobStats['errors'],
+						'failed_validation' => (int) $jobStats['failed_validation'],
+						'larger_than_source' => (int) $jobStats['larger_than_source'],
+						'bytes_jpeg_compared' => (int) $jobStats['bytes_jpeg_compared'],
+						'bytes_avif_generated' => (int) $jobStats['bytes_avif_generated'],
+						'retry_quality_sum' => (int) $jobStats['retry_quality_sum'],
+						'retry_quality_count' => (int) $jobStats['retry_quality_count'],
+						'last_error' => (string) $jobStats['last_error'],
+					)
+				);
+			}
 
 		return $count;
 	}
 
-	private function convertGeneratedSizesForce( array $metadata, int $attachmentId ): void {
+	private function convertGeneratedSizesForce( array $metadata, int $attachmentId, ?array &$jobStats = null ): void {
 		if ( ! $this->isJpegMime( get_post_mime_type( $attachmentId ) ) ) {
 			return;
 		}
@@ -1065,7 +1209,7 @@ final class Converter {
 		$baseDir   = trailingslashit( $uploadDir['basedir'] ?? '' );
 
 		// De-duped: convert original and sizes via shared helper
-		$this->convertFromMetadata( $metadata, $baseDir );
+		$this->convertFromMetadata( $metadata, $baseDir, $jobStats );
 	}
 
 	/**

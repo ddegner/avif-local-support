@@ -237,6 +237,19 @@
   margin: 0;
 }
 
+.avif-log-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 10px;
+}
+
+.avif-log-chip.is-active {
+  background: #2271b1;
+  border-color: #2271b1;
+  color: #fff;
+}
+
 .avif-logs-container {
   max-height: 400px;
   overflow-y: auto;
@@ -269,8 +282,36 @@
 }
 
 .avif-log-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
   font-weight: 600;
   margin-bottom: 4px;
+}
+
+.avif-log-file {
+  font-family: Consolas, Monaco, monospace;
+}
+
+.avif-log-meta {
+  font-size: 11px;
+  color: #8c8f94;
+  font-weight: 500;
+}
+
+.avif-log-meta.is-smaller {
+  color: #3c434a;
+}
+
+.avif-log-meta.is-larger {
+  color: #b32d2e;
+}
+
+.avif-log-time {
+  margin-left: auto;
+  font-weight: 400;
+  color: #666;
 }
 
 .avif-log-status.error {
@@ -291,6 +332,38 @@
   color: #666;
   font-family: Consolas, Monaco, monospace;
   line-height: 1.4;
+}
+
+.avif-log-links {
+  margin: 4px 0 6px;
+  font-size: 12px;
+}
+
+.avif-log-links a {
+  text-decoration: none;
+}
+
+.avif-logs-compact .avif-log-entry {
+  padding: 7px 10px;
+}
+
+.avif-logs-compact .avif-log-header {
+  cursor: pointer;
+  margin-bottom: 0;
+}
+
+.avif-logs-compact .avif-log-message,
+.avif-logs-compact .avif-log-links,
+.avif-logs-compact .avif-log-suggestion,
+.avif-logs-compact .avif-log-details {
+  display: none;
+}
+
+.avif-logs-compact .avif-log-entry.is-expanded .avif-log-message,
+.avif-logs-compact .avif-log-entry.is-expanded .avif-log-links,
+.avif-logs-compact .avif-log-entry.is-expanded .avif-log-suggestion,
+.avif-logs-compact .avif-log-entry.is-expanded .avif-log-details {
+  display: block;
 }
 
 .avif-log-suggestion {

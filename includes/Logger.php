@@ -115,14 +115,61 @@ final class Logger {
 
 			$timeDisplay = $timestamp > 0 ? wp_date( 'Y-m-d H:i:s', $timestamp ) : '-';
 
-			echo '<div class="avif-log-entry ' . esc_attr( $status ) . '" data-status="' . esc_attr( $status ) . '">';
+			$sourceSize = isset( $details['source_size'] ) ? (int) $details['source_size'] : 0;
+			$targetSize = isset( $details['target_size'] ) ? (int) $details['target_size'] : 0;
+			$sourceFile = isset( $details['source_file'] ) ? (string) $details['source_file'] : '';
+			$targetFile = isset( $details['target_file'] ) ? (string) $details['target_file'] : '';
+			$engineUsed = isset( $details['engine_used'] ) ? (string) $details['engine_used'] : '';
+			$sizeDeltaPct = null;
+			if ( 'success' === $status && $sourceSize > 0 && $targetSize >= 0 ) {
+				$sizeDeltaPct = round( ( ( $targetSize - $sourceSize ) / $sourceSize ) * 100, 1 );
+			}
+
+			$searchText = strtolower( trim( implode( ' ', array_filter( array( $message, $sourceFile, $targetFile, $engineUsed, (string) ( $details['error'] ?? '' ) ) ) ) ) );
+
+			$sourceUrl = ( isset( $details['source_url'] ) && is_string( $details['source_url'] ) ) ? $details['source_url'] : '';
+			$targetUrl = ( isset( $details['target_url'] ) && is_string( $details['target_url'] ) ) ? $details['target_url'] : '';
+
+			$hasAvifContext = isset( $details['quality'] )
+				|| isset( $details['speed'] )
+				|| isset( $details['engine_used'] )
+				|| isset( $details['source_file'] )
+				|| isset( $details['target_file'] );
+			$qualityUsed = isset( $details['quality'] ) ? (int) $details['quality'] : (int) get_option( 'aviflosu_quality', 85 );
+			$speedUsed   = isset( $details['speed'] ) ? (int) $details['speed'] : (int) get_option( 'aviflosu_speed', 1 );
+
+			echo '<div class="avif-log-entry ' . esc_attr( $status ) . '" data-status="' . esc_attr( $status ) . '" data-filename="' . esc_attr( strtolower( $sourceFile ) ) . '" data-search="' . esc_attr( $searchText ) . '">';
 			echo '  <div class="avif-log-header">';
-			echo '    <span class="avif-log-status ' . esc_attr( $status ) . '">' . esc_html( strtoupper( $status ) ) . '</span>';
-			echo '    - ' . esc_html( $timeDisplay );
+			$statusLabel = strtoupper( $status );
+			echo '    <span class="avif-log-status ' . esc_attr( $status ) . '">' . esc_html( $statusLabel ) . '</span>';
+			if ( '' !== $sourceFile ) {
+				echo '    <span class="avif-log-file">' . esc_html( $sourceFile ) . '</span>';
+			}
+			$metaBits = array();
+			$metaClass = 'avif-log-meta';
+			if ( null !== $sizeDeltaPct ) {
+				$deltaPrefix = $sizeDeltaPct > 0 ? '+' : '';
+				$metaBits[] = $deltaPrefix . number_format( $sizeDeltaPct, 1, '.', '' ) . '%';
+				if ( $sizeDeltaPct > 0 ) {
+					$metaClass .= ' is-larger';
+				} elseif ( $sizeDeltaPct < 0 ) {
+					$metaClass .= ' is-smaller';
+				}
+			}
+			if ( $hasAvifContext ) {
+				$metaBits[] = 'q=' . $qualityUsed;
+				$metaBits[] = 's=' . $speedUsed;
+			}
+			if ( ! empty( $metaBits ) ) {
+				echo '    <span class="' . esc_attr( $metaClass ) . '">' . esc_html( implode( ' ', $metaBits ) ) . '</span>';
+			}
+			echo '    <span class="avif-log-time">' . esc_html( $timeDisplay ) . '</span>';
 			echo '  </div>';
 			echo '  <div class="avif-log-message">' . esc_html( $message ) . '</div>';
 
 			if ( ! empty( $details ) ) {
+				unset( $details['source_url'], $details['target_url'] );
+
 				// Highlight suggestion if present
 				if ( isset( $details['error_suggestion'] ) ) {
 					echo '<div class="avif-log-suggestion">';
@@ -135,7 +182,15 @@ final class Logger {
 				foreach ( $details as $key => $value ) {
 					if ( is_scalar( $value ) ) {
 						$displayValue = is_bool( $value ) ? ( $value ? 'true' : 'false' ) : (string) $value;
-						echo '<div><strong>' . esc_html( $key ) . ':</strong> ' . esc_html( $displayValue ) . '</div>';
+						echo '<div><strong>' . esc_html( $key ) . ':</strong> ';
+						if ( 'source_file' === $key && '' !== $sourceUrl ) {
+							echo '<a href="' . esc_url( $sourceUrl ) . '" target="_blank" rel="noopener">' . esc_html( $displayValue ) . '</a>';
+						} elseif ( 'target_file' === $key && '' !== $targetUrl ) {
+							echo '<a href="' . esc_url( $targetUrl ) . '" target="_blank" rel="noopener">' . esc_html( $displayValue ) . '</a>';
+						} else {
+							echo esc_html( $displayValue );
+						}
+						echo '</div>';
 					}
 				}
 				echo '</div>';

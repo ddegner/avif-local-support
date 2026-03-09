@@ -276,6 +276,26 @@ final class Support {
 			if ( ! ( $img instanceof \DOMElement ) ) {
 				continue;
 			}
+
+			// Rewrite parent <a> href from JPEG to AVIF for lightbox compatibility.
+			// This must run before the isInsidePicture check because images that were
+			// already wrapped in <picture> by the wrapAttachment filter (e.g. from
+			// wp_get_attachment_image) may still be inside an <a> that needs rewriting.
+			$ancestor = $img->parentNode;
+			while ( $ancestor instanceof \DOMElement ) {
+				if ( 'a' === strtolower( $ancestor->nodeName ) ) {
+					$href = (string) $ancestor->getAttribute( 'href' );
+					if ( preg_match( '/\.(jpe?g)$/i', $href ) ) {
+						$avifHref = $this->avifUrlFor( $href );
+						if ( $avifHref ) {
+							$ancestor->setAttribute( 'href', $avifHref );
+						}
+					}
+					break;
+				}
+				$ancestor = $ancestor->parentNode;
+			}
+
 			if ( $this->isInsidePicture( $img ) ) {
 				continue;
 			}
@@ -294,19 +314,6 @@ final class Support {
 
 			if ( ! $avifUrl && ! $thumbhash ) {
 				continue;
-			}
-
-			// Check if the image is wrapped in a link to a JPEG that also has an AVIF version.
-			$parent = $img->parentNode;
-			if ( $parent instanceof \DOMElement && strtolower( $parent->nodeName ) === 'a' ) {
-				$href = (string) $parent->getAttribute( 'href' );
-				// Only process if href looks like a JPEG
-				if ( preg_match( '/\.(jpe?g)$/i', $href ) ) {
-					$avifHref = $this->avifUrlFor( $href );
-					if ( $avifHref ) {
-						$parent->setAttribute( 'href', $avifHref );
-					}
-				}
 			}
 
 			$srcset     = (string) $img->getAttribute( 'srcset' );

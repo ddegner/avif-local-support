@@ -3,7 +3,7 @@ Contributors: ddegner
 Tags: avif, images, performance, media, optimization
 Requires at least: 6.8
 Tested up to: 6.9
-Stable tag: 0.6.2
+Stable tag: 0.6.3
 Requires PHP: 8.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -210,6 +210,10 @@ LiteSpeed's open_basedir restriction prevents PHP from detecting executables out
 4. **About** — Quick reference and version info
 
 ## Changelog
+
+### 0.6.3
+
+- Fix: Lightbox/slideshow links now correctly rewrite from JPEG to AVIF when the image was already wrapped in a `<picture>` element by another plugin (e.g. photo-collage). Previously the `<a>` href rewriting was skipped for images inside `<picture>`, causing lightboxes to load full-size JPEGs instead of AVIFs.
 
 ### 0.6.2
 

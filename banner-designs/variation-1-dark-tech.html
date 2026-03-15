@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>V1 — Weightless</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', 'SF Pro Display', system-ui, -apple-system, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 80px;
+    padding: 120px;
+    background: #07080d;
+    background-image:
+      radial-gradient(ellipse 2000px 1200px at 50% 50%, rgba(99, 102, 241, 0.03) 0%, transparent 70%);
+  }
+
+  .banner {
+    width: 1544px;
+    height: 500px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    background: #07080d;
+  }
+
+  .banner::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 800px 600px at 68% 50%, rgba(99, 102, 241, 0.06) 0%, transparent 55%),
+      radial-gradient(ellipse 400px 300px at 30% 65%, rgba(56, 189, 248, 0.03) 0%, transparent 50%);
+  }
+
+  .left-content {
+    position: relative;
+    z-index: 2;
+    flex: 0 0 700px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 60px 70px;
+    gap: 24px;
+  }
+
+  .eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .eyebrow-icon { width: 30px; height: 30px; }
+
+  .eyebrow-text {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: #818cf8;
+  }
+
+  .headline {
+    font-size: 56px;
+    font-weight: 800;
+    line-height: 1.05;
+    color: #f8fafc;
+    letter-spacing: -2px;
+  }
+
+  .headline .thin {
+    font-weight: 300;
+    color: #94a3b8;
+  }
+
+  .subline {
+    font-size: 17px;
+    color: #64748b;
+    line-height: 1.6;
+    max-width: 440px;
+  }
+
+  .pills {
+    display: flex;
+    gap: 10px;
+    margin-top: 4px;
+  }
+
+  .pill {
+    padding: 7px 16px;
+    border-radius: 100px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #a5b4fc;
+    border: 1px solid rgba(129, 140, 248, 0.2);
+    background: rgba(99, 102, 241, 0.06);
+    white-space: nowrap;
+  }
+
+  /* Right: abstract dissolution — dense mass breaking into light particles */
+  .right-content {
+    position: relative;
+    z-index: 2;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .abstract-visual {
+    width: 500px;
+    height: 420px;
+    position: relative;
+  }
+
+  /* ===== ICON ===== */
+  .icon-section { text-align: center; }
+  .icon-section h2 { color: #f1f5f9; font-size: 18px; margin-bottom: 24px; font-weight: 500; }
+
+  .icon-box {
+    width: 256px;
+    height: 256px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #07080d;
+    background-image: radial-gradient(ellipse at 50% 50%, rgba(99, 102, 241, 0.06) 0%, transparent 70%);
+  }
+</style>
+</head>
+<body>
+
+<div class="banner">
+  <div class="left-content">
+    <div class="eyebrow">
+      <svg class="eyebrow-icon" viewBox="0 0 30 30" fill="none">
+        <path d="M15 3L27 10V20L15 27L3 20V10L15 3Z" stroke="#818cf8" stroke-width="1.5" fill="rgba(99,102,241,0.06)"/>
+        <circle cx="15" cy="15" r="3" fill="#818cf8" opacity="0.5"/>
+      </svg>
+      <span class="eyebrow-text">AVIF Local Support</span>
+    </div>
+    <div class="headline">
+      Half the weight.<br><span class="thin">All the beauty.</span>
+    </div>
+    <div class="subline">
+      Your images, converted and served in next-gen AVIF — entirely on your own server. No subscriptions. Nothing lost.
+    </div>
+    <div class="pills">
+      <span class="pill">Local Processing</span>
+      <span class="pill">Quality Preserved</span>
+      <span class="pill">Photos Respected</span>
+      <span class="pill">LQIP ThumbHash</span>
+    </div>
+  </div>
+
+  <div class="right-content">
+    <svg class="abstract-visual" viewBox="0 0 500 420" fill="none">
+      <defs>
+        <linearGradient id="g1" x1="0" y1="0" x2="500" y2="420">
+          <stop offset="0%" stop-color="#818cf8"/>
+          <stop offset="100%" stop-color="#38bdf8"/>
+        </linearGradient>
+        <linearGradient id="g2" x1="100" y1="100" x2="400" y2="350">
+          <stop offset="0%" stop-color="#6366f1" stop-opacity="0.4"/>
+          <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.1"/>
+        </linearGradient>
+        <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#818cf8" stop-opacity="0.15"/>
+          <stop offset="100%" stop-color="#818cf8" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+
+      <!-- Ambient glow behind the dense cluster — stronger -->
+      <ellipse cx="150" cy="210" rx="130" ry="140" fill="url(#glow)"/>
+      <ellipse cx="160" cy="200" rx="80" ry="90" fill="#6366f1" opacity="0.04"/>
+
+      <!-- Dense cluster (the "heavy" — tightly packed, more vibrant) -->
+      <rect x="95" y="130" width="55" height="55" rx="5" fill="#6366f1" opacity="0.32" transform="rotate(8 122 157)"/>
+      <rect x="128" y="150" width="50" height="50" rx="5" fill="#818cf8" opacity="0.26" transform="rotate(-5 153 175)"/>
+      <rect x="85" y="170" width="60" height="60" rx="5" fill="#6366f1" opacity="0.22" transform="rotate(12 115 200)"/>
+      <rect x="118" y="195" width="45" height="45" rx="4" fill="#818cf8" opacity="0.28" transform="rotate(-3 140 217)"/>
+      <rect x="138" y="135" width="40" height="40" rx="4" fill="#a5b4fc" opacity="0.18" transform="rotate(15 158 155)"/>
+      <rect x="78" y="148" width="48" height="48" rx="4" fill="#6366f1" opacity="0.2" transform="rotate(-10 102 172)"/>
+      <rect x="105" y="210" width="52" height="52" rx="5" fill="#818cf8" opacity="0.15" transform="rotate(6 131 236)"/>
+      <rect x="145" y="185" width="38" height="38" rx="4" fill="#a5b4fc" opacity="0.14" transform="rotate(-8 164 204)"/>
+      <rect x="70" y="195" width="42" height="42" rx="4" fill="#6366f1" opacity="0.16" transform="rotate(18 91 216)"/>
+
+      <!-- Transition zone: shapes getting smaller, more spaced -->
+      <rect x="195" y="125" width="30" height="30" rx="4" fill="#818cf8" opacity="0.24" transform="rotate(20 210 140)"/>
+      <rect x="215" y="185" width="26" height="26" rx="3" fill="#a5b4fc" opacity="0.2" transform="rotate(-15 228 198)"/>
+      <rect x="205" y="245" width="24" height="24" rx="3" fill="#6366f1" opacity="0.18" transform="rotate(30 217 257)"/>
+      <rect x="232" y="148" width="20" height="20" rx="3" fill="#818cf8" opacity="0.18" transform="rotate(45 242 158)"/>
+      <rect x="238" y="215" width="22" height="22" rx="3" fill="#a5b4fc" opacity="0.15" transform="rotate(-25 249 226)"/>
+      <rect x="255" y="170" width="18" height="18" rx="3" fill="#6366f1" opacity="0.16" transform="rotate(35 264 179)"/>
+      <rect x="225" y="270" width="16" height="16" rx="3" fill="#818cf8" opacity="0.12" transform="rotate(-12 233 278)"/>
+
+      <!-- Dispersed particles (the "light" — scattered, more visible) -->
+      <rect x="285" y="95" width="16" height="16" rx="3" fill="#818cf8" opacity="0.25" transform="rotate(35 293 103)"/>
+      <rect x="315" y="155" width="14" height="14" rx="3" fill="#a5b4fc" opacity="0.22" transform="rotate(-20 322 162)"/>
+      <rect x="335" y="105" width="12" height="12" rx="2" fill="#38bdf8" opacity="0.2" transform="rotate(50 341 111)"/>
+      <rect x="305" y="235" width="13" height="13" rx="2" fill="#818cf8" opacity="0.18" transform="rotate(15 311 241)"/>
+      <rect x="355" y="195" width="11" height="11" rx="2" fill="#a5b4fc" opacity="0.22" transform="rotate(-40 360 200)"/>
+      <rect x="365" y="135" width="10" height="10" rx="2" fill="#38bdf8" opacity="0.24" transform="rotate(60 370 140)"/>
+      <rect x="345" y="265" width="12" height="12" rx="2" fill="#818cf8" opacity="0.15" transform="rotate(25 351 271)"/>
+      <rect x="295" y="170" width="10" height="10" rx="2" fill="#6366f1" opacity="0.16" transform="rotate(-30 300 175)"/>
+      <rect x="330" y="280" width="9" height="9" rx="2" fill="#a5b4fc" opacity="0.12" transform="rotate(42 334 284)"/>
+
+      <!-- Fine particles -->
+      <rect x="395" y="115" width="8" height="8" rx="2" fill="#38bdf8" opacity="0.26" transform="rotate(45 399 119)"/>
+      <rect x="405" y="175" width="7" height="7" rx="1.5" fill="#a5b4fc" opacity="0.22" transform="rotate(-30 408 178)"/>
+      <rect x="415" y="245" width="8" height="8" rx="2" fill="#818cf8" opacity="0.18" transform="rotate(70 419 249)"/>
+      <rect x="425" y="145" width="6" height="6" rx="1.5" fill="#38bdf8" opacity="0.28" transform="rotate(20 428 148)"/>
+      <rect x="435" y="205" width="7" height="7" rx="1.5" fill="#a5b4fc" opacity="0.2" transform="rotate(-55 438 208)"/>
+      <rect x="385" y="280" width="6" height="6" rx="1.5" fill="#818cf8" opacity="0.14" transform="rotate(38 388 283)"/>
+      <rect x="410" y="290" width="5" height="5" rx="1" fill="#38bdf8" opacity="0.16" transform="rotate(-18 412 292)"/>
+
+      <!-- Finest dust — still visible -->
+      <rect x="450" y="130" width="5" height="5" rx="1" fill="#38bdf8" opacity="0.3" transform="rotate(55 452 132)"/>
+      <rect x="455" y="170" width="4" height="4" rx="1" fill="#a5b4fc" opacity="0.24" transform="rotate(-25 457 172)"/>
+      <rect x="460" y="220" width="5" height="5" rx="1" fill="#818cf8" opacity="0.2" transform="rotate(40 462 222)"/>
+      <rect x="448" y="260" width="4" height="4" rx="1" fill="#38bdf8" opacity="0.18" transform="rotate(68 450 262)"/>
+      <rect x="468" y="150" width="3" height="3" rx="1" fill="#a5b4fc" opacity="0.26" transform="rotate(15 469 151)"/>
+      <rect x="472" y="195" width="4" height="4" rx="1" fill="#38bdf8" opacity="0.22" transform="rotate(-50 474 197)"/>
+      <rect x="465" y="280" width="3" height="3" rx="1" fill="#818cf8" opacity="0.16" transform="rotate(32 466 281)"/>
+      <rect x="478" y="240" width="3" height="3" rx="1" fill="#a5b4fc" opacity="0.2" transform="rotate(-70 479 241)"/>
+
+      <!-- Subtle directional lines suggesting the flow — slightly more visible -->
+      <line x1="175" y1="200" x2="465" y2="170" stroke="url(#g1)" stroke-width="0.6" opacity="0.08"/>
+      <line x1="170" y1="220" x2="455" y2="210" stroke="url(#g1)" stroke-width="0.5" opacity="0.06"/>
+      <line x1="165" y1="185" x2="470" y2="150" stroke="url(#g1)" stroke-width="0.4" opacity="0.04"/>
+    </svg>
+  </div>
+</div>
+
+<!-- ICON -->
+<div class="icon-section">
+  <h2>Icon (256 x 256)</h2>
+  <div class="icon-box">
+    <svg width="200" height="200" viewBox="0 0 200 200" fill="none">
+      <defs>
+        <radialGradient id="iglow" cx="45%" cy="48%" r="45%">
+          <stop offset="0%" stop-color="#818cf8" stop-opacity="0.18"/>
+          <stop offset="60%" stop-color="#6366f1" stop-opacity="0.06"/>
+          <stop offset="100%" stop-color="#818cf8" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <ellipse cx="95" cy="95" rx="70" ry="70" fill="url(#iglow)"/>
+      <!-- 3 squares — dissolution, well-centered, strong enough for small sizes -->
+      <rect x="12" y="12" width="112" height="112" rx="14" fill="#6366f1" opacity="0.5" transform="rotate(8 68 68)"/>
+      <rect x="45" y="42" width="98" height="98" rx="12" fill="#818cf8" opacity="0.42" transform="rotate(-5 94 91)"/>
+      <rect x="75" y="70" width="85" height="85" rx="10" fill="#a5b4fc" opacity="0.35" transform="rotate(12 117 112)"/>
+      <!-- Subtle edge highlights for depth -->
+      <rect x="12" y="12" width="112" height="112" rx="14" fill="none" stroke="#818cf8" stroke-width="0.8" opacity="0.15" transform="rotate(8 68 68)"/>
+      <rect x="45" y="42" width="98" height="98" rx="12" fill="none" stroke="#a5b4fc" stroke-width="0.6" opacity="0.12" transform="rotate(-5 94 91)"/>
+      <rect x="75" y="70" width="85" height="85" rx="10" fill="none" stroke="#c7d2fe" stroke-width="0.5" opacity="0.1" transform="rotate(12 117 112)"/>
+    </svg>
+  </div>
+</div>
+
+</body>
+</html>

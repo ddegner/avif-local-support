@@ -37,5 +37,8 @@ node_modules
 *.sql
 *.tar.gz
 *.zip
+.claude
 .cursor
+banner-designs
+CLAUDE.md
 cursor.md

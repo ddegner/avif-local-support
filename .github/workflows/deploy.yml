@@ -1,4 +1,4 @@
-name: Deploy to WordPress.org
+name: Publish Stable Package and Release
 on:
   push:
     tags:
@@ -8,35 +8,42 @@ concurrency:
   group: wporg-svn-${{ github.repository }}
   cancel-in-progress: false
 
+permissions:
+  contents: write
+
 jobs:
-  tag:
-    name: New tag
+  publish:
+    name: Build package, publish release, and deploy to WordPress.org
     if: ${{ !startsWith(github.ref_name, 'beta-') }}
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@master
+    - uses: actions/checkout@v4
 
     - name: Generate readme.txt
       uses: tarosky/workflows/actions/wp-readme@main
 
-    - name: Build Release Zip
+    - name: Build stable package (ZIP)
       run: |
+        set -euo pipefail
+        package="avif-local-support"
         mkdir -p _build/avif-local-support
         grep -vE '^(#|$)' .distignore > .rsync_ignore
         rsync -rc --exclude-from=.rsync_ignore . _build/avif-local-support/
         cd _build
-        zip -r ../avif-local-support.zip avif-local-support
+        zip -r "../${package}.zip" avif-local-support
         cd ..
-        rm -rf _build
+        rm -rf _build .rsync_ignore
+        echo "PACKAGE=${package}" >> "$GITHUB_ENV"
 
-    - name: Create Release
+    - name: Create GitHub release record
       uses: softprops/action-gh-release@v1
       with:
-        files: avif-local-support.zip
+        files: ${{ env.PACKAGE }}.zip
+        fail_on_unmatched_files: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: WordPress Plugin Deploy
+    - name: Deploy package to WordPress.org
       uses: 10up/action-wordpress-plugin-deploy@stable
       env:
         SVN_USERNAME: ${{ secrets.SVN_USERNAME }}

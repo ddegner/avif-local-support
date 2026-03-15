@@ -121,10 +121,14 @@ function aviflosu_activate(): void
 
 function aviflosu_deactivate(): void
 {
-	// Clear any scheduled events created by this plugin
+	// Clear any scheduled events created by this plugin.
 	\wp_clear_scheduled_hook('aviflosu_daily_event');
 	\wp_clear_scheduled_hook('aviflosu_run_on_demand');
 	\delete_transient('aviflosu_stop_lqip_generation');
+
+	// Clear file existence cache so stale positive entries don't persist
+	// across deactivation/reactivation cycles if AVIF files are deleted while inactive.
+	\delete_transient('aviflosu_file_cache');
 }
 
 register_activation_hook(__FILE__, 'aviflosu_activate');

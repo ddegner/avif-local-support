@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   build:
-    name: Build beta ZIP
+    name: Build beta package and publish prerelease
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,7 +25,7 @@ jobs:
       - name: Generate readme.txt
         uses: tarosky/workflows/actions/wp-readme@main
 
-      - name: Build beta ZIP
+      - name: Build beta package (ZIP)
         run: |
           set -euo pipefail
           short_sha="${GITHUB_SHA::7}"
@@ -43,7 +43,7 @@ jobs:
           echo "PACKAGE=${package}" >> "$GITHUB_ENV"
           echo "BETA_TAG=${beta_tag}" >> "$GITHUB_ENV"
 
-      - name: Upload beta artifact
+      - name: Upload beta package artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.PACKAGE }}
@@ -51,7 +51,7 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      - name: Create beta prerelease
+      - name: Create beta GitHub release record
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ env.BETA_TAG }}

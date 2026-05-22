@@ -49,10 +49,14 @@ final class Diagnostics
 			'cli_will_attempt' => false,
 			'imagick_will_attempt' => false,
 			'gd_will_attempt' => false,
+			'wordpress_avif_upload_allowed' => false,
+			'wordpress_avif_editor_supported' => false,
+			'wordpress_avif_mime_registered' => false,
 			'avif_support_level' => 'no',
 			'avif_support' => false,
 		);
 
+		$status = array_merge($status, $this->getWordPressAvifStatus());
 		$this->detectImagickSupport($status);
 		$this->detectGdSupport($status);
 		$this->detectCliSupport($status);
@@ -81,6 +85,24 @@ final class Diagnostics
 		}
 
 		return $out;
+	}
+
+	/**
+	 * Detect WordPress core AVIF handling support.
+	 *
+	 * @return array{wordpress_avif_upload_allowed: bool, wordpress_avif_editor_supported: bool, wordpress_avif_mime_registered: bool}
+	 */
+	public function getWordPressAvifStatus(): array
+	{
+		$mimeTypes = function_exists('wp_get_mime_types') ? wp_get_mime_types() : array();
+		$allowedMimes = function_exists('get_allowed_mime_types') ? get_allowed_mime_types() : array();
+
+		return array(
+			'wordpress_avif_upload_allowed' => isset($allowedMimes['avif']) && 'image/avif' === $allowedMimes['avif'],
+			'wordpress_avif_editor_supported' => function_exists('wp_image_editor_supports')
+				&& (bool) wp_image_editor_supports(array('mime_type' => 'image/avif')),
+			'wordpress_avif_mime_registered' => isset($mimeTypes['avif']) && 'image/avif' === $mimeTypes['avif'],
+		);
 	}
 
 	/**

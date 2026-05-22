@@ -141,6 +141,67 @@ class CLI {
 	}
 
 	/**
+	 * Scan the uploads folder for orphan JPEGs (not in Media Library) and convert them.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--dry-run]
+	 * : Classify candidates without converting.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp avif scan-files --dry-run
+	 *     wp avif scan-files
+	 *
+	 * @subcommand scan-files
+	 * @when after_wp_load
+	 *
+	 * @param array<int, string>    $args Positional arguments.
+	 * @param array<string, string> $assoc_args Associative arguments.
+	 */
+	public function scan_files( array $args, array $assoc_args ): void {
+		$scanner = new FilesystemScanner( $this->converter );
+		$dryRun  = isset( $assoc_args['dry-run'] );
+
+		if ( $dryRun ) {
+			$result = $scanner->preview();
+			\WP_CLI::line( '' );
+			\WP_CLI::line( \WP_CLI::colorize( '%B-- Filesystem Scan (dry run) --%n' ) );
+			\WP_CLI::line( sprintf( 'Found:             %d', (int) ( $result['found'] ?? 0 ) ) );
+			\WP_CLI::line( sprintf( 'Already have AVIF: %d', (int) ( $result['already_have_avif'] ?? 0 ) ) );
+			\WP_CLI::line( sprintf( 'Will convert:      %d', (int) ( $result['will_convert'] ?? 0 ) ) );
+			\WP_CLI::line( '' );
+			if ( ! empty( $result['skipped'] ) ) {
+				\WP_CLI::line( \WP_CLI::colorize( '%B-- Skipped directories --%n' ) );
+				foreach ( $result['skipped'] as $row ) {
+					\WP_CLI::line( sprintf( '  %s  [%s]', $row['dir'], $row['reason'] ) );
+				}
+				\WP_CLI::line( '' );
+			}
+			if ( ! empty( $result['sample'] ) ) {
+				\WP_CLI::line( \WP_CLI::colorize( '%B-- Sample candidates --%n' ) );
+				foreach ( $result['sample'] as $path ) {
+					\WP_CLI::line( '  ' . $path );
+				}
+				\WP_CLI::line( '' );
+			}
+			return;
+		}
+
+		\WP_CLI::line( 'Starting filesystem scan of uploads folder...' );
+		$scanner->run();
+		$progress = $scanner->progress();
+		\WP_CLI::success(
+			sprintf(
+				'Scan complete. Scanned: %d, converted: %d, skipped: %d.',
+				(int) ( $progress['scanned'] ?? 0 ),
+				(int) ( $progress['converted'] ?? 0 ),
+				(int) ( $progress['skipped'] ?? 0 )
+			)
+		);
+	}
+
+	/**
 	 * Show AVIF conversion statistics.
 	 *
 	 * ## OPTIONS

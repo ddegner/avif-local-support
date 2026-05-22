@@ -2,8 +2,8 @@
 Contributors: ddegner
 Tags: avif, images, performance, media, optimization
 Requires at least: 6.8
-Tested up to: 6.9
-Stable tag: 0.6.3
+Tested up to: 7.0
+Stable tag: 0.6.4
 Requires PHP: 8.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -210,6 +210,12 @@ LiteSpeed's open_basedir restriction prevents PHP from detecting executables out
 4. **About** — Quick reference and version info
 
 ## Changelog
+
+### 0.6.4
+
+- Feature: Added a filesystem scanner for JPEGs under uploads that are not represented in the Media Library, including WP-CLI and admin Tools support.
+- Enhancement: Added WordPress AVIF compatibility diagnostics to `wp avif status --format=json` and Site Health debug data.
+- Chore: Confirmed WordPress 7.0 compatibility and hardened production package exclusions for development metadata.
 
 ### 0.6.3
 

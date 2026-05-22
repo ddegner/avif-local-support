@@ -23,15 +23,17 @@ final class Plugin {
 	private Diagnostics $diagnostics;
 	private Settings $settings;
 	private RestController $restController;
+	private FilesystemScanner $filesystemScanner;
 
 	public function __construct() {
-		$this->support          = new Support();
-		$this->backgroundImages = new BackgroundImages();
-		$this->converter        = new Converter();
-		$this->logger           = new Logger();
-		$this->diagnostics      = new Diagnostics();
-		$this->settings         = new Settings( $this->diagnostics );
-		$this->restController   = new RestController( $this->converter, $this->logger, $this->diagnostics );
+		$this->support           = new Support();
+		$this->backgroundImages  = new BackgroundImages();
+		$this->converter         = new Converter();
+		$this->logger            = new Logger();
+		$this->diagnostics       = new Diagnostics();
+		$this->settings          = new Settings( $this->diagnostics );
+		$this->filesystemScanner = new FilesystemScanner( $this->converter );
+		$this->restController    = new RestController( $this->converter, $this->logger, $this->diagnostics, $this->filesystemScanner );
 		$this->converter->set_plugin( $this );
 	}
 
@@ -42,6 +44,7 @@ final class Plugin {
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_assets' ) );
 		add_action( 'rest_api_init', array( $this->restController, 'register' ) );
 		add_filter( 'plugin_action_links_' . plugin_basename( \AVIFLOSU_PLUGIN_FILE ), array( $this, 'add_settings_link' ) );
+		add_filter( 'debug_information', array( $this, 'add_debug_information' ) );
 		add_action( 'admin_post_aviflosu_upload_test', array( $this, 'handle_upload_test' ) );
 		add_action( 'admin_post_aviflosu_reset_defaults', array( $this, 'handle_reset_defaults' ) );
 
@@ -58,6 +61,9 @@ final class Plugin {
 
 		// Always init converter so schedule/on-demand are available.
 		$this->converter->init();
+
+		// Register filesystem scanner cron hook.
+		$this->filesystemScanner->init();
 
 		// Allow AVIF uploads.
 		add_filter(
@@ -390,6 +396,34 @@ final class Plugin {
 		$settings_link = sprintf( '<a href="%s">%s</a>', esc_url( admin_url( 'options-general.php?page=avif-local-support' ) ), __( 'Settings', 'avif-local-support' ) );
 		array_unshift( $links, $settings_link );
 		return $links;
+	}
+
+	public function add_debug_information( array $debug_info ): array {
+		$wp_avif = $this->diagnostics->getWordPressAvifStatus();
+
+		$debug_info['avif-local-support'] = array(
+			'label'  => __( 'AVIF Local Support', 'avif-local-support' ),
+			'fields' => array(
+				'wordpress_avif_upload_allowed'   => array(
+					'label' => __( 'WordPress allows AVIF uploads', 'avif-local-support' ),
+					'value' => $this->format_debug_boolean( (bool) $wp_avif['wordpress_avif_upload_allowed'] ),
+				),
+				'wordpress_avif_editor_supported' => array(
+					'label' => __( 'WordPress image editor supports AVIF', 'avif-local-support' ),
+					'value' => $this->format_debug_boolean( (bool) $wp_avif['wordpress_avif_editor_supported'] ),
+				),
+				'wordpress_avif_mime_registered'  => array(
+					'label' => __( 'WordPress registers the AVIF MIME type', 'avif-local-support' ),
+					'value' => $this->format_debug_boolean( (bool) $wp_avif['wordpress_avif_mime_registered'] ),
+				),
+			),
+		);
+
+		return $debug_info;
+	}
+
+	private function format_debug_boolean( bool $value ): string {
+		return $value ? __( 'Yes', 'avif-local-support' ) : __( 'No', 'avif-local-support' );
 	}
 
 	/**

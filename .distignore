@@ -2,6 +2,7 @@
 .babelrc
 .distignore
 .DS_Store
+**/.DS_Store
 .editorconfig
 .eslintignore
 .eslintrc
@@ -12,6 +13,7 @@
 .gitlab-ci.yml
 .travis.yml
 .vscode
+.wordpress-org
 Thumbs.db
 behat.yml
 bin
@@ -38,7 +40,9 @@ node_modules
 *.tar.gz
 *.zip
 .claude
+.claude/
 .cursor
+.github/
 banner-designs
 CLAUDE.md
 cursor.md

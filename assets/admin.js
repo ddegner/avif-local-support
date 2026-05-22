@@ -247,6 +247,150 @@
       });
     }
 
+    // Filesystem scanner (orphan JPEGs)
+    var fsRunBtn = document.querySelector('#aviflosu-fs-scan-run');
+    var fsStopBtn = document.querySelector('#aviflosu-fs-scan-stop');
+    var fsResult = document.querySelector('#aviflosu-fs-scan-result');
+    var fsSpinner = document.querySelector('#aviflosu-fs-scan-spinner');
+    var fsStatus = document.querySelector('#aviflosu-fs-scan-status');
+    var fsProgress = document.querySelector('#aviflosu-fs-scan-progress');
+    var fsScanned = document.querySelector('#aviflosu-fs-scan-scanned');
+    var fsConverted = document.querySelector('#aviflosu-fs-scan-converted');
+    var fsAlreadyHad = document.querySelector('#aviflosu-fs-scan-already-had');
+    var fsFailed = document.querySelector('#aviflosu-fs-scan-failed');
+    var fsStatTotal = document.querySelector('#aviflosu-fs-scan-stat-total');
+    var fsStatWith = document.querySelector('#aviflosu-fs-scan-stat-with');
+    var fsStatWithout = document.querySelector('#aviflosu-fs-scan-stat-without');
+    var fsSkippedDirsOut = document.querySelector('#aviflosu-fs-scan-skipped-dirs');
+    var fsPollTimer = null;
+
+    function fsStopPolling() {
+      if (fsPollTimer) { window.clearInterval(fsPollTimer); fsPollTimer = null; }
+      toggleHidden(fsStopBtn, true);
+      if (fsSpinner) fsSpinner.classList.remove('is-active');
+      if (fsRunBtn) fsRunBtn.disabled = false;
+    }
+
+    function fsEscape(s) {
+      return String(s).replace(/[&<>"']/g, function (c) {
+        return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+      });
+    }
+
+    function fsLoadStats() {
+      return apiFetch({ path: '/aviflosu/v1/filesystem-scan/preview', method: 'POST' })
+        .then(function (data) {
+          if (fsStatTotal) fsStatTotal.textContent = String(data.found || 0);
+          if (fsStatWith) fsStatWith.textContent = String(data.already_have_avif || 0);
+          if (fsStatWithout) fsStatWithout.textContent = String(data.will_convert || 0);
+          return data;
+        })
+        .catch(function () {
+          if (fsStatTotal) fsStatTotal.textContent = '-';
+          if (fsStatWith) fsStatWith.textContent = '-';
+          if (fsStatWithout) fsStatWithout.textContent = '-';
+        });
+    }
+
+    function fsRenderSkippedDirs(dirs) {
+      if (!fsSkippedDirsOut) return;
+      if (!dirs || !dirs.length) {
+        fsSkippedDirsOut.innerHTML = '';
+        toggleHidden(fsSkippedDirsOut, true);
+        return;
+      }
+      var parts = ['<details><summary><strong>Skipped directories (' + dirs.length + ')</strong></summary><ul>'];
+      dirs.forEach(function (s) {
+        parts.push('<li><code>' + fsEscape(s.dir || '(root)') + '</code> — ' + fsEscape(s.reason) + '</li>');
+      });
+      parts.push('</ul></details>');
+      fsSkippedDirsOut.innerHTML = parts.join('');
+      toggleHidden(fsSkippedDirsOut, false);
+    }
+
+    if ((fsStatTotal || fsStatWith || fsStatWithout) && typeof AVIFLocalSupportData !== 'undefined') {
+      fsLoadStats();
+    }
+
+    if (fsStopBtn && typeof AVIFLocalSupportData !== 'undefined') {
+      fsStopBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        fsStopBtn.disabled = true;
+        apiFetch({ path: '/aviflosu/v1/stop-convert', method: 'POST' })
+          .then(function () { if (fsStatus) fsStatus.textContent = 'Scan stopped.'; })
+          .catch(function () { if (fsStatus) fsStatus.textContent = 'Could not stop scan.'; })
+          .finally(function () { fsStopPolling(); fsStopBtn.disabled = false; });
+      });
+    }
+
+    if (fsRunBtn && typeof AVIFLocalSupportData !== 'undefined') {
+      fsRunBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        fsRunBtn.disabled = true;
+        toggleHidden(fsResult, false);
+        toggleHidden(fsSkippedDirsOut, true);
+        if (fsSpinner) fsSpinner.classList.add('is-active');
+        if (fsStatus) fsStatus.textContent = 'Starting filesystem scan...';
+        toggleHidden(fsProgress, false);
+        toggleHidden(fsStopBtn, false);
+
+        apiFetch({ path: '/aviflosu/v1/filesystem-scan/run', method: 'POST' })
+          .then(function () {
+            var prevScanned = -1;
+            var unchangedTicks = 0;
+            var MAX_UNCHANGED_TICKS = 40;
+            var MAX_DURATION_MS = 30 * 60 * 1000;
+            var startTime = Date.now();
+
+            function tick() {
+              apiFetch({ path: '/aviflosu/v1/filesystem-scan/progress', method: 'GET' })
+                .then(function (data) {
+                  var scanned = data.scanned || 0;
+                  var converted = data.converted || 0;
+                  var alreadyHad = data.already_had || 0;
+                  var failed = data.failed || 0;
+                  if (fsScanned) fsScanned.textContent = String(scanned);
+                  if (fsConverted) fsConverted.textContent = String(converted);
+                  if (fsAlreadyHad) fsAlreadyHad.textContent = String(alreadyHad);
+                  if (fsFailed) fsFailed.textContent = String(failed);
+
+                  if (data.done) {
+                    if (fsStatus) {
+                      fsStatus.textContent = 'Scan complete. Converted ' + converted +
+                        '. Already had AVIF: ' + alreadyHad +
+                        (failed ? '. Failed: ' + failed : '') + '.';
+                    }
+                    fsRenderSkippedDirs(data.skipped_dirs || []);
+                    fsLoadStats();
+                    fsStopPolling();
+                    return;
+                  }
+                  if (fsStatus) fsStatus.textContent = 'Scanning uploads folder...';
+
+                  if (scanned === prevScanned) {
+                    unchangedTicks++;
+                  } else {
+                    unchangedTicks = 0;
+                    prevScanned = scanned;
+                  }
+                  if (unchangedTicks >= MAX_UNCHANGED_TICKS || (Date.now() - startTime) > MAX_DURATION_MS) {
+                    if (fsStatus) fsStatus.textContent = 'Scan is continuing in the background.';
+                    fsStopPolling();
+                  }
+                })
+                .catch(function () { });
+            }
+            if (fsPollTimer) window.clearInterval(fsPollTimer);
+            fsPollTimer = window.setInterval(tick, 1500);
+            tick();
+          })
+          .catch(function () {
+            if (fsStatus) fsStatus.textContent = 'Could not start scan.';
+            fsStopPolling();
+          });
+      });
+    }
+
     // LQIP tools
     var lqipTotalEl = document.querySelector('#aviflosu-thumbhash-total');
     var lqipWithEl = document.querySelector('#aviflosu-thumbhash-with');

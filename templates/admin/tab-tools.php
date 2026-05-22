@@ -149,6 +149,53 @@ $auto_first_label   = match ( $auto_first_attempt ) {
 			</div>
 		</section>
 
+		<section class="avif-tools-section">
+			<h3><?php esc_html_e( 'AVIF Tools (Filesystem)', 'avif-local-support' ); ?></h3>
+			<p class="description">
+				<?php esc_html_e( 'Covers JPEGs under /wp-content/uploads/ that are not in the Media Library — for example page builder caches, direct FTP uploads, or legacy imports. Useful if "Generate Missing AVIF" above leaves images unconverted. Privacy-sensitive folders (form plugins, backups) are skipped.', 'avif-local-support' ); ?>
+			</p>
+
+			<table id="aviflosu-fs-scan-stats" class="widefat striped">
+				<tbody>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'JPEG Files', 'avif-local-support' ); ?></th>
+						<td><span id="aviflosu-fs-scan-stat-total">-</span></td>
+					</tr>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'With AVIF', 'avif-local-support' ); ?></th>
+						<td><span id="aviflosu-fs-scan-stat-with">-</span></td>
+					</tr>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Without AVIF', 'avif-local-support' ); ?></th>
+						<td><span id="aviflosu-fs-scan-stat-without">-</span></td>
+					</tr>
+				</tbody>
+			</table>
+
+			<div class="avif-actions-row">
+				<button type="button" class="button button-primary" id="aviflosu-fs-scan-run"><?php esc_html_e( 'Generate Missing AVIF (Filesystem)', 'avif-local-support' ); ?></button>
+				<button type="button" class="button hidden" id="aviflosu-fs-scan-stop"><?php esc_html_e( 'Stop', 'avif-local-support' ); ?></button>
+			</div>
+
+			<div id="aviflosu-fs-scan-result" class="avif-result-row hidden">
+				<span class="spinner" id="aviflosu-fs-scan-spinner"></span>
+				<span id="aviflosu-fs-scan-status" class="description"></span>
+				<span id="aviflosu-fs-scan-progress" class="description hidden">
+					<strong><?php esc_html_e( 'Progress:', 'avif-local-support' ); ?></strong>
+					<?php esc_html_e( 'scanned', 'avif-local-support' ); ?>
+					<span id="aviflosu-fs-scan-scanned">0</span>
+					| <?php esc_html_e( 'converted', 'avif-local-support' ); ?>
+					<span id="aviflosu-fs-scan-converted">0</span>
+					| <?php esc_html_e( 'already had AVIF', 'avif-local-support' ); ?>
+					<span id="aviflosu-fs-scan-already-had">0</span>
+					| <?php esc_html_e( 'failed', 'avif-local-support' ); ?>
+					<span id="aviflosu-fs-scan-failed">0</span>
+				</span>
+			</div>
+
+			<div id="aviflosu-fs-scan-skipped-dirs" class="hidden" style="margin-top:10px;"></div>
+		</section>
+
 			<section class="avif-tools-section">
 				<h3><?php esc_html_e( 'AVIF Settings Playground', 'avif-local-support' ); ?></h3>
 				<p class="description">

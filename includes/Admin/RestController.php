@@ -7,6 +7,7 @@ namespace Ddegner\AvifLocalSupport\Admin;
 use Ddegner\AvifLocalSupport\Converter;
 use Ddegner\AvifLocalSupport\Diagnostics;
 use Ddegner\AvifLocalSupport\DTO\AvifSettings;
+use Ddegner\AvifLocalSupport\FilesystemScanner;
 use Ddegner\AvifLocalSupport\ImageMagickCli;
 use Ddegner\AvifLocalSupport\Logger;
 
@@ -27,12 +28,14 @@ final class RestController
 	private Converter $converter;
 	private Logger $logger;
 	private Diagnostics $diagnostics;
+	private FilesystemScanner $filesystemScanner;
 
-	public function __construct(Converter $converter, Logger $logger, Diagnostics $diagnostics)
+	public function __construct(Converter $converter, Logger $logger, Diagnostics $diagnostics, FilesystemScanner $filesystemScanner)
 	{
 		$this->converter = $converter;
 		$this->logger = $logger;
 		$this->diagnostics = $diagnostics;
+		$this->filesystemScanner = $filesystemScanner;
 	}
 
 	/**
@@ -220,6 +223,37 @@ final class RestController
 				'callback' => array($this, 'thumbhashDeleteAll'),
 			)
 		);
+
+		// Filesystem scanner (orphan JPEGs under uploads/).
+		register_rest_route(
+			self::NAMESPACE ,
+			'/filesystem-scan/preview',
+			array(
+				'methods' => 'POST',
+				'permission_callback' => array($this, 'permissionManageOptions'),
+				'callback' => array($this, 'filesystemScanPreview'),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE ,
+			'/filesystem-scan/run',
+			array(
+				'methods' => 'POST',
+				'permission_callback' => array($this, 'permissionManageOptions'),
+				'callback' => array($this, 'filesystemScanRun'),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE ,
+			'/filesystem-scan/progress',
+			array(
+				'methods' => 'GET',
+				'permission_callback' => array($this, 'permissionManageOptions'),
+				'callback' => array($this, 'filesystemScanProgress'),
+			)
+		);
 	}
 
 	public function permissionManageOptions(): bool
@@ -253,7 +287,35 @@ final class RestController
 			\wp_unschedule_event($timestamp, 'aviflosu_run_on_demand');
 		}
 
+		// Also unschedule any pending filesystem scan.
+		$fsTimestamp = \wp_next_scheduled('aviflosu_run_filesystem_scan');
+		if ($fsTimestamp) {
+			\wp_unschedule_event($fsTimestamp, 'aviflosu_run_filesystem_scan');
+		}
+
 		return rest_ensure_response(array('stopped' => true));
+	}
+
+	public function filesystemScanPreview(\WP_REST_Request $request): \WP_REST_Response
+	{
+		return rest_ensure_response($this->filesystemScanner->preview());
+	}
+
+	public function filesystemScanRun(\WP_REST_Request $request): \WP_REST_Response
+	{
+		\delete_transient('aviflosu_stop_conversion');
+		$queued = false;
+		if (!\wp_next_scheduled('aviflosu_run_filesystem_scan')) {
+			\wp_schedule_single_event(time() + 5, 'aviflosu_run_filesystem_scan');
+			$this->filesystemScanner->markQueued();
+			$queued = true;
+		}
+		return rest_ensure_response(array('queued' => $queued));
+	}
+
+	public function filesystemScanProgress(\WP_REST_Request $request): \WP_REST_Response
+	{
+		return rest_ensure_response($this->filesystemScanner->progress());
 	}
 
 	public function deleteAllAvifs(\WP_REST_Request $request): \WP_REST_Response

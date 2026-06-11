@@ -142,9 +142,7 @@ $auto_first_label   = match ( $auto_first_attempt ) {
 				<span class="spinner" id="avif-local-support-spinner"></span>
 				<span id="avif-local-support-status" class="description"></span>
 				<span id="avif-local-support-convert-progress" class="description hidden">
-					<strong><?php esc_html_e( 'Progress:', 'avif-local-support' ); ?></strong>
 					<span id="avif-local-support-progress-avifs">0</span> / <span id="avif-local-support-progress-jpegs">0</span>
-					<?php esc_html_e( 'AVIF files created', 'avif-local-support' ); ?>
 				</span>
 			</div>
 		</section>
@@ -181,19 +179,18 @@ $auto_first_label   = match ( $auto_first_attempt ) {
 				<span class="spinner" id="aviflosu-fs-scan-spinner"></span>
 				<span id="aviflosu-fs-scan-status" class="description"></span>
 				<span id="aviflosu-fs-scan-progress" class="description hidden">
-					<strong><?php esc_html_e( 'Progress:', 'avif-local-support' ); ?></strong>
 					<?php esc_html_e( 'scanned', 'avif-local-support' ); ?>
 					<span id="aviflosu-fs-scan-scanned">0</span>
-					| <?php esc_html_e( 'converted', 'avif-local-support' ); ?>
+					· <?php esc_html_e( 'converted', 'avif-local-support' ); ?>
 					<span id="aviflosu-fs-scan-converted">0</span>
-					| <?php esc_html_e( 'already had AVIF', 'avif-local-support' ); ?>
+					· <?php esc_html_e( 'already had AVIF', 'avif-local-support' ); ?>
 					<span id="aviflosu-fs-scan-already-had">0</span>
-					| <?php esc_html_e( 'failed', 'avif-local-support' ); ?>
+					· <?php esc_html_e( 'failed', 'avif-local-support' ); ?>
 					<span id="aviflosu-fs-scan-failed">0</span>
 				</span>
 			</div>
 
-			<div id="aviflosu-fs-scan-skipped-dirs" class="hidden" style="margin-top:10px;"></div>
+			<div id="aviflosu-fs-scan-skipped-dirs" class="hidden"></div>
 		</section>
 
 			<section class="avif-tools-section">
@@ -317,7 +314,7 @@ $auto_first_label   = match ( $auto_first_attempt ) {
 
 			<div class="avif-actions-row">
 				<button type="button" id="aviflosu-thumbhash-generate" class="button button-primary"><?php esc_html_e( 'Generate Missing LQIPs', 'avif-local-support' ); ?></button>
-				<button type="button" id="aviflosu-thumbhash-stop" class="button hidden"><?php esc_html_e( 'Stop LQIP Generation', 'avif-local-support' ); ?></button>
+				<button type="button" id="aviflosu-thumbhash-stop" class="button hidden"><?php esc_html_e( 'Stop', 'avif-local-support' ); ?></button>
 				<button type="button" id="aviflosu-thumbhash-delete" class="button button-secondary"><?php esc_html_e( 'Delete All LQIPs', 'avif-local-support' ); ?></button>
 			</div>
 
@@ -325,9 +322,7 @@ $auto_first_label   = match ( $auto_first_attempt ) {
 				<span class="spinner" id="aviflosu-thumbhash-spinner"></span>
 				<span id="aviflosu-thumbhash-status" class="description"></span>
 				<span id="aviflosu-thumbhash-progress" class="description hidden">
-					<strong><?php esc_html_e( 'Progress:', 'avif-local-support' ); ?></strong>
 					<span id="aviflosu-thumbhash-progress-with">0</span> / <span id="aviflosu-thumbhash-progress-total">0</span>
-					<?php esc_html_e( 'LQIP created', 'avif-local-support' ); ?>
 				</span>
 			</div>
 		</section>

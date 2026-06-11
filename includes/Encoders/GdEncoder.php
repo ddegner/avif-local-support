@@ -95,7 +95,8 @@ class GdEncoder implements AvifEncoderInterface {
 
 		imagedestroy( $gd );
 
-		if ( $success && file_exists( $destination ) ) {
+		// Same 512-byte validity threshold as the CLI and Imagick encoders.
+		if ( $success && file_exists( $destination ) && filesize( $destination ) > 512 ) {
 			return ConversionResult::success();
 		}
 

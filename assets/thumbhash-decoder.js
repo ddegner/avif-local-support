@@ -77,12 +77,14 @@
             q_ac = readAC(3, 3, q_scale * 1.25),
             a_ac = hasAlpha ? readAC(5, 5, a_scale) : null;
 
-        // Calculate dimensions from header (inline aspect ratio calc)
+        // Calculate dimensions from header. The aspect ratio is lx/ly using the
+        // raw (unclamped) coefficient counts, per the reference implementation's
+        // thumbHashToApproximateAspectRatio().
         var alpha = hasAlpha,
             landscape = isLandscape,
             _lx = landscape ? (alpha ? 5 : 7) : (h16 & 7),
             _ly = landscape ? (h16 & 7) : (alpha ? 5 : 7),
-            ratio = (landscape ? 32 : _lx) / (landscape ? _ly : 32),
+            ratio = _lx / _ly,
             w = round(ratio > 1 ? 32 : 32 * ratio),
             h = round(ratio > 1 ? 32 / ratio : 32),
             rgba = new Uint8Array(w * h * 4),
@@ -193,23 +195,26 @@
         if (!url) return;
 
         var el = img.closest('picture') || img,
+            isPicture = el.tagName === 'PICTURE',
             s = el.style;
 
         s.backgroundImage = 'url(' + url + ')';
         s.backgroundSize = 'cover';
         s.backgroundPosition = 'center';
         s.backgroundRepeat = 'no-repeat';
-        if (el.tagName === 'PICTURE') s.display = 'block';
+        if (el.classList) el.classList.add('thumbhash-bg');
+        if (isPicture) s.display = 'block';
 
         function clearBackground() {
             s.backgroundImage = s.backgroundSize = s.backgroundPosition = s.backgroundRepeat = '';
-            if (el.tagName === 'PICTURE') s.display = '';
+            if (el.classList) el.classList.remove('thumbhash-bg');
+            if (isPicture) s.display = '';
         }
 
         function startFade() {
             // Slow load - fade in the image, then clear the LQIP background
             // Remove the loading class to trigger opacity 0 -> 1 transition (400ms)
-            if (el.classList) el.classList.remove('thumbhash-loading');
+            if (isPicture && el.classList) el.classList.remove('thumbhash-loading');
             // Clear background after image is fully visible (transition complete)
             setTimeout(clearBackground, 420);
         }
@@ -217,7 +222,7 @@
         function doInstantReveal() {
             // Fast load - disable CSS transition and show immediately
             img.style.transition = 'none';
-            if (el.classList) el.classList.remove('thumbhash-loading');
+            if (isPicture && el.classList) el.classList.remove('thumbhash-loading');
             clearBackground();
         }
 
@@ -236,8 +241,10 @@
             return;
         }
 
-        // Image still loading - add the class to hide it behind placeholder
-        if (el.classList) el.classList.add('thumbhash-loading');
+        // Image still loading - hide it behind the placeholder. Only when the
+        // background sits on an ancestor (<picture>): opacity:0 on a bare img
+        // would hide its own background placeholder too.
+        if (isPicture && el.classList) el.classList.add('thumbhash-loading');
 
         function onReady() {
             // Skip fade animation if page loaded recently (within 2 seconds)

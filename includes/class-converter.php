@@ -21,6 +21,21 @@ final class Converter {
 
 	private const JPEG_MIMES = array( 'image/jpeg', 'image/jpg' );
 
+	/**
+	 * Cron hook that runs one slice of the bulk conversion scan.
+	 */
+	public const ON_DEMAND_HOOK = 'aviflosu_run_on_demand';
+
+	/**
+	 * Stop flag shared with FilesystemScanner so one Stop button halts both.
+	 */
+	public const STOP_TRANSIENT = 'aviflosu_stop_conversion';
+
+	/**
+	 * Resume cursor for the batched conversion scan.
+	 */
+	private const CURSOR_TRANSIENT = 'aviflosu_convert_cursor';
+
 	private ?Plugin $plugin = null;
 	private ?Logger $logger = null;
 
@@ -147,17 +162,48 @@ final class Converter {
 	}
 
 	public function run_daily_scan(): void {
+		// Both scans run as batched background jobs; queue them instead of
+		// processing the whole library inside this single cron request.
 		if ( (bool) get_option( 'aviflosu_convert_via_schedule', true ) ) {
-			$this->convertAllJpegsIfMissingAvif();
+			self::queueScan();
 		}
 		if ( (bool) get_option( 'aviflosu_lqip_generate_via_schedule', true ) && ThumbHash::isEnabled() ) {
-			ThumbHash::generateAll();
+			// Small offset so both encoding chains don't start at the same moment.
+			ThumbHash::queueGenerateAll( 30 );
 		}
 	}
 
+	/**
+	 * Queue a bulk conversion scan unless one is already pending.
+	 */
+	public static function queueScan(): bool {
+		return AttachmentBatchRunner::queue( self::ON_DEMAND_HOOK, self::STOP_TRANSIENT );
+	}
+
+	/**
+	 * Stop a running or pending bulk conversion scan.
+	 */
+	public static function stopScan(): void {
+		AttachmentBatchRunner::stop( self::ON_DEMAND_HOOK, self::STOP_TRANSIENT, self::CURSOR_TRANSIENT );
+	}
+
+	/**
+	 * Run one time slice of the bulk conversion scan; continuation slices are
+	 * self-scheduled by the runner until the library is covered.
+	 */
 	public function run_on_demand_scan(): void {
-		// Explicit manual AVIF generation should not depend on daily schedule toggles.
-		$this->convertAllJpegsIfMissingAvif();
+		if ( function_exists( 'wp_raise_memory_limit' ) ) {
+			wp_raise_memory_limit( 'image' );
+		}
+
+		$runner = new AttachmentBatchRunner(
+			self::CURSOR_TRANSIENT,
+			self::STOP_TRANSIENT,
+			self::ON_DEMAND_HOOK,
+			AttachmentQuery::JPEG_MIMES,
+			$this->convertAttachmentMissingSizes( ... )
+		);
+		$runner->run();
 	}
 
 	public function convertGeneratedSizes( array $metadata, int $attachmentId ): array {
@@ -209,7 +255,9 @@ final class Converter {
 			return null;
 		}
 		$avifPath = (string) preg_replace( '/\.(jpe?g)$/i', '.avif', $path );
-		if ( '' !== $avifPath && file_exists( $avifPath ) ) {
+		// Treat tiny files as invalid leftovers from failed conversions (same 512-byte
+		// rule as Diagnostics::computeMissingCounts) so they get reconverted, not skipped.
+		if ( '' !== $avifPath && file_exists( $avifPath ) && filesize( $avifPath ) > 512 ) {
 			return null; // Already converted.
 		}
 
@@ -298,6 +346,13 @@ final class Converter {
 		}
 
 		// If we reached here, all attempts failed.
+		// Remove any invalid partial output a failed encoder left behind so it is not
+		// later mistaken for a completed conversion and served to visitors.
+		clearstatcache( true, $avifPath );
+		if ( file_exists( $avifPath ) && filesize( $avifPath ) <= 512 ) {
+			wp_delete_file( $avifPath );
+		}
+
 		$errorMsg   = $lastResult ? $lastResult->error : 'Unknown error';
 		$suggestion = $lastResult ? $lastResult->suggestion : null;
 
@@ -468,66 +523,47 @@ final class Converter {
 		}
 	}
 
-	// Optional: WP-CLI bulk conversion
+	// Optional: WP-CLI bulk conversion (synchronous — CLI has no request timeout).
 	public function cliConvertAll(): void {
-		$this->convertAllJpegsIfMissingAvif( true );
-	}
+		// Clear any previous stop flag when starting.
+		\delete_transient( self::STOP_TRANSIENT );
 
-	private function convertAllJpegsIfMissingAvif( bool $cli = false ): void {
-		// Clear any previous stop flag when starting
-		\delete_transient( 'aviflosu_stop_conversion' );
-
-		$query = new \WP_Query(
-			array(
-				'post_type'              => 'attachment',
-				'post_status'            => 'inherit',
-				'post_mime_type'         => array( 'image/jpeg', 'image/jpg' ),
-				'posts_per_page'         => -1,
-				'fields'                 => 'ids',
-				'no_found_rows'          => true,
-				'update_post_meta_cache' => false,
-				'update_post_term_cache' => false,
-				'cache_results'          => false,
-			)
-		);
 		$count = 0;
-		foreach ( $query->posts as $attachmentId ) {
-			// Check for stop flag
-			if ( \get_transient( 'aviflosu_stop_conversion' ) ) {
-				if ( $cli && defined( 'WP_CLI' ) && \WP_CLI ) {
+		foreach ( AttachmentQuery::allIds() as $attachmentId ) {
+			if ( \get_transient( self::STOP_TRANSIENT ) ) {
+				if ( defined( 'WP_CLI' ) && \WP_CLI ) {
 					\WP_CLI::warning( "Conversion stopped by user after {$count} attachments." );
 				}
-				\delete_transient( 'aviflosu_stop_conversion' );
+				\delete_transient( self::STOP_TRANSIENT );
 				return;
 			}
 
-			if ( ! $this->isJpegMime( get_post_mime_type( $attachmentId ) ) ) {
-				continue;
-			}
-			$path = get_attached_file( $attachmentId );
-			if ( $path ) {
-				$this->checkMissingAvif( $path );
-			}
-			$meta = wp_get_attachment_metadata( $attachmentId );
-			if ( $meta ) {
-				$this->convertGeneratedSizesForce( $meta, $attachmentId );
-			}
+			$this->convertAttachmentMissingSizes( $attachmentId );
 			++$count;
 		}
-		if ( $cli && defined( 'WP_CLI' ) && \WP_CLI ) {
+		if ( defined( 'WP_CLI' ) && \WP_CLI ) {
 			\WP_CLI::success( "Scanned attachments: {$count}" );
 		}
 	}
 
-	private function convertGeneratedSizesForce( array $metadata, int $attachmentId ): void {
+	/**
+	 * Convert any missing AVIFs for one attachment (original + generated sizes).
+	 */
+	public function convertAttachmentMissingSizes( int $attachmentId ): void {
 		if ( ! $this->isJpegMime( get_post_mime_type( $attachmentId ) ) ) {
 			return;
 		}
-		$uploadDir = wp_upload_dir();
-		$baseDir   = trailingslashit( $uploadDir['basedir'] ?? '' );
 
-		// De-duped: convert original and sizes via shared helper
-		$this->convertFromMetadata( $metadata, $baseDir );
+		$path = get_attached_file( $attachmentId );
+		if ( $path ) {
+			$this->checkMissingAvif( $path );
+		}
+
+		$meta = wp_get_attachment_metadata( $attachmentId );
+		if ( is_array( $meta ) ) {
+			$uploadDir = wp_upload_dir();
+			$this->convertFromMetadata( $meta, trailingslashit( $uploadDir['basedir'] ?? '' ) );
+		}
 	}
 
 	/**
@@ -666,8 +702,10 @@ final class Converter {
 			}
 		}
 
-		// Also delete ThumbHash metadata for this attachment.
-		ThumbHash::deleteForAttachment( $attachmentId );
+		// Note: ThumbHash (LQIP) metadata is intentionally left alone. It is an
+		// independent feature with its own delete tool, and "Delete All AVIF"
+		// must not wipe placeholders. On real attachment deletion WordPress
+		// removes all post meta itself.
 
 		return $result;
 	}
@@ -763,7 +801,7 @@ final class Converter {
 		}
 
 		$avifPath = (string) preg_replace( '/\.(jpe?g)$/i', '.avif', $jpegPath );
-		if ( file_exists( $avifPath ) ) {
+		if ( file_exists( $avifPath ) && filesize( $avifPath ) > 512 ) {
 			return ConversionResult::success();
 		}
 

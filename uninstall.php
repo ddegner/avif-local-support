@@ -47,6 +47,10 @@ delete_transient('aviflosu_file_cache');
 delete_transient('aviflosu_logs');
 delete_transient('aviflosu_stop_conversion');
 delete_transient('aviflosu_stop_lqip_generation');
+delete_transient('aviflosu_fs_scan_progress');
+delete_transient('aviflosu_convert_cursor');
+delete_transient('aviflosu_lqip_cursor');
+delete_transient('aviflosu_lqip_progress');
 
 // Delete ImageMagick CLI cache transients (with wildcard pattern).
 // These use dynamic keys like aviflosu_imc_cand_*, aviflosu_imc_sel_*, aviflosu_imc_def_*.

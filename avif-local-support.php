@@ -6,7 +6,7 @@ declare(strict_types=1);
  * Plugin Name: AVIF Local Support
  * Plugin URI: https://github.com/ddegner/avif-local-support
  * Description: High-quality AVIF image conversion for WordPress — local, quality-first.
- * Version: 0.6.4
+ * Version: 0.7.0
  * Author: ddegner
  * Author URI: https://www.daviddegner.com
  * License: GPL v2 or later
@@ -21,7 +21,7 @@ declare(strict_types=1);
 \defined('ABSPATH') || exit;
 
 // Define constants
-\define('AVIFLOSU_VERSION', '0.6.4');
+\define('AVIFLOSU_VERSION', '0.7.0');
 \define('AVIFLOSU_PLUGIN_FILE', __FILE__);
 \define('AVIFLOSU_PLUGIN_DIR', plugin_dir_path(__FILE__));
 \define('AVIFLOSU_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -125,8 +125,12 @@ function aviflosu_deactivate(): void
 	\wp_clear_scheduled_hook('aviflosu_daily_event');
 	\wp_clear_scheduled_hook('aviflosu_run_on_demand');
 	\wp_clear_scheduled_hook('aviflosu_run_filesystem_scan');
+	\wp_clear_scheduled_hook('aviflosu_run_lqip_generation');
 	\delete_transient('aviflosu_stop_lqip_generation');
 	\delete_transient('aviflosu_fs_scan_progress');
+	\delete_transient('aviflosu_convert_cursor');
+	\delete_transient('aviflosu_lqip_cursor');
+	\delete_transient('aviflosu_lqip_progress');
 
 	// Clear file existence cache so stale positive entries don't persist
 	// across deactivation/reactivation cycles if AVIF files are deleted while inactive.

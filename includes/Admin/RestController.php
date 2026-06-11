@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace Ddegner\AvifLocalSupport\Admin;
 
+use Ddegner\AvifLocalSupport\AttachmentBatchRunner;
+use Ddegner\AvifLocalSupport\AttachmentQuery;
 use Ddegner\AvifLocalSupport\Converter;
 use Ddegner\AvifLocalSupport\Diagnostics;
+use Ddegner\AvifLocalSupport\ThumbHash;
 use Ddegner\AvifLocalSupport\DTO\AvifSettings;
 use Ddegner\AvifLocalSupport\FilesystemScanner;
 use Ddegner\AvifLocalSupport\ImageMagickCli;
@@ -268,30 +271,22 @@ final class RestController
 
 	public function convertNow(\WP_REST_Request $request): \WP_REST_Response
 	{
-		$queued = false;
-		if (!\wp_next_scheduled('aviflosu_run_on_demand')) {
-			\wp_schedule_single_event(time() + 5, 'aviflosu_run_on_demand');
-			$queued = true;
-		}
-		return rest_ensure_response(array('queued' => $queued));
+		return rest_ensure_response(array('queued' => Converter::queueScan()));
 	}
 
 	public function stopConvert(\WP_REST_Request $request): \WP_REST_Response
 	{
-		// Set stop flag that the conversion loop checks.
-		\set_transient('aviflosu_stop_conversion', true, 300); // 5 minute expiry.
+		// Raises the shared stop flag, drops the pending continuation event,
+		// and forgets the resume cursor.
+		Converter::stopScan();
 
-		// Also unschedule any pending cron job.
-		$timestamp = \wp_next_scheduled('aviflosu_run_on_demand');
-		if ($timestamp) {
-			\wp_unschedule_event($timestamp, 'aviflosu_run_on_demand');
-		}
-
-		// Also unschedule any pending filesystem scan.
+		// Also unschedule any pending filesystem scan (it shares the stop flag)
+		// and reflect that in its polled progress.
 		$fsTimestamp = \wp_next_scheduled('aviflosu_run_filesystem_scan');
 		if ($fsTimestamp) {
 			\wp_unschedule_event($fsTimestamp, 'aviflosu_run_filesystem_scan');
 		}
+		$this->filesystemScanner->markStopped();
 
 		return rest_ensure_response(array('stopped' => true));
 	}
@@ -303,12 +298,9 @@ final class RestController
 
 	public function filesystemScanRun(\WP_REST_Request $request): \WP_REST_Response
 	{
-		\delete_transient('aviflosu_stop_conversion');
-		$queued = false;
-		if (!\wp_next_scheduled('aviflosu_run_filesystem_scan')) {
-			\wp_schedule_single_event(time() + 5, 'aviflosu_run_filesystem_scan');
+		$queued = AttachmentBatchRunner::queue('aviflosu_run_filesystem_scan', Converter::STOP_TRANSIENT);
+		if ($queued) {
 			$this->filesystemScanner->markQueued();
-			$queued = true;
 		}
 		return rest_ensure_response(array('queued' => $queued));
 	}
@@ -320,25 +312,14 @@ final class RestController
 
 	public function deleteAllAvifs(\WP_REST_Request $request): \WP_REST_Response
 	{
-		$query = new \WP_Query(
-			array(
-				'post_type'              => 'attachment',
-				'post_status'            => 'inherit',
-				'post_mime_type'         => array('image/jpeg', 'image/jpg'),
-				'posts_per_page'         => -1,
-				'fields'                 => 'ids',
-				'no_found_rows'          => true,
-				'update_post_meta_cache' => false,
-				'update_post_term_cache' => false,
-				'cache_results'          => false,
-			)
-		);
+		// Halt any running conversion scan so it doesn't recreate files mid-delete.
+		Converter::stopScan();
 
 		$attempted = 0;
 		$deleted = 0;
 		$processed = 0;
 
-		foreach ($query->posts as $attachmentId) {
+		foreach (AttachmentQuery::allIds() as $attachmentId) {
 			$result = $this->converter->deleteAvifsForAttachment((int) $attachmentId);
 			$attempted += (int) ($result['attempted'] ?? 0);
 			$deleted += (int) ($result['deleted'] ?? 0);
@@ -1149,20 +1130,21 @@ final class RestController
 	}
 
 	/**
-	 * Get ThumbHash statistics.
+	 * Get ThumbHash statistics plus bulk-generation job progress.
 	 */
 	public function thumbhashStats(\WP_REST_Request $request): \WP_REST_Response
 	{
-		return rest_ensure_response(\Ddegner\AvifLocalSupport\ThumbHash::getStats());
+		$stats = ThumbHash::getStats();
+		$stats['job'] = ThumbHash::getGenerationProgress();
+		return rest_ensure_response($stats);
 	}
 
 	/**
-	 * Generate ThumbHashes for all existing images.
+	 * Queue background ThumbHash generation for all existing images.
 	 */
 	public function thumbhashGenerateAll(\WP_REST_Request $request): \WP_REST_Response
 	{
-		$result = \Ddegner\AvifLocalSupport\ThumbHash::generateAll();
-		return rest_ensure_response($result);
+		return rest_ensure_response(array('queued' => ThumbHash::queueGenerateAll()));
 	}
 
 	/**
@@ -1170,7 +1152,7 @@ final class RestController
 	 */
 	public function thumbhashStop(\WP_REST_Request $request): \WP_REST_Response
 	{
-		\Ddegner\AvifLocalSupport\ThumbHash::requestStop();
+		ThumbHash::requestStop();
 		return rest_ensure_response(array('stopped' => true));
 	}
 
@@ -1179,7 +1161,7 @@ final class RestController
 	 */
 	public function thumbhashDeleteAll(\WP_REST_Request $request): \WP_REST_Response
 	{
-		$deleted = \Ddegner\AvifLocalSupport\ThumbHash::deleteAll();
+		$deleted = ThumbHash::deleteAll();
 		return rest_ensure_response(array('deleted' => $deleted));
 	}
 }

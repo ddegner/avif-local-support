@@ -437,21 +437,7 @@ class CLI {
 			return;
 		}
 
-		$query = new \WP_Query(
-			array(
-				'post_type'              => 'attachment',
-				'post_status'            => 'inherit',
-				'post_mime_type'         => 'image/jpeg',
-				'posts_per_page'         => -1,
-				'fields'                 => 'ids',
-				'no_found_rows'          => true,
-				'update_post_meta_cache' => false,
-				'update_post_term_cache' => false,
-				'cache_results'          => false,
-			)
-		);
-
-		$attachmentIds = $query->posts;
+		$attachmentIds = AttachmentQuery::allIds();
 		$totalMissing  = $counts['missing_avifs'];
 
 		\WP_CLI::line( sprintf( 'Converting %d missing AVIF files...', $totalMissing ) );
@@ -469,71 +455,16 @@ class CLI {
 					++$totalConverted;
 
 					// Calculate and display progress with time estimates.
-					$this->printProgress( $totalConverted, $totalMissing, $startTime );
+					CliProgress::render( $totalConverted, $totalMissing, $startTime );
 				} else {
 					++$totalSkipped;
 				}
 			}
 		}
 
-		// Clear the progress line and print final newline.
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- WP-CLI progress output.
-		fwrite( STDERR, "\r" . str_repeat( ' ', 80 ) . "\r" );
+		CliProgress::clear();
 
 		\WP_CLI::success( sprintf( 'Converted %d files, skipped %d (already exist).', $totalConverted, $totalSkipped ) );
-	}
-
-	/**
-	 * Print progress with elapsed and estimated time in hh:mm:ss format.
-	 */
-	private function printProgress( int $current, int $total, float $startTime ): void {
-		$elapsed    = microtime( true ) - $startTime;
-		$percentage = ( $total > 0 ) ? round( ( $current / $total ) * 100, 1 ) : 0;
-
-		// Calculate estimated time remaining
-		$eta = 0;
-		if ( $current > 0 && $current < $total ) {
-			$avgTimePerItem = $elapsed / $current;
-			$eta            = $avgTimePerItem * ( $total - $current );
-		}
-
-		$elapsedStr = $this->formatSecondsToTime( (int) $elapsed );
-		$etaStr     = $this->formatSecondsToTime( (int) $eta );
-
-		// Build progress bar
-		$barWidth = 20;
-		$filled   = ( $total > 0 ) ? (int) round( ( $current / $total ) * $barWidth ) : 0;
-		$empty    = $barWidth - $filled;
-		$bar      = str_repeat( '█', $filled ) . str_repeat( '░', $empty );
-
-		// Output progress on same line (using STDERR like WP-CLI progress bar)
-		$output = sprintf(
-			"\rProgress: [%s] %d/%d (%.1f%%) | Elapsed: %s | ETA: %s",
-			$bar,
-			$current,
-			$total,
-			$percentage,
-			$elapsedStr,
-			$etaStr
-		);
-
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- WP-CLI progress output.
-		fwrite( STDERR, $output );
-	}
-
-	/**
-	 * Format seconds as hh:mm:ss.
-	 */
-	private function formatSecondsToTime( int $seconds ): string {
-		if ( $seconds < 0 ) {
-			$seconds = 0;
-		}
-
-		$hours   = (int) floor( $seconds / 3600 );
-		$minutes = (int) floor( ( $seconds % 3600 ) / 60 );
-		$secs    = $seconds % 60;
-
-		return sprintf( '%02d:%02d:%02d', $hours, $minutes, $secs );
 	}
 
 	/**
@@ -581,21 +512,7 @@ class CLI {
 			);
 		}
 
-		$query = new \WP_Query(
-			array(
-				'post_type'              => 'attachment',
-				'post_status'            => 'inherit',
-				'post_mime_type'         => 'image/jpeg',
-				'posts_per_page'         => -1,
-				'fields'                 => 'ids',
-				'no_found_rows'          => true,
-				'update_post_meta_cache' => false,
-				'update_post_term_cache' => false,
-				'cache_results'          => false,
-			)
-		);
-
-		$attachmentIds = $query->posts;
+		$attachmentIds = AttachmentQuery::allIds();
 		$total         = count( $attachmentIds );
 
 		if ( $total === 0 ) {
@@ -618,12 +535,10 @@ class CLI {
 			++$processed;
 
 			// Display progress with time estimates
-			$this->printProgress( $processed, $total, $startTime );
+			CliProgress::render( $processed, $total, $startTime );
 		}
 
-		// Clear the progress line and print final newline.
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- WP-CLI progress output.
-		fwrite( STDERR, "\r" . str_repeat( ' ', 80 ) . "\r" );
+		CliProgress::clear();
 
 		if ( $totalAttempted === 0 ) {
 			\WP_CLI::line( 'No AVIF files were found to delete.' );

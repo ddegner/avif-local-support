@@ -16,6 +16,13 @@ final class Support {
 	private array $fileCache   = array();
 	private array $uploadsInfo = array();
 
+	/**
+	 * Whether the file-existence cache gained new entries during this request.
+	 *
+	 * @var bool
+	 */
+	private bool $cacheDirty = false;
+
 	public function init(): void {
 
 		$this->uploadsInfo = \wp_upload_dir();
@@ -51,15 +58,16 @@ final class Support {
 		if ( (bool) get_option( 'aviflosu_lqip_fade', true ) ) {
 			// CSS explanation:
 			// 1. img[data-thumbhash] starts visible (opacity 1) with a transition.
-			// 2. When .thumbhash-loading is applied, the image is hidden (opacity 0).
+			// 2. While loading, JS adds .thumbhash-loading to the parent <picture> so the image is hidden (opacity 0).
+			// It is never added to a bare img: opacity 0 there would hide the img's own background placeholder.
 			// 3. When JS removes .thumbhash-loading, the image fades in over the LQIP background.
 			// 4. The LQIP background is cleared after the fade completes to avoid a white flash.
 			$css = 'img[data-thumbhash]{opacity:1;transition:opacity 400ms ease-out;}'
-				. '.thumbhash-loading img[data-thumbhash],'
-				. 'img.thumbhash-loading[data-thumbhash]{opacity:0;}';
+				. '.thumbhash-loading img[data-thumbhash]{opacity:0;}';
 			// Optionally render placeholders as sharp pixels instead of smooth blur.
+			// .thumbhash-bg marks whichever element carries the placeholder background.
 			if ( (bool) get_option( 'aviflosu_lqip_pixelated', false ) ) {
-				$css .= '.thumbhash-loading,img.thumbhash-loading{image-rendering:pixelated;}';
+				$css .= '.thumbhash-bg{image-rendering:pixelated;}';
 			}
 			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static CSS string, no user input.
 			echo '<style id="aviflosu-thumbhash-fade">' . $css . '</style>' . "\n";
@@ -159,9 +167,12 @@ final class Support {
 		if ( isset( $this->fileCache[ $filePath ] ) && true === $this->fileCache[ $filePath ] ) {
 			return true;
 		}
-		$exists = file_exists( $filePath );
+		// Tiny files are invalid leftovers from failed conversions (same 512-byte rule
+		// as the encoders and Diagnostics) — never serve them to browsers.
+		$exists = file_exists( $filePath ) && filesize( $filePath ) > 512;
 		if ( $exists ) {
 			$this->fileCache[ $filePath ] = true;
+			$this->cacheDirty             = true;
 		}
 		return $exists;
 	}
@@ -339,8 +350,22 @@ final class Support {
 	}
 
 	public function saveCache(): void {
+		// Skip the write entirely when this request discovered nothing new — otherwise
+		// every page view costs a DB write on sites without a persistent object cache.
+		if ( ! $this->cacheDirty ) {
+			return;
+		}
+
 		// Only save positive (true) entries - filter out any false entries that might have snuck in.
 		$positiveOnly = array_filter( $this->fileCache, fn( $v ) => true === $v );
+
+		// Merge with the latest stored cache instead of overwriting it, so entries added
+		// by concurrent requests or by the converter (invalidateFileCache) are not lost.
+		$stored = \get_transient( 'aviflosu_file_cache' );
+		if ( is_array( $stored ) ) {
+			$positiveOnly += array_filter( $stored, fn( $v ) => true === $v );
+		}
+
 		set_transient( 'aviflosu_file_cache', $positiveOnly, (int) get_option( 'aviflosu_cache_duration', 3600 ) );
 	}
 }

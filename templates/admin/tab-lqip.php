@@ -12,7 +12,6 @@ defined( 'ABSPATH' ) || exit;
 	<form action="options.php" method="post" class="avif-settings-form">
 		<?php settings_fields( 'aviflosu_beta_settings' ); ?>
 
-		<h2 class="title"><?php esc_html_e( 'LQIP', 'avif-local-support' ); ?></h2>
 		<p class="description">
 			<?php esc_html_e( 'LQIP means Low-Quality Image Placeholder. It shows a tiny preview while the full image loads, improving perceived speed.', 'avif-local-support' ); ?>
 		</p>

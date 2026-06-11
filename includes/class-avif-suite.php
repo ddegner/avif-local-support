@@ -65,6 +65,9 @@ final class Plugin {
 		// Register filesystem scanner cron hook.
 		$this->filesystemScanner->init();
 
+		// Register batched LQIP generation cron hook.
+		add_action( ThumbHash::GENERATE_HOOK, array( ThumbHash::class, 'runGenerationBatch' ) );
+
 		// Allow AVIF uploads.
 		add_filter(
 			'upload_mimes',
@@ -99,7 +102,7 @@ final class Plugin {
 				'confirmClearLogs'          => __( 'Clear all logs?', 'avif-local-support' ),
 				'avifStopped'               => __( 'AVIF generation stopped.', 'avif-local-support' ),
 				'avifStopFailed'            => __( 'Could not stop AVIF generation.', 'avif-local-support' ),
-				'avifConverting'            => __( 'Generating missing AVIF files...', 'avif-local-support' ),
+				'avifConverting'            => __( 'Generating missing AVIF files:', 'avif-local-support' ),
 				'avifComplete'              => __( 'AVIF generation complete.', 'avif-local-support' ),
 				'avifContinuingBackground'  => __( 'AVIF generation is continuing in the background.', 'avif-local-support' ),
 				'avifFailed'                => __( 'AVIF generation failed.', 'avif-local-support' ),
@@ -109,7 +112,7 @@ final class Plugin {
 				'lqipStopping'             => __( 'Stopping LQIP generation...', 'avif-local-support' ),
 				'lqipStopped'              => __( 'LQIP generation stopped.', 'avif-local-support' ),
 				'lqipStopFailed'           => __( 'Could not request LQIP stop.', 'avif-local-support' ),
-				'lqipGenerating'           => __( 'Generating missing LQIPs...', 'avif-local-support' ),
+				'lqipGenerating'           => __( 'Generating missing LQIPs:', 'avif-local-support' ),
 				'lqipComplete'             => __( 'LQIP generation complete.', 'avif-local-support' ),
 				'lqipGenerated'            => __( 'Generated:', 'avif-local-support' ),
 				'lqipSkipped'              => __( 'Skipped:', 'avif-local-support' ),
@@ -119,6 +122,17 @@ final class Plugin {
 				'lqipDeleted'              => __( 'Deleted LQIPs:', 'avif-local-support' ),
 				'lqipEntries'              => __( 'entries', 'avif-local-support' ),
 				'lqipContinuingBackground' => __( 'LQIP generation is continuing in the background...', 'avif-local-support' ),
+				'fsStarting'                => __( 'Starting filesystem scan...', 'avif-local-support' ),
+				'fsWaiting'                 => __( 'Waiting for the background scan to start...', 'avif-local-support' ),
+				'fsScanning'                => __( 'Scanning uploads folder:', 'avif-local-support' ),
+				'fsComplete'                => __( 'Scan complete.', 'avif-local-support' ),
+				'fsStopped'                 => __( 'Scan stopped.', 'avif-local-support' ),
+				'fsStopFailed'              => __( 'Could not stop scan.', 'avif-local-support' ),
+				'fsContinuing'              => __( 'Scan is continuing in the background.', 'avif-local-support' ),
+				'fsNotStarted'              => __( 'The scan has not started yet. It may have been stopped — try again.', 'avif-local-support' ),
+				'fsStartFailed'             => __( 'Could not start scan.', 'avif-local-support' ),
+				'fsSkippedDirs'             => __( 'Skipped directories', 'avif-local-support' ),
+				'fsSkippedRoot'             => __( '(uploads root)', 'avif-local-support' ),
 				'logsRefreshFailed'         => __( 'Could not refresh logs. Please try again.', 'avif-local-support' ),
 				'logsClearFailed'           => __( 'Could not clear logs. Please try again.', 'avif-local-support' ),
 				'logsNone'                  => __( 'No logs available.', 'avif-local-support' ),

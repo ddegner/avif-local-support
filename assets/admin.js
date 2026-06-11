@@ -95,6 +95,18 @@
       else element.classList.remove('hidden');
     }
 
+    function spinnerStart(spinnerEl) {
+      if (!spinnerEl || !spinnerEl.classList) return;
+      spinnerEl.classList.remove('avif-done');
+      spinnerEl.classList.add('is-active');
+    }
+
+    function spinnerDone(spinnerEl) {
+      if (!spinnerEl || !spinnerEl.classList) return;
+      spinnerEl.classList.remove('is-active');
+      spinnerEl.classList.add('avif-done');
+    }
+
     // Convert-now button (AJAX queue + simple counter progress)
     var convertBtn = document.querySelector('#avif-local-support-convert-now');
     var stopBtn = document.querySelector('#avif-local-support-stop-convert');
@@ -140,8 +152,8 @@
         e.preventDefault();
         convertBtn.disabled = true;
         toggleHidden(resultContainer, false);
-        if (spinner) spinner.classList.add('is-active');
-        if (statusEl) statusEl.textContent = getI18n('avifConverting', 'Generating missing AVIF files...');
+        spinnerStart(spinner);
+        if (statusEl) statusEl.textContent = getI18n('avifConverting', 'Generating missing AVIF files:');
         toggleHidden(progressEl, true);
         toggleHidden(stopBtn, false);
         apiFetch({ path: '/aviflosu/v1/convert-now', method: 'POST' })
@@ -176,6 +188,7 @@
                   if (missing === 0) {
                     if (statusEl) statusEl.textContent = getI18n('avifComplete', 'AVIF generation complete.');
                     stopPolling();
+                    spinnerDone(spinner);
                   } else {
                     if (prevMissing !== null && missing === prevMissing) {
                       unchangedTicks++;
@@ -215,7 +228,7 @@
         }
         deleteBtn.disabled = true;
         toggleHidden(resultContainer, false);
-        if (spinner) spinner.classList.add('is-active');
+        spinnerStart(spinner);
         if (statusEl) statusEl.textContent = getI18n('avifDeleting', 'Deleting AVIF files...');
         toggleHidden(progressEl, true);
         apiFetch({ path: '/aviflosu/v1/delete-all-avifs', method: 'POST' })
@@ -226,6 +239,7 @@
               var deletedText = deletedPrefix + ' ' + String(d.deleted || 0);
               statusEl.textContent = deletedText + (d.failed ? (', ' + failedPrefix + ' ' + String(d.failed)) : '');
             }
+            spinnerDone(spinner);
             // Refresh the AVIF counts after deletion
             apiFetch({ path: '/aviflosu/v1/scan-missing', method: 'POST' })
               .then(function (data) {
@@ -299,9 +313,9 @@
         toggleHidden(fsSkippedDirsOut, true);
         return;
       }
-      var parts = ['<details><summary><strong>Skipped directories (' + dirs.length + ')</strong></summary><ul>'];
+      var parts = ['<details><summary><strong>' + fsEscape(getI18n('fsSkippedDirs', 'Skipped directories')) + ' (' + dirs.length + ')</strong></summary><ul>'];
       dirs.forEach(function (s) {
-        parts.push('<li><code>' + fsEscape(s.dir || '(root)') + '</code> — ' + fsEscape(s.reason) + '</li>');
+        parts.push('<li><code>' + fsEscape(s.dir || getI18n('fsSkippedRoot', '(uploads root)')) + '</code> — ' + fsEscape(s.reason) + '</li>');
       });
       parts.push('</ul></details>');
       fsSkippedDirsOut.innerHTML = parts.join('');
@@ -317,8 +331,8 @@
         e.preventDefault();
         fsStopBtn.disabled = true;
         apiFetch({ path: '/aviflosu/v1/stop-convert', method: 'POST' })
-          .then(function () { if (fsStatus) fsStatus.textContent = 'Scan stopped.'; })
-          .catch(function () { if (fsStatus) fsStatus.textContent = 'Could not stop scan.'; })
+          .then(function () { if (fsStatus) fsStatus.textContent = getI18n('fsStopped', 'Scan stopped.'); })
+          .catch(function () { if (fsStatus) fsStatus.textContent = getI18n('fsStopFailed', 'Could not stop scan.'); })
           .finally(function () { fsStopPolling(); fsStopBtn.disabled = false; });
       });
     }
@@ -329,8 +343,8 @@
         fsRunBtn.disabled = true;
         toggleHidden(fsResult, false);
         toggleHidden(fsSkippedDirsOut, true);
-        if (fsSpinner) fsSpinner.classList.add('is-active');
-        if (fsStatus) fsStatus.textContent = 'Starting filesystem scan...';
+        spinnerStart(fsSpinner);
+        if (fsStatus) fsStatus.textContent = getI18n('fsStarting', 'Starting filesystem scan...');
         toggleHidden(fsProgress, false);
         toggleHidden(fsStopBtn, false);
 
@@ -345,6 +359,7 @@
             function tick() {
               apiFetch({ path: '/aviflosu/v1/filesystem-scan/progress', method: 'GET' })
                 .then(function (data) {
+                  var state = data.state || (data.done ? 'complete' : 'running');
                   var scanned = data.scanned || 0;
                   var converted = data.converted || 0;
                   var alreadyHad = data.already_had || 0;
@@ -354,18 +369,26 @@
                   if (fsAlreadyHad) fsAlreadyHad.textContent = String(alreadyHad);
                   if (fsFailed) fsFailed.textContent = String(failed);
 
-                  if (data.done) {
-                    if (fsStatus) {
-                      fsStatus.textContent = 'Scan complete. Converted ' + converted +
-                        '. Already had AVIF: ' + alreadyHad +
-                        (failed ? '. Failed: ' + failed : '') + '.';
-                    }
-                    fsRenderSkippedDirs(data.skipped_dirs || []);
-                    fsLoadStats();
+                  if (state === 'stopped') {
+                    if (fsStatus) fsStatus.textContent = getI18n('fsStopped', 'Scan stopped.');
                     fsStopPolling();
                     return;
                   }
-                  if (fsStatus) fsStatus.textContent = 'Scanning uploads folder...';
+
+                  if (state === 'complete' || data.done) {
+                    if (fsStatus) fsStatus.textContent = getI18n('fsComplete', 'Scan complete.');
+                    fsRenderSkippedDirs(data.skipped_dirs || []);
+                    fsLoadStats();
+                    fsStopPolling();
+                    spinnerDone(fsSpinner);
+                    return;
+                  }
+
+                  if (fsStatus) {
+                    fsStatus.textContent = state === 'queued'
+                      ? getI18n('fsWaiting', 'Waiting for the background scan to start...')
+                      : getI18n('fsScanning', 'Scanning uploads folder:');
+                  }
 
                   if (scanned === prevScanned) {
                     unchangedTicks++;
@@ -374,7 +397,11 @@
                     prevScanned = scanned;
                   }
                   if (unchangedTicks >= MAX_UNCHANGED_TICKS || (Date.now() - startTime) > MAX_DURATION_MS) {
-                    if (fsStatus) fsStatus.textContent = 'Scan is continuing in the background.';
+                    if (fsStatus) {
+                      fsStatus.textContent = state === 'queued'
+                        ? getI18n('fsNotStarted', 'The scan has not started yet. It may have been stopped — try again.')
+                        : getI18n('fsContinuing', 'Scan is continuing in the background.');
+                    }
                     fsStopPolling();
                   }
                 })
@@ -385,7 +412,7 @@
             tick();
           })
           .catch(function () {
-            if (fsStatus) fsStatus.textContent = 'Could not start scan.';
+            if (fsStatus) fsStatus.textContent = getI18n('fsStartFailed', 'Could not start scan.');
             fsStopPolling();
           });
       });
@@ -463,52 +490,46 @@
         if (lqipDeleteBtn) lqipDeleteBtn.disabled = true;
         lqipStopRequested = false;
         toggleHidden(lqipResultContainer, false);
-        if (lqipSpinner) lqipSpinner.classList.add('is-active');
-        if (lqipStatusEl) lqipStatusEl.textContent = getI18n('lqipGenerating', 'Generating missing LQIPs...');
+        spinnerStart(lqipSpinner);
+        if (lqipStatusEl) lqipStatusEl.textContent = getI18n('lqipGenerating', 'Generating missing LQIPs:');
         toggleHidden(lqipProgressEl, false);
         toggleHidden(lqipStopBtn, false);
         if (lqipStopBtn) lqipStopBtn.disabled = false;
 
-        loadLqipStats(function (initialData) {
-          var startWithout = initialData.without_hash || 0;
-          var total = initialData.total || 0;
-          if (lqipProgressTotal) lqipProgressTotal.textContent = String(total);
-          if (lqipProgressWith) lqipProgressWith.textContent = String(initialData.with_hash || 0);
+        // Generation runs as queued background batches; poll stats (which
+        // include the job state) until the job reports complete or stopped.
+        apiFetch({ path: '/aviflosu/v1/thumbhash/generate-all', method: 'POST' })
+          .then(function () {
+            var prevWithout = null;
+            var unchangedTicks = 0;
+            var startTime = Date.now();
+            var MAX_UNCHANGED_TICKS = 40;
+            var MAX_DURATION_MS = 30 * 60 * 1000;
 
-          apiFetch({ path: '/aviflosu/v1/thumbhash/generate-all', method: 'POST' })
-            .then(function (data) {
-              if (lqipStatusEl) {
-                var headline = data && data.stopped
-                  ? getI18n('lqipStopped', 'LQIP generation stopped.')
-                  : getI18n('lqipComplete', 'LQIP generation complete.');
-                lqipStatusEl.textContent = headline +
-                  ' ' + getI18n('lqipGenerated', 'Generated:') + ' ' + (data.generated || 0) +
-                  ', ' + getI18n('lqipSkipped', 'Skipped:') + ' ' + (data.skipped || 0) +
-                  ', ' + getI18n('lqipFailed', 'Failed:') + ' ' + (data.failed || 0);
-              }
-              stopLqipPolling();
-              loadLqipStats();
-            })
-            .catch(function () {
-              if (lqipStatusEl) lqipStatusEl.textContent = getI18n('lqipFailedShort', 'LQIP generation failed.');
-              stopLqipPolling();
-            });
+            function pollLqipProgress() {
+              loadLqipStats(function (data) {
+                var without = data.without_hash || 0;
+                var job = data.job || {};
 
-          var prevWithout = startWithout;
-          var unchangedTicks = 0;
-          var startTime = Date.now();
-          var MAX_UNCHANGED_TICKS = 20;
-          var MAX_DURATION_MS = 10 * 60 * 1000;
+                if (lqipProgressWith) lqipProgressWith.textContent = String(data.with_hash || 0);
+                if (lqipProgressTotal) lqipProgressTotal.textContent = String(data.total || 0);
 
-          function pollLqipProgress() {
-            loadLqipStats(function (data) {
-              var withHash = data.with_hash || 0;
-              var without = data.without_hash || 0;
+                if (job.state === 'complete' || job.state === 'stopped') {
+                  if (lqipStatusEl) {
+                    var headline = job.state === 'stopped'
+                      ? getI18n('lqipStopped', 'LQIP generation stopped.')
+                      : getI18n('lqipComplete', 'LQIP generation complete.');
+                    lqipStatusEl.textContent = headline +
+                      ' ' + getI18n('lqipGenerated', 'Generated:') + ' ' + (job.generated || 0) +
+                      ', ' + getI18n('lqipSkipped', 'Skipped:') + ' ' + (job.skipped || 0) +
+                      ', ' + getI18n('lqipFailed', 'Failed:') + ' ' + (job.failed || 0);
+                  }
+                  stopLqipPolling();
+                  if (job.state === 'complete') spinnerDone(lqipSpinner);
+                  return;
+                }
 
-              if (lqipProgressWith) lqipProgressWith.textContent = String(withHash);
-
-              if (!lqipStopRequested && without !== 0) {
-                if (without === prevWithout) {
+                if (prevWithout !== null && without === prevWithout) {
                   unchangedTicks++;
                 } else {
                   unchangedTicks = 0;
@@ -518,14 +539,17 @@
                   if (lqipStatusEl) lqipStatusEl.textContent = getI18n('lqipContinuingBackground', 'LQIP generation is continuing in the background...');
                   stopLqipPolling();
                 }
-              }
-            });
-          }
+              });
+            }
 
-          if (lqipPollingTimer) window.clearInterval(lqipPollingTimer);
-          lqipPollingTimer = window.setInterval(pollLqipProgress, 1500);
-          pollLqipProgress();
-        });
+            if (lqipPollingTimer) window.clearInterval(lqipPollingTimer);
+            lqipPollingTimer = window.setInterval(pollLqipProgress, 1500);
+            pollLqipProgress();
+          })
+          .catch(function () {
+            if (lqipStatusEl) lqipStatusEl.textContent = getI18n('lqipFailedShort', 'LQIP generation failed.');
+            stopLqipPolling();
+          });
       });
     }
 
@@ -538,7 +562,7 @@
         if (lqipGenerateBtn) lqipGenerateBtn.disabled = true;
         lqipDeleteBtn.disabled = true;
         toggleHidden(lqipResultContainer, false);
-        if (lqipSpinner) lqipSpinner.classList.add('is-active');
+        spinnerStart(lqipSpinner);
         if (lqipStatusEl) lqipStatusEl.textContent = getI18n('lqipDeleting', 'Deleting LQIPs...');
         toggleHidden(lqipProgressEl, true);
 
@@ -547,7 +571,7 @@
             if (lqipStatusEl) {
               lqipStatusEl.textContent = getI18n('lqipDeleted', 'Deleted LQIPs:') + ' ' + (data.deleted || 0) + ' ' + getI18n('lqipEntries', 'entries');
             }
-            if (lqipSpinner) lqipSpinner.classList.remove('is-active');
+            spinnerDone(lqipSpinner);
             if (lqipGenerateBtn) lqipGenerateBtn.disabled = false;
             lqipDeleteBtn.disabled = false;
             loadLqipStats();

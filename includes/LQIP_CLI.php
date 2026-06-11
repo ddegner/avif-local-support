@@ -202,12 +202,9 @@ class LQIP_CLI
 		}
 
 		// Check if already has valid LQIP (with proper 'full' entry)
-		if (!$force) {
-			$existing = get_post_meta($attachmentId, ThumbHash::getMetaKey(), true);
-			if (is_array($existing) && isset($existing['full']) && is_string($existing['full']) && strlen($existing['full']) > 10) {
-				\WP_CLI::line("Attachment ID {$attachmentId} already has valid LQIP data.");
-				return;
-			}
+		if (!$force && ThumbHash::hasValidHash($attachmentId)) {
+			\WP_CLI::line("Attachment ID {$attachmentId} already has valid LQIP data.");
+			return;
 		}
 
 		if ($dryRun) {
@@ -219,7 +216,7 @@ class LQIP_CLI
 		$hashes = ThumbHash::generateForAttachment($attachmentId);
 
 		// Verify it was generated with valid 'full' entry
-		if (is_array($hashes) && isset($hashes['full']) && is_string($hashes['full']) && strlen($hashes['full']) > 10) {
+		if (ThumbHash::isValidHashSet($hashes)) {
 			$count = count($hashes);
 			\WP_CLI::success("Generated LQIP for {$count} size(s).");
 		} else {
@@ -271,24 +268,10 @@ class LQIP_CLI
 		$totalMissing = $stats['without_hash'];
 		$processed = 0;
 
-		// Get all image attachments without LQIP
-		$query = new \WP_Query(
-			array(
-				'post_type' => 'attachment',
-				'post_mime_type' => array('image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'),
-				'post_status' => 'inherit',
-				'posts_per_page' => -1,
-				'fields' => 'ids',
-				'no_found_rows' => true,
-				'update_post_meta_cache' => true,
-				'update_post_term_cache' => false,
-			)
-		);
-
 		$generated = 0;
 		$skipped = 0;
 		$failed = 0;
-		$postsToProcess = $query->posts;
+		$postsToProcess = AttachmentQuery::allIds(AttachmentQuery::IMAGE_MIMES);
 
 		// Apply limit if specified
 		if ($limit > 0 && count($postsToProcess) > $limit) {
@@ -306,21 +289,17 @@ class LQIP_CLI
 			\clean_post_cache((int) $attachmentId);
 
 			// Skip if already has valid LQIP (check for 'full' key with proper hash), unless forcing
-			if (!$force) {
-				$existing = get_post_meta($attachmentId, ThumbHash::getMetaKey(), true);
-				if (is_array($existing) && isset($existing['full']) && is_string($existing['full']) && strlen($existing['full']) > 10) {
-					++$skipped;
-					++$processed;
-					$this->printProgress($processed, $totalToProcess, $startTime);
-					continue;
-				}
+			if (!$force && ThumbHash::hasValidHash((int) $attachmentId)) {
+				++$skipped;
+				++$processed;
+				CliProgress::render($processed, $totalToProcess, $startTime);
+				continue;
 			}
 
 			// Show which image we're processing (helps identify hanging images)
 			$currentNum = $index + 1;
 			if ($verbose || $currentNum % 10 === 0 || $currentNum === 1) {
-				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- WP-CLI progress output.
-				fwrite(STDERR, "\r" . str_repeat(' ', 80) . "\r");
+				CliProgress::clear();
 				\WP_CLI::line(sprintf('Processing image %d/%d (ID: %d)...', $currentNum, $totalToProcess, $attachmentId));
 			}
 
@@ -342,16 +321,16 @@ class LQIP_CLI
 				\WP_CLI::warning(sprintf('Exception generating LQIP for attachment ID %d: %s', $attachmentId, $e->getMessage()));
 				++$failed;
 				++$processed;
-				$this->printProgress($processed, $totalToProcess, $startTime);
+				CliProgress::render($processed, $totalToProcess, $startTime);
 				continue;
 			}
 
 			// Verify it was generated with valid 'full' entry
 			// We check $hashes which is the return value of generateForAttachment
-			if (is_array($hashes) && isset($hashes['full']) && is_string($hashes['full']) && strlen($hashes['full']) > 10) {
+			if (ThumbHash::isValidHashSet($hashes)) {
 				++$generated;
 				++$processed;
-				$this->printProgress($processed, $totalToProcess, $startTime);
+				CliProgress::render($processed, $totalToProcess, $startTime);
 			} else {
 				++$failed;
 				++$processed;
@@ -359,7 +338,7 @@ class LQIP_CLI
 				if ($error && ($currentNum % 10 === 0 || $currentNum <= 5)) {
 					\WP_CLI::warning(sprintf('Failed to generate LQIP for attachment ID %d: %s', $attachmentId, $error));
 				}
-				$this->printProgress($processed, $totalToProcess, $startTime);
+				CliProgress::render($processed, $totalToProcess, $startTime);
 			}
 
 			// Force garbage collection every 50 images to prevent memory buildup
@@ -368,9 +347,7 @@ class LQIP_CLI
 			}
 		}
 
-		// Clear the progress line.
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- WP-CLI progress output.
-		fwrite(STDERR, "\r" . str_repeat(' ', 80) . "\r");
+		CliProgress::clear();
 
 		\WP_CLI::success(sprintf('Generated: %d, Skipped: %d, Failed: %d', $generated, $skipped, $failed));
 	}
@@ -418,64 +395,5 @@ class LQIP_CLI
 
 		$deleted = ThumbHash::deleteAll();
 		\WP_CLI::success("Deleted {$deleted} LQIP entries.");
-	}
-
-	/**
-	 * Print progress with elapsed and estimated time in hh:mm:ss format.
-	 */
-	private function printProgress(int $current, int $total, float $startTime): void
-	{
-		$elapsed = microtime(true) - $startTime;
-		// Ensure total is at least 1 to avoid division by zero
-		$total = max(1, $total);
-		$percentage = round(($current / $total) * 100, 1);
-
-		// Calculate estimated time remaining
-		$eta = 0;
-		if ($current > 0 && $current < $total) {
-			$avgTimePerItem = $elapsed / $current;
-			$eta = $avgTimePerItem * ($total - $current);
-		}
-
-		$elapsedStr = $this->formatSecondsToTime((int) $elapsed);
-		$etaStr = $this->formatSecondsToTime((int) $eta);
-
-		// Build progress bar
-		$barWidth = 20;
-		// Ensure filled is between 0 and barWidth
-		$filled = (int) round(($current / $total) * $barWidth);
-		$filled = max(0, min($barWidth, $filled));
-		$empty = max(0, $barWidth - $filled);
-		$bar = str_repeat('█', $filled) . str_repeat('░', $empty);
-
-		// Output progress on same line (using STDERR like WP-CLI progress bar)
-		$output = sprintf(
-			"\rProgress: [%s] %d/%d (%.1f%%) | Elapsed: %s | ETA: %s",
-			$bar,
-			$current,
-			$total,
-			$percentage,
-			$elapsedStr,
-			$etaStr
-		);
-
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- WP-CLI progress output.
-		fwrite(STDERR, $output);
-	}
-
-	/**
-	 * Format seconds as hh:mm:ss.
-	 */
-	private function formatSecondsToTime(int $seconds): string
-	{
-		if ($seconds < 0) {
-			$seconds = 0;
-		}
-
-		$hours = (int) floor($seconds / 3600);
-		$minutes = (int) floor(($seconds % 3600) / 60);
-		$secs = $seconds % 60;
-
-		return sprintf('%02d:%02d:%02d', $hours, $minutes, $secs);
 	}
 }

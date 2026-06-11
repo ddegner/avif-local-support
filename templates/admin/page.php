@@ -33,9 +33,9 @@ $support_level = (string) ( $system_status['avif_support_level'] ?? ( empty( $sy
 
 		<h2 class="nav-tab-wrapper">
 			<a href="#settings" class="nav-tab nav-tab-active"
-				id="avif-local-support-tab-link-settings"><?php esc_html_e( 'AVIF Images', 'avif-local-support' ); ?></a>
+				id="avif-local-support-tab-link-settings"><?php esc_html_e( 'AVIF Settings', 'avif-local-support' ); ?></a>
 			<a href="#lqip" class="nav-tab"
-				id="avif-local-support-tab-link-lqip"><?php esc_html_e( 'LQIP', 'avif-local-support' ); ?></a>
+				id="avif-local-support-tab-link-lqip"><?php esc_html_e( 'LQIP Settings', 'avif-local-support' ); ?></a>
 			<a href="#tools" class="nav-tab"
 				id="avif-local-support-tab-link-tools"><?php esc_html_e( 'Tools', 'avif-local-support' ); ?></a>
 			<a href="#about" class="nav-tab"

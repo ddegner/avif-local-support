@@ -3,7 +3,7 @@ Contributors: ddegner
 Tags: avif, images, performance, media, optimization
 Requires at least: 6.8
 Tested up to: 7.0
-Stable tag: 0.6.4
+Stable tag: 0.7.0
 Requires PHP: 8.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -210,6 +210,19 @@ LiteSpeed's open_basedir restriction prevents PHP from detecting executables out
 4. **About** — Quick reference and version info
 
 ## Changelog
+
+### 0.7.0
+
+- Fix: LQIP (ThumbHash) placeholders were decoded at the wrong aspect ratio and rendered as distorted slivers; placeholders now match each image's shape.
+- Fix: LQIP placeholders no longer stay hidden for images that are not wrapped in a `<picture>` element.
+- Fix: Failed conversions no longer leave tiny invalid `.avif` files that could be served to visitors and were never regenerated; such files are now cleaned up and reconverted.
+- Fix: "Delete All AVIF" no longer erases LQIP placeholder data, which is managed independently.
+- Fix: LQIP generation now succeeds for attachments with missing or broken metadata by falling back to the original file.
+- Enhancement: Bulk AVIF conversion and LQIP generation now run as resumable, time-sliced background jobs, preventing request timeouts and cron stalls on large media libraries.
+- Enhancement: Removed a database write that occurred on every front-end request from the AVIF file-existence cache.
+- Enhancement: Unified the Tools interface — consistent progress indicators that end on a completion checkmark, clearer status messages, and accurate stopped/queued states for scans.
+- Enhancement: Renamed settings tabs to "AVIF Settings" and "LQIP Settings" and removed redundant in-tab headings.
+- Chore: Made filesystem-scan status messages translatable and removed an unused bundled admin script.
 
 ### 0.6.4
 

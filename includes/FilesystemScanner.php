@@ -105,7 +105,7 @@ final class FilesystemScanner {
 			foreach ( $this->iterateJpegs( $baseDir, $skipped ) as $jpegPath ) {
 				++$result['found'];
 				$avifPath = $this->avifPathFor( $jpegPath );
-				if ( '' !== $avifPath && file_exists( $avifPath ) ) {
+				if ( '' !== $avifPath && file_exists( $avifPath ) && filesize( $avifPath ) > 512 ) {
 					++$result['already_have_avif'];
 					continue;
 				}
@@ -169,13 +169,14 @@ final class FilesystemScanner {
 		$skipped      = array();
 		$lastFlush    = microtime( true );
 		$checkCounter = 0;
+		$stopped      = false;
 
 		try {
 			foreach ( $this->iterateJpegs( $baseDir, $skipped ) as $jpegPath ) {
 				++$checkCounter;
 				// Check stop flag every 25 files.
 				if ( ( $checkCounter % 25 ) === 0 && get_transient( self::STOP_TRANSIENT ) ) {
-					$progress['done'] = true;
+					$stopped = true;
 					break;
 				}
 
@@ -183,7 +184,7 @@ final class FilesystemScanner {
 				++$progress['scanned'];
 
 				$avifPath = $this->avifPathFor( $jpegPath );
-				if ( '' !== $avifPath && file_exists( $avifPath ) ) {
+				if ( '' !== $avifPath && file_exists( $avifPath ) && filesize( $avifPath ) > 512 ) {
 					++$progress['already_had'];
 					++$progress['skipped'];
 				} else {
@@ -210,7 +211,7 @@ final class FilesystemScanner {
 
 		$progress['done']         = true;
 		$progress['finished_at']  = time();
-		$progress['state']        = 'complete';
+		$progress['state']        = $stopped ? 'stopped' : 'complete';
 		$progress['skipped_dirs'] = $this->formatSkipped( $skipped, $baseDir );
 		$this->writeProgress( $progress );
 
@@ -237,6 +238,25 @@ final class FilesystemScanner {
 			);
 		}
 		return $data;
+	}
+
+	/**
+	 * Mark a queued or running scan as stopped so UI polling does not wait
+	 * forever for a scan whose cron event was unscheduled.
+	 */
+	public function markStopped(): void {
+		$data = get_transient( self::PROGRESS_TRANSIENT );
+		if ( ! is_array( $data ) ) {
+			return;
+		}
+		$state = (string) ( $data['state'] ?? '' );
+		if ( ! in_array( $state, array( 'queued', 'running' ), true ) ) {
+			return;
+		}
+		$data['state']       = 'stopped';
+		$data['done']        = true;
+		$data['finished_at'] = time();
+		$this->writeProgress( $data );
 	}
 
 	/**

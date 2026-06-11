@@ -12,7 +12,6 @@ defined( 'ABSPATH' ) || exit;
 	<form action="options.php" method="post" class="avif-settings-form">
 		<?php settings_fields( 'aviflosu_settings' ); ?>
 
-		<h2 class="title"><?php esc_html_e( 'AVIF Settings', 'avif-local-support' ); ?></h2>
 		<table class="form-table" role="presentation">
 			<?php do_settings_fields( 'avif-local-support', 'aviflosu_main' ); ?>
 			<?php do_settings_fields( 'avif-local-support', 'aviflosu_conversion_basic' ); ?>

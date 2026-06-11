@@ -49,15 +49,42 @@
   margin-bottom: 12px;
 }
 
+/* Shared status row: [spinner/check] [status text] [progress counters]. */
 .avif-result-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
   margin-top: 15px;
 }
 
-#avif-local-support-result .spinner,
-#aviflosu-thumbhash-result .spinner {
+.avif-result-row.hidden {
+  display: none;
+}
+
+.avif-result-row .spinner {
+  flex: none;
   float: none;
+  margin: 0 4px 0 0;
+}
+
+#aviflosu-fs-scan-skipped-dirs {
+  margin-top: 10px;
+}
+
+/* Completed state: swap the looping spinner GIF for a green checkmark. */
+.spinner.avif-done {
   visibility: visible;
-  margin: 0 8px 0 0;
+  background: none;
+}
+
+.spinner.avif-done::before {
+  content: "\f147"; /* dashicons-yes */
+  font-family: dashicons;
+  font-size: 20px;
+  line-height: 20px;
+  color: #00a32a;
+  display: block;
 }
 
 .avif-test-form {

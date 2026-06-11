@@ -26,6 +26,22 @@ final class ThumbHash {
 	private const STOP_TRANSIENT = 'aviflosu_stop_lqip_generation';
 
 	/**
+	 * Cron hook that runs one slice of the bulk LQIP generation scan.
+	 */
+	public const GENERATE_HOOK = 'aviflosu_run_lqip_generation';
+
+	/**
+	 * Resume cursor for the batched generation scan.
+	 */
+	private const CURSOR_TRANSIENT = 'aviflosu_lqip_cursor';
+
+	/**
+	 * Progress snapshot polled by the admin UI during bulk generation.
+	 */
+	private const PROGRESS_TRANSIENT = 'aviflosu_lqip_progress';
+	private const PROGRESS_TTL       = HOUR_IN_SECONDS;
+
+	/**
 	 * Maximum dimension for thumbnail before hashing.
 	 * Set to 100px (ThumbHash maximum) to capture more detail in the DCT encoding.
 	 * The decoder outputs 32px, but larger input = more frequency data = richer placeholders.
@@ -308,7 +324,148 @@ final class ThumbHash {
 	 * Request cancellation of an in-progress bulk generation run.
 	 */
 	public static function requestStop(): void {
-		\set_transient( self::STOP_TRANSIENT, true, 300 );
+		AttachmentBatchRunner::stop( self::GENERATE_HOOK, self::STOP_TRANSIENT, self::CURSOR_TRANSIENT );
+
+		// Reflect the stop in the polled progress even when no slice is
+		// currently running (e.g. between continuation events).
+		$progress = self::getGenerationProgress();
+		if ( in_array( $progress['state'], array( 'queued', 'running' ), true ) ) {
+			$progress['state'] = 'stopped';
+			\set_transient( self::PROGRESS_TRANSIENT, $progress, self::PROGRESS_TTL );
+		}
+	}
+
+	/**
+	 * Queue a bulk LQIP generation scan unless one is already pending.
+	 *
+	 * @param int $delay Seconds before the first slice starts.
+	 */
+	public static function queueGenerateAll( int $delay = 5 ): bool {
+		$queued = AttachmentBatchRunner::queue( self::GENERATE_HOOK, self::STOP_TRANSIENT, $delay );
+		if ( $queued ) {
+			// Reset progress so admin polling reflects the new job immediately.
+			\set_transient(
+				self::PROGRESS_TRANSIENT,
+				array(
+					'state'     => 'queued',
+					'generated' => 0,
+					'skipped'   => 0,
+					'failed'    => 0,
+				),
+				self::PROGRESS_TTL
+			);
+		}
+		return $queued;
+	}
+
+	/**
+	 * Current bulk-generation progress for admin UI polling.
+	 *
+	 * @return array{state: string, generated: int, skipped: int, failed: int}
+	 */
+	public static function getGenerationProgress(): array {
+		$progress = \get_transient( self::PROGRESS_TRANSIENT );
+		if ( ! is_array( $progress ) ) {
+			$progress = array();
+		}
+
+		return array(
+			'state'     => (string) ( $progress['state'] ?? 'idle' ),
+			'generated' => (int) ( $progress['generated'] ?? 0 ),
+			'skipped'   => (int) ( $progress['skipped'] ?? 0 ),
+			'failed'    => (int) ( $progress['failed'] ?? 0 ),
+		);
+	}
+
+	/**
+	 * Run one time slice of the bulk generation scan; continuation slices are
+	 * self-scheduled by the runner until the library is covered.
+	 */
+	public static function runGenerationBatch(): void {
+		if ( function_exists( 'wp_raise_memory_limit' ) ) {
+			\wp_raise_memory_limit( 'image' );
+		}
+
+		$progress = self::getGenerationProgress();
+		if ( ! in_array( $progress['state'], array( 'queued', 'running' ), true ) ) {
+			// Scan started outside queueGenerateAll() (e.g. a bare cron event).
+			$progress = array(
+				'generated' => 0,
+				'skipped'   => 0,
+				'failed'    => 0,
+			);
+		}
+		$progress['state'] = 'running';
+		\set_transient( self::PROGRESS_TRANSIENT, $progress, self::PROGRESS_TTL );
+
+		$runner = new AttachmentBatchRunner(
+			self::CURSOR_TRANSIENT,
+			self::STOP_TRANSIENT,
+			self::GENERATE_HOOK,
+			AttachmentQuery::IMAGE_MIMES,
+			static function ( int $attachmentId ) use ( &$progress ): void {
+				++$progress[ self::generateMissingForAttachment( $attachmentId ) ];
+			}
+		);
+		$status = $runner->run();
+
+		$progress['state'] = match ( $status ) {
+			AttachmentBatchRunner::STATUS_COMPLETE => 'complete',
+			AttachmentBatchRunner::STATUS_STOPPED  => 'stopped',
+			default                                => 'running',
+		};
+		\set_transient( self::PROGRESS_TRANSIENT, $progress, self::PROGRESS_TTL );
+
+		if ( 'running' !== $progress['state'] && class_exists( Logger::class ) ) {
+			( new Logger() )->addLog(
+				$progress['failed'] > 0 || 'stopped' === $progress['state'] ? 'warning' : 'success',
+				sprintf(
+					'LQIP bulk generation %s: %d generated, %d skipped, %d failed',
+					$progress['state'],
+					$progress['generated'],
+					$progress['skipped'],
+					$progress['failed']
+				),
+				$progress
+			);
+		}
+	}
+
+	/**
+	 * Generate hashes for one attachment unless it already has a valid set.
+	 *
+	 * @return string Outcome: 'generated', 'skipped', or 'failed'.
+	 */
+	public static function generateMissingForAttachment( int $attachmentId, bool $force = false ): string {
+		// Clear object cache for this post so persistent caches (Redis/
+		// Memcached) cannot serve stale meta data.
+		\clean_post_cache( $attachmentId );
+
+		if ( ! $force && self::hasValidHash( $attachmentId ) ) {
+			return 'skipped';
+		}
+
+		$hashes = self::doGenerateForAttachment( $attachmentId );
+		return ( is_array( $hashes ) && ! empty( $hashes['full'] ) ) ? 'generated' : 'failed';
+	}
+
+	/**
+	 * Whether an attachment already has a valid stored ThumbHash set.
+	 */
+	public static function hasValidHash( int $attachmentId ): bool {
+		return self::isValidHashSet( \get_post_meta( $attachmentId, self::META_KEY, true ) );
+	}
+
+	/**
+	 * Whether a meta value is a valid ThumbHash set (has a proper 'full' hash).
+	 *
+	 * @param mixed $meta Stored meta value to validate.
+	 */
+	public static function isValidHashSet( $meta ): bool {
+		return is_array( $meta )
+			&& isset( $meta['full'] )
+			&& is_string( $meta['full'] )
+			&& strlen( $meta['full'] ) > 10;
 	}
 
 	/**
@@ -329,139 +486,8 @@ final class ThumbHash {
 	}
 
 	/**
-	 * Generate ThumbHashes for all image attachments that don't have them yet.
-	 *
-	 * @param bool $force If true, regenerate even if ThumbHash already exists.
-	 * @return array{generated: int, skipped: int, failed: int, stopped: bool}
-	 */
-	public static function generateAll( bool $force = false ): array {
-		self::clearStopRequest();
-
-		$result = array(
-			'generated' => 0,
-			'skipped'   => 0,
-			'failed'    => 0,
-			'stopped'   => false,
-		);
-
-		$query = new \WP_Query(
-			array(
-				'post_type'              => 'attachment',
-				'post_mime_type'         => array( 'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp' ),
-				'post_status'            => 'inherit',
-				'posts_per_page'         => -1,
-				'fields'                 => 'ids',
-				'no_found_rows'          => true,
-				'update_post_meta_cache' => false, // Avoid potential caching issues
-				'update_post_term_cache' => false,
-			)
-		);
-
-		$logger = class_exists( Logger::class ) ? new Logger() : null;
-
-		foreach ( $query->posts as $attachmentId ) {
-			if ( self::shouldStop() ) {
-				$result['stopped'] = true;
-				break;
-			}
-
-			// Clear object cache for this post to ensure fresh meta data
-			// This prevents stale data from persistent object caching (Redis/Memcached)
-			\clean_post_cache( (int) $attachmentId );
-
-			// Skip if already has valid ThumbHash (unless forcing regeneration)
-			if ( ! $force ) {
-				$existing = \get_post_meta( $attachmentId, self::META_KEY, true );
-				// Verify it's a valid ThumbHash array with at least a 'full' entry
-				if ( is_array( $existing ) && isset( $existing['full'] ) && is_string( $existing['full'] ) && strlen( $existing['full'] ) > 10 ) {
-					++$result['skipped'];
-					// Log individual skip
-					if ( $logger ) {
-						$logger->addLog(
-							'info',
-							sprintf( 'LQIP skipped for attachment ID %d (already exists)', $attachmentId ),
-							array( 'attachment_id' => $attachmentId )
-						);
-					}
-					continue;
-				}
-			}
-
-			// Use private helper to generate (bypasses isEnabled check for bulk operations)
-			$hashes = self::doGenerateForAttachment( (int) $attachmentId );
-
-			if ( is_array( $hashes ) && ! empty( $hashes['full'] ) ) {
-				++$result['generated'];
-				// Log individual success
-				if ( $logger ) {
-					$logger->addLog(
-						'success',
-						sprintf( 'LQIP generated for attachment ID %d', $attachmentId ),
-						array(
-							'attachment_id'   => $attachmentId,
-							'sizes_generated' => count( $hashes ),
-						)
-					);
-				}
-			} else {
-				++$result['failed'];
-				// Capture the last error for debugging
-				if ( ! isset( $result['last_error'] ) && self::$lastError ) {
-					$result['last_error'] = self::$lastError;
-				}
-				// Log individual failure
-				if ( $logger ) {
-					$logger->addLog(
-						'error',
-						sprintf( 'LQIP generation failed for attachment ID %d', $attachmentId ),
-						array(
-							'attachment_id' => $attachmentId,
-							'error'         => self::$lastError ?? 'Unknown error',
-						)
-					);
-				}
-			}
-		}
-
-		// Log summary of bulk operation
-		if ( $logger && ( $result['generated'] > 0 || $result['failed'] > 0 || $result['skipped'] > 0 || $result['stopped'] ) ) {
-			$summaryDetails = array(
-				'generated' => $result['generated'],
-				'skipped'   => $result['skipped'],
-				'failed'    => $result['failed'],
-			);
-			if ( $result['stopped'] ) {
-				$summaryDetails['stopped'] = true;
-			}
-
-			$logger->addLog(
-				( $result['failed'] > 0 || $result['stopped'] ) ? 'warning' : 'success',
-				sprintf(
-					'LQIP bulk generation complete: %d generated, %d skipped, %d failed',
-					$result['generated'],
-					$result['skipped'],
-					$result['failed']
-				),
-				$summaryDetails
-			);
-		}
-
-		self::clearStopRequest();
-
-		return $result;
-	}
-
-	private static function shouldStop(): bool {
-		return (bool) \get_transient( self::STOP_TRANSIENT );
-	}
-
-	private static function clearStopRequest(): void {
-		\delete_transient( self::STOP_TRANSIENT );
-	}
-
-	/**
 	 * Internal helper to generate ThumbHashes for an attachment without checking isEnabled().
-	 * Used by generateAll() for bulk operations where the caller handles the enable check.
+	 * Used by bulk operations where the caller handles the enable check.
 	 *
 	 * @param int $attachmentId WordPress attachment ID.
 	 * @return array<string, string>|null Hash array or null on failure.
@@ -469,7 +495,19 @@ final class ThumbHash {
 	private static function doGenerateForAttachment( int $attachmentId ): ?array {
 		$metadata = \wp_get_attachment_metadata( $attachmentId );
 		if ( ! is_array( $metadata ) || empty( $metadata['file'] ) ) {
-			self::$lastError = "Invalid or missing metadata for attachment $attachmentId";
+			// Fall back to the attached file so attachments with broken or
+			// missing metadata still get a 'full' placeholder.
+			$attached = (string) \get_attached_file( $attachmentId );
+			if ( '' === $attached || ! file_exists( $attached ) ) {
+				self::$lastError = "Invalid or missing metadata for attachment $attachmentId";
+				return null;
+			}
+			$hash = self::generate( $attached );
+			if ( $hash ) {
+				$hashes = array( 'full' => $hash );
+				\update_post_meta( $attachmentId, self::META_KEY, $hashes );
+				return $hashes;
+			}
 			return null;
 		}
 
@@ -551,6 +589,10 @@ final class ThumbHash {
 			return 0;
 		}
 
+		// A paused generation scan must not resume past freshly-deleted hashes.
+		\delete_transient( self::CURSOR_TRANSIENT );
+		\delete_transient( self::PROGRESS_TRANSIENT );
+
 		// Delete the meta data directly
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$deleted = $wpdb->query(
@@ -581,7 +623,7 @@ final class ThumbHash {
 	 * Count attachments with ThumbHash metadata.
 	 *
 	 * Validates that entries have a proper 'full' key with hash length > 10,
-	 * matching the skip logic in generateAll() to ensure consistent reporting.
+	 * matching the bulk-generation skip logic to ensure consistent reporting.
 	 *
 	 * @return array{with_hash: int, without_hash: int, total: int}
 	 */
@@ -613,9 +655,9 @@ final class ThumbHash {
 				continue;
 			}
 
-			// Validate the structure matches what generateAll() skip logic expects
+			// Validate the structure matches what the generation skip logic expects
 			$meta = maybe_unserialize( $row->meta_value );
-			if ( is_array( $meta ) && isset( $meta['full'] ) && is_string( $meta['full'] ) && strlen( $meta['full'] ) > 10 ) {
+			if ( self::isValidHashSet( $meta ) ) {
 				++$withHash;
 				$seenPostIds[ $row->post_id ] = true;
 			}

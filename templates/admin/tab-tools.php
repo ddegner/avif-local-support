@@ -110,15 +110,15 @@ $auto_first_label   = match ( $auto_first_attempt ) {
 <div id="avif-local-support-tab-tools" class="avif-local-support-tab">
 	<div class="avif-settings-form avif-tools-layout">
 		<section class="avif-tools-section">
-			<h3><?php esc_html_e( 'AVIF Tools', 'avif-local-support' ); ?></h3>
+			<h3><?php esc_html_e( 'AVIF Tools: Media Library', 'avif-local-support' ); ?></h3>
 			<p class="description">
-				<?php esc_html_e( 'Generate or remove AVIF files for existing JPEG media.', 'avif-local-support' ); ?>
+				<?php esc_html_e( 'Generate or remove AVIF files for JPEGs in the Media Library.', 'avif-local-support' ); ?>
 			</p>
 
 			<table id="avif-local-support-stats" class="widefat striped">
 				<tbody>
 					<tr>
-						<th scope="row"><?php esc_html_e( 'JPEG Files', 'avif-local-support' ); ?></th>
+						<th scope="row"><?php esc_html_e( 'JPEG files', 'avif-local-support' ); ?></th>
 						<td><span id="avif-local-support-total-jpegs"><?php echo (int) ( $stats['total_jpegs'] ?? 0 ); ?></span></td>
 					</tr>
 					<tr>
@@ -133,9 +133,9 @@ $auto_first_label   = match ( $auto_first_attempt ) {
 			</table>
 
 			<div class="avif-actions-row">
-				<button type="button" class="button button-primary" id="avif-local-support-convert-now"><?php esc_html_e( 'Generate Missing AVIF', 'avif-local-support' ); ?></button>
+				<button type="button" class="button button-primary" id="avif-local-support-convert-now"><?php esc_html_e( 'Generate Missing AVIF Files', 'avif-local-support' ); ?></button>
 				<button type="button" class="button hidden" id="avif-local-support-stop-convert"><?php esc_html_e( 'Stop', 'avif-local-support' ); ?></button>
-				<button type="button" class="button button-secondary" id="avif-local-support-delete-avifs"><?php esc_html_e( 'Delete All AVIF', 'avif-local-support' ); ?></button>
+				<button type="button" class="button button-link-delete" id="avif-local-support-delete-avifs"><?php esc_html_e( 'Delete All AVIF Files', 'avif-local-support' ); ?></button>
 			</div>
 
 			<div id="avif-local-support-result" class="avif-result-row hidden">
@@ -148,15 +148,15 @@ $auto_first_label   = match ( $auto_first_attempt ) {
 		</section>
 
 		<section class="avif-tools-section">
-			<h3><?php esc_html_e( 'AVIF Tools (Filesystem)', 'avif-local-support' ); ?></h3>
+			<h3><?php esc_html_e( 'AVIF Tools: Uploads Folder (outside the Media Library)', 'avif-local-support' ); ?></h3>
 			<p class="description">
-				<?php esc_html_e( 'Covers JPEGs under /wp-content/uploads/ that are not in the Media Library — for example page builder caches, direct FTP uploads, or legacy imports. Useful if "Generate Missing AVIF" above leaves images unconverted. Privacy-sensitive folders (form plugins, backups) are skipped.', 'avif-local-support' ); ?>
+				<?php esc_html_e( 'Covers JPEGs under /wp-content/uploads/ that are not in the Media Library — for example page builder caches, direct FTP uploads, or legacy imports. Useful if "Generate Missing AVIF Files" above leaves images unconverted. Privacy-sensitive folders (form plugins, backups) are skipped.', 'avif-local-support' ); ?>
 			</p>
 
 			<table id="aviflosu-fs-scan-stats" class="widefat striped">
 				<tbody>
 					<tr>
-						<th scope="row"><?php esc_html_e( 'JPEG Files', 'avif-local-support' ); ?></th>
+						<th scope="row"><?php esc_html_e( 'JPEG files', 'avif-local-support' ); ?></th>
 						<td><span id="aviflosu-fs-scan-stat-total">-</span></td>
 					</tr>
 					<tr>
@@ -171,7 +171,7 @@ $auto_first_label   = match ( $auto_first_attempt ) {
 			</table>
 
 			<div class="avif-actions-row">
-				<button type="button" class="button button-primary" id="aviflosu-fs-scan-run"><?php esc_html_e( 'Generate Missing AVIF (Filesystem)', 'avif-local-support' ); ?></button>
+				<button type="button" class="button" id="aviflosu-fs-scan-run"><?php esc_html_e( 'Generate Missing AVIF Files (Uploads Folder)', 'avif-local-support' ); ?></button>
 				<button type="button" class="button hidden" id="aviflosu-fs-scan-stop"><?php esc_html_e( 'Stop', 'avif-local-support' ); ?></button>
 			</div>
 
@@ -196,12 +196,12 @@ $auto_first_label   = match ( $auto_first_attempt ) {
 			<section class="avif-tools-section">
 				<h3><?php esc_html_e( 'AVIF Settings Playground', 'avif-local-support' ); ?></h3>
 				<p class="description">
-					<?php esc_html_e( 'Upload one JPEG, pick a WordPress image size for preview generation, then compare JPEG and AVIF while tuning settings.', 'avif-local-support' ); ?>
+					<?php esc_html_e( 'Upload one JPEG, pick a preview size, then compare JPEG and AVIF while tuning settings.', 'avif-local-support' ); ?>
 				</p>
 				<form id="avif-local-support-playground-upload-form" action="#" method="post" enctype="multipart/form-data" class="avif-test-form">
 					<input type="file" id="avif-local-support-playground-file" name="avif_local_support_test_file" accept="image/jpeg" required />
 					<div class="avif-playground-upload-row">
-						<label for="avif-local-support-playground-size"><?php esc_html_e( 'Preview Size', 'avif-local-support' ); ?></label>
+						<label for="avif-local-support-playground-size"><?php esc_html_e( 'Preview size', 'avif-local-support' ); ?></label>
 						<select id="avif-local-support-playground-size" name="avif_local_support_playground_size">
 							<?php foreach ( $playground_sizes as $playground_size_name => $playground_size ) : ?>
 								<?php
@@ -218,7 +218,7 @@ $auto_first_label   = match ( $auto_first_attempt ) {
 						</select>
 					</div>
 					<div class="avif-actions-row">
-						<button type="submit" class="button button-primary" id="avif-local-support-playground-upload-submit"><?php esc_html_e( 'Load Playground Image', 'avif-local-support' ); ?></button>
+						<button type="submit" class="button" id="avif-local-support-playground-upload-submit"><?php esc_html_e( 'Load Playground Image', 'avif-local-support' ); ?></button>
 						<span class="spinner avif-spinner-inline" id="avif-local-support-playground-upload-spinner"></span>
 						<span id="avif-local-support-playground-upload-status" class="description"></span>
 					</div>
@@ -239,7 +239,7 @@ $auto_first_label   = match ( $auto_first_attempt ) {
 							<span id="avif-local-support-playground-speed-value"><?php echo esc_html( (string) $playground_speed ); ?></span>
 						</div>
 
-						<label for="avif-local-support-playground-subsampling"><?php esc_html_e( 'Chroma', 'avif-local-support' ); ?></label>
+						<label for="avif-local-support-playground-subsampling"><?php esc_html_e( 'Chroma subsampling', 'avif-local-support' ); ?></label>
 						<select id="avif-local-support-playground-subsampling">
 							<option value="420" <?php selected( '420', $playground_subsampling ); ?>>4:2:0</option>
 							<option value="422" <?php selected( '422', $playground_subsampling ); ?>>4:2:2</option>
@@ -264,7 +264,7 @@ $auto_first_label   = match ( $auto_first_attempt ) {
 
 					<div class="avif-actions-row">
 						<button type="button" class="button button-primary" id="avif-local-support-playground-refresh"><?php esc_html_e( 'Update AVIF Preview', 'avif-local-support' ); ?></button>
-						<button type="button" class="button button-secondary" id="avif-local-support-playground-apply-settings"><?php esc_html_e( 'Use These Settings Plugin-Wide', 'avif-local-support' ); ?></button>
+						<button type="button" class="button button-secondary" id="avif-local-support-playground-apply-settings"><?php esc_html_e( 'Save as Plugin Settings', 'avif-local-support' ); ?></button>
 						<span class="spinner avif-spinner-inline" id="avif-local-support-playground-preview-spinner"></span>
 						<span id="avif-local-support-playground-preview-status" class="description"></span>
 					</div>
@@ -273,7 +273,7 @@ $auto_first_label   = match ( $auto_first_attempt ) {
 				<div class="avif-playground-preview-card">
 					<h4 id="avif-local-support-playground-preview-title"><?php esc_html_e( 'JPEG', 'avif-local-support' ); ?></h4>
 					<div class="avif-playground-view-switch" role="group" aria-label="<?php esc_attr_e( 'Preview format', 'avif-local-support' ); ?>">
-						<button type="button" class="button button-small is-primary" id="avif-local-support-playground-view-jpg"><?php esc_html_e( 'Show JPG', 'avif-local-support' ); ?></button>
+						<button type="button" class="button button-small is-primary" id="avif-local-support-playground-view-jpg"><?php esc_html_e( 'Show JPEG', 'avif-local-support' ); ?></button>
 						<button type="button" class="button button-small" id="avif-local-support-playground-view-avif"><?php esc_html_e( 'Show AVIF', 'avif-local-support' ); ?></button>
 					</div>
 					<p id="avif-local-support-playground-size-summary" class="description"></p>
@@ -283,7 +283,7 @@ $auto_first_label   = match ( $auto_first_attempt ) {
 				</div>
 
 				<div class="avif-actions-row">
-					<a id="avif-local-support-playground-download-jpeg" class="button" href="#" target="_blank" rel="noopener" download><?php esc_html_e( 'Download JPG', 'avif-local-support' ); ?></a>
+					<a id="avif-local-support-playground-download-jpeg" class="button" href="#" target="_blank" rel="noopener" download><?php esc_html_e( 'Download JPEG', 'avif-local-support' ); ?></a>
 					<a id="avif-local-support-playground-download-avif" class="button" href="#" target="_blank" rel="noopener" download><?php esc_html_e( 'Download AVIF', 'avif-local-support' ); ?></a>
 				</div>
 			</div>
@@ -292,13 +292,13 @@ $auto_first_label   = match ( $auto_first_attempt ) {
 		<section class="avif-tools-section">
 			<h3><?php esc_html_e( 'LQIP Tools', 'avif-local-support' ); ?></h3>
 			<p class="description">
-				<?php esc_html_e( 'Manage LQIP for existing media items.', 'avif-local-support' ); ?>
+				<?php esc_html_e( 'Generate or remove LQIPs for images already in the Media Library.', 'avif-local-support' ); ?>
 			</p>
 
 			<table id="aviflosu-thumbhash-stats" class="widefat striped">
 				<tbody>
 					<tr>
-						<th scope="row"><?php esc_html_e( 'Media Items', 'avif-local-support' ); ?></th>
+						<th scope="row"><?php esc_html_e( 'Media items', 'avif-local-support' ); ?></th>
 						<td><span id="aviflosu-thumbhash-total">-</span></td>
 					</tr>
 					<tr>
@@ -315,7 +315,7 @@ $auto_first_label   = match ( $auto_first_attempt ) {
 			<div class="avif-actions-row">
 				<button type="button" id="aviflosu-thumbhash-generate" class="button button-primary"><?php esc_html_e( 'Generate Missing LQIPs', 'avif-local-support' ); ?></button>
 				<button type="button" id="aviflosu-thumbhash-stop" class="button hidden"><?php esc_html_e( 'Stop', 'avif-local-support' ); ?></button>
-				<button type="button" id="aviflosu-thumbhash-delete" class="button button-secondary"><?php esc_html_e( 'Delete All LQIPs', 'avif-local-support' ); ?></button>
+				<button type="button" id="aviflosu-thumbhash-delete" class="button button-link-delete"><?php esc_html_e( 'Delete All LQIPs', 'avif-local-support' ); ?></button>
 			</div>
 
 			<div id="aviflosu-thumbhash-result" class="avif-result-row hidden">
@@ -335,7 +335,7 @@ $auto_first_label   = match ( $auto_first_attempt ) {
 			<div class="avif-actions-row">
 				<button type="button" class="button" id="avif-local-support-refresh-logs"><?php esc_html_e( 'Refresh Logs', 'avif-local-support' ); ?></button>
 				<button type="button" class="button" id="avif-local-support-copy-logs"><?php esc_html_e( 'Copy Logs', 'avif-local-support' ); ?></button>
-				<button type="button" class="button" id="avif-local-support-clear-logs"><?php esc_html_e( 'Clear Logs', 'avif-local-support' ); ?></button>
+				<button type="button" class="button button-link-delete" id="avif-local-support-clear-logs"><?php esc_html_e( 'Clear Logs', 'avif-local-support' ); ?></button>
 				<label class="avif-logs-filter"><input type="checkbox" id="avif-local-support-logs-only-errors" />
 					<?php esc_html_e( 'Show only errors', 'avif-local-support' ); ?></label>
 				<span class="spinner avif-spinner-inline" id="avif-local-support-logs-spinner"></span>
@@ -351,21 +351,21 @@ $auto_first_label   = match ( $auto_first_attempt ) {
 		</section>
 
 		<section class="avif-tools-section">
-			<h3><?php esc_html_e( 'Server Support', 'avif-local-support' ); ?></h3>
+			<h3><?php esc_html_e( 'Server Diagnostics', 'avif-local-support' ); ?></h3>
+			<p class="description">
+				<?php esc_html_e( 'This panel explains what your server supports, what AVIF Local Support will do, and what to check when something is unexpected.', 'avif-local-support' ); ?>
+			</p>
+
 			<div class="avif-actions-row">
 				<button type="button" class="button" id="avif-local-support-copy-support"><?php esc_html_e( 'Copy Server Diagnostics', 'avif-local-support' ); ?></button>
 				<span id="avif-local-support-copy-support-status" class="description avif-status-success hidden"><?php esc_html_e( 'Copied!', 'avif-local-support' ); ?></span>
 			</div>
 
-			<p class="description">
-				<?php esc_html_e( 'This panel explains what your server supports, what AVIF Local Support will do, and what to check when something is unexpected.', 'avif-local-support' ); ?>
-			</p>
-
 			<div class="avif-support-panel">
-				<h3><?php esc_html_e( 'Summary', 'avif-local-support' ); ?></h3>
+				<h4><?php esc_html_e( 'Summary', 'avif-local-support' ); ?></h4>
 				<?php
 				$mode_explain = 'auto' === $engine_mode
-					? esc_html__( 'Auto: the plugin will try engines in order (CLI -> Imagick -> GD) until one succeeds.', 'avif-local-support' )
+					? esc_html__( 'Auto: the plugin will try engines in order (CLI → Imagick → GD) until one succeeds.', 'avif-local-support' )
 					: esc_html__( 'Forced: the plugin will use only the selected engine (no fallback).', 'avif-local-support' );
 				?>
 				<table class="widefat striped">
@@ -416,7 +416,7 @@ $auto_first_label   = match ( $auto_first_attempt ) {
 							</td>
 						</tr>
 						<tr>
-							<td><strong><?php esc_html_e( 'Front-end AVIF delivery', 'avif-local-support' ); ?></strong></td>
+							<td><strong><?php esc_html_e( 'AVIF image delivery', 'avif-local-support' ); ?></strong></td>
 							<td>
 								<?php echo wp_kses_post( $badge( $frontend_enabled, 'Enabled', 'Disabled' ) ); ?>
 								<div class="description">
@@ -427,7 +427,7 @@ $auto_first_label   = match ( $auto_first_attempt ) {
 					</tbody>
 				</table>
 
-				<h3><?php esc_html_e( 'Engine Details', 'avif-local-support' ); ?></h3>
+				<h4><?php esc_html_e( 'Engine Details', 'avif-local-support' ); ?></h4>
 				<?php require __DIR__ . '/partials/engine-details.php'; ?>
 
 				<details class="avif-support-details">
@@ -441,11 +441,11 @@ $auto_first_label   = match ( $auto_first_attempt ) {
 						<table class="widefat striped">
 							<tbody>
 								<tr>
-									<td><strong><?php esc_html_e( 'PHP Version', 'avif-local-support' ); ?></strong></td>
+									<td><strong><?php esc_html_e( 'PHP version', 'avif-local-support' ); ?></strong></td>
 									<td><code><?php echo esc_html( PHP_VERSION ); ?></code></td>
 								</tr>
 								<tr>
-									<td><strong><?php esc_html_e( 'WordPress Version', 'avif-local-support' ); ?></strong></td>
+									<td><strong><?php esc_html_e( 'WordPress version', 'avif-local-support' ); ?></strong></td>
 									<td><code><?php echo esc_html( get_bloginfo( 'version' ) ); ?></code></td>
 								</tr>
 								<tr>
@@ -484,7 +484,7 @@ $auto_first_label   = match ( $auto_first_attempt ) {
 			<form action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post" onsubmit="return confirm('<?php esc_attr_e( 'Reset all plugin settings to default values?', 'avif-local-support' ); ?>');">
 				<input type="hidden" name="action" value="aviflosu_reset_defaults" />
 				<?php wp_nonce_field( 'aviflosu_reset_defaults', '_wpnonce', false, true ); ?>
-				<button type="submit" class="button"><?php esc_html_e( 'Reset All Plugin Settings', 'avif-local-support' ); ?></button>
+				<button type="submit" class="button button-link-delete"><?php esc_html_e( 'Reset All Plugin Settings', 'avif-local-support' ); ?></button>
 			</form>
 		</section>
 	</div>

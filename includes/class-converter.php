@@ -277,7 +277,7 @@ final class Converter {
 		}
 
 		// Memory Check.
-		if ( ! $settings->disableMemoryCheck ) {
+		if ( $settings->memoryCheck ) {
 			$memoryWarning = $this->check_memory_safe( $sourcePath );
 			if ( $memoryWarning ) {
 				$this->log_conversion( 'error', $sourcePath, $avifPath, 'none', $start_time, $memoryWarning, $settings->toArray() );

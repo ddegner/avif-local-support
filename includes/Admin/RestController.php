@@ -664,7 +664,7 @@ final class RestController
 			$avifPath,
 			$this->buildPlaygroundAvifSettings($settings)
 		);
-		$error = $result->success ? '' : (string) ($result->error ?? __('Conversion failed.', 'avif-local-support'));
+		$error = $result->success ? '' : (string) ($result->error ?? __('Conversion failed. Check the Logs section for details.', 'avif-local-support'));
 
 		set_transient($this->getPlaygroundStateKey($token), $state, DAY_IN_SECONDS);
 
@@ -694,7 +694,7 @@ final class RestController
 			(string) $state['avif_path'],
 			$this->buildPlaygroundAvifSettings($settings)
 		);
-		$error = $result->success ? '' : (string) ($result->error ?? __('Conversion failed.', 'avif-local-support'));
+		$error = $result->success ? '' : (string) ($result->error ?? __('Conversion failed. Check the Logs section for details.', 'avif-local-support'));
 
 		return rest_ensure_response($this->buildPlaygroundResponse($token, $state, $settings, $error));
 	}
@@ -793,7 +793,7 @@ final class RestController
 			bitDepth: (string) ($settings['bit_depth'] ?? $current->bitDepth),
 			engineMode: (string) ($settings['engine_mode'] ?? $current->engineMode),
 			cliPath: $current->cliPath,
-			disableMemoryCheck: $current->disableMemoryCheck,
+			memoryCheck: $current->memoryCheck,
 			lossless: $quality >= 100,
 			convertOnUpload: $current->convertOnUpload,
 			convertViaSchedule: $current->convertViaSchedule,

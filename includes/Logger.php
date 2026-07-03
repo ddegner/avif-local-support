@@ -115,33 +115,71 @@ final class Logger {
 
 			$timeDisplay = $timestamp > 0 ? wp_date( 'Y-m-d H:i:s', $timestamp ) : '-';
 
-			echo '<div class="avif-log-entry ' . esc_attr( $status ) . '" data-status="' . esc_attr( $status ) . '">';
-			echo '  <div class="avif-log-header">';
-			echo '    <span class="avif-log-status ' . esc_attr( $status ) . '">' . esc_html( strtoupper( $status ) ) . '</span>';
-			echo '    - ' . esc_html( $timeDisplay );
-			echo '  </div>';
-			echo '  <div class="avif-log-message">' . esc_html( $message ) . '</div>';
+			$summary  = '<span class="avif-log-status ' . esc_attr( $status ) . '">' . esc_html( strtoupper( $status ) ) . '</span> ';
+			$summary .= '<span class="avif-log-time">' . esc_html( $timeDisplay ) . '</span> ';
+			$summary .= '<span class="avif-log-message">' . esc_html( $message ) . '</span>';
 
-			if ( ! empty( $details ) ) {
-				// Highlight suggestion if present
-				if ( isset( $details['error_suggestion'] ) ) {
-					echo '<div class="avif-log-suggestion">';
-					echo '💡 ' . esc_html( (string) $details['error_suggestion'] );
-					echo '</div>';
-					unset( $details['error_suggestion'] );
-				}
-
-				echo '<div class="avif-log-details">';
-				foreach ( $details as $key => $value ) {
-					if ( is_scalar( $value ) ) {
-						$displayValue = is_bool( $value ) ? ( $value ? 'true' : 'false' ) : (string) $value;
-						echo '<div><strong>' . esc_html( $key ) . ':</strong> ' . esc_html( $displayValue ) . '</div>';
-					}
-				}
-				echo '</div>';
+			$meta = $this->buildLogMeta( $details );
+			if ( '' !== $meta ) {
+				$summary .= ' <span class="avif-log-meta">' . esc_html( $meta ) . '</span>';
 			}
 
+			if ( empty( $details ) ) {
+				echo '<div class="avif-log-entry ' . esc_attr( $status ) . '" data-status="' . esc_attr( $status ) . '">';
+				echo '<div class="avif-log-summary">' . $summary . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped above.
+				echo '</div>';
+				continue;
+			}
+
+			echo '<details class="avif-log-entry ' . esc_attr( $status ) . '" data-status="' . esc_attr( $status ) . '">';
+			echo '<summary class="avif-log-summary">' . $summary . '</summary>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped above.
+			echo '<div class="avif-log-body">';
+
+			// Highlight suggestion if present.
+			if ( isset( $details['error_suggestion'] ) ) {
+				echo '<div class="avif-log-suggestion">';
+				echo '💡 ' . esc_html( (string) $details['error_suggestion'] );
+				echo '</div>';
+				unset( $details['error_suggestion'] );
+			}
+
+			echo '<div class="avif-log-details">';
+			foreach ( $details as $key => $value ) {
+				if ( is_scalar( $value ) ) {
+					$displayValue = is_bool( $value ) ? ( $value ? 'true' : 'false' ) : (string) $value;
+					echo '<div><strong>' . esc_html( $key ) . ':</strong> ' . esc_html( $displayValue ) . '</div>';
+				}
+			}
 			echo '</div>';
+
+			echo '</div>';
+			echo '</details>';
 		}
+	}
+
+	/**
+	 * Build the compact one-line meta string (engine · duration · size delta) for a log entry.
+	 *
+	 * @param array $details Log entry details (engine_used, duration_ms, source_size, target_size, ...).
+	 */
+	private function buildLogMeta( array $details ): string {
+		$parts = array();
+
+		$engine = isset( $details['engine_used'] ) ? (string) $details['engine_used'] : '';
+		if ( '' !== $engine && 'none' !== $engine ) {
+			$parts[] = $engine;
+		}
+
+		if ( isset( $details['duration_ms'] ) && is_numeric( $details['duration_ms'] ) ) {
+			$parts[] = number_format_i18n( (float) $details['duration_ms'] ) . ' ms';
+		}
+
+		$source = isset( $details['source_size'] ) && is_numeric( $details['source_size'] ) ? (int) $details['source_size'] : 0;
+		$target = isset( $details['target_size'] ) && is_numeric( $details['target_size'] ) ? (int) $details['target_size'] : 0;
+		if ( $source > 0 && $target > 0 ) {
+			$parts[] = size_format( $source ) . ' → ' . size_format( $target );
+		}
+
+		return implode( ' · ', $parts );
 	}
 }

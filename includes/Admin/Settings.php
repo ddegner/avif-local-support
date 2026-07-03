@@ -152,10 +152,10 @@ final class Settings
 
 		register_setting(
 			self::OPTION_GROUP,
-			'aviflosu_disable_memory_check',
+			'aviflosu_memory_check',
 			array(
 				'type' => 'boolean',
-				'default' => false,
+				'default' => true,
 				'sanitize_callback' => 'rest_sanitize_boolean',
 				'show_in_rest' => true,
 			)
@@ -322,7 +322,7 @@ final class Settings
 
 		add_settings_field(
 			'avif_local_support_quality',
-			__('AVIF quality (0-100)', 'avif-local-support'),
+			__('AVIF quality (0–100)', 'avif-local-support'),
 			array($this, 'renderQualityField'),
 			self::PAGE_SLUG,
 			'aviflosu_conversion_basic',
@@ -331,7 +331,7 @@ final class Settings
 
 		add_settings_field(
 			'avif_local_support_speed',
-			__('AVIF encoding speed (0-8)', 'avif-local-support'),
+			__('AVIF encoding speed (0–8)', 'avif-local-support'),
 			array($this, 'renderSpeedField'),
 			self::PAGE_SLUG,
 			'aviflosu_conversion_basic',
@@ -357,12 +357,12 @@ final class Settings
 		);
 
 		add_settings_field(
-			'avif_local_support_disable_memory_check',
+			'avif_local_support_memory_check',
 			__('Memory safety check', 'avif-local-support'),
-			array($this, 'renderDisableMemoryCheckField'),
+			array($this, 'renderMemoryCheckField'),
 			self::PAGE_SLUG,
 			'aviflosu_conversion_advanced',
-			array('label_for' => 'aviflosu_disable_memory_check')
+			array('label_for' => 'aviflosu_memory_check')
 		);
 
 		// Engine section.
@@ -475,9 +475,9 @@ final class Settings
 	// Field Renderers
 	// =========================================================================
 
-	private function renderHelpTip(string $text): void
+	private function renderFieldDescription(string $text): void
 	{
-		echo ' <span class="dashicons dashicons-editor-help avif-help-tip" role="img" aria-label="' . esc_attr($text) . '" title="' . esc_attr($text) . '"></span>';
+		echo '<p class="description">' . esc_html($text) . '</p>';
 	}
 
 	public function renderEnableSupportField(): void
@@ -495,8 +495,8 @@ final class Settings
 		echo '<label for="aviflosu_enable_background_images">';
 		echo '<input id="aviflosu_enable_background_images" type="checkbox" name="aviflosu_enable_background_images" value="1" ' . checked(true, $value, false) . ' /> ';
 		echo esc_html__('Replace JPEG background images with AVIF when available', 'avif-local-support');
-		$this->renderHelpTip(__('Works with page builders that set background images via CSS.', 'avif-local-support'));
 		echo '</label>';
+		$this->renderFieldDescription(__('Works with page builders that set background images via CSS.', 'avif-local-support'));
 	}
 
 	public function renderConvertOnUploadField(): void
@@ -505,8 +505,8 @@ final class Settings
 		echo '<label for="aviflosu_convert_on_upload">';
 		echo '<input id="aviflosu_convert_on_upload" type="checkbox" name="aviflosu_convert_on_upload" value="1" ' . checked(true, $value, false) . ' /> ';
 		echo esc_html__('Convert uploaded JPEG files to AVIF', 'avif-local-support');
-		$this->renderHelpTip(__('Can slow uploads on low-resource servers.', 'avif-local-support'));
 		echo '</label>';
+		$this->renderFieldDescription(__('Can slow uploads on low-resource servers.', 'avif-local-support'));
 	}
 
 	public function renderScheduleField(): void
@@ -515,10 +515,10 @@ final class Settings
 		$time = (string) get_option('aviflosu_schedule_time', '01:00');
 		echo '<label for="aviflosu_convert_via_schedule">';
 		echo '<input id="aviflosu_convert_via_schedule" type="checkbox" name="aviflosu_convert_via_schedule" value="1" ' . checked(true, $enabled, false) . ' /> ';
-		echo esc_html__('Scan daily and convert missing AVIF files', 'avif-local-support');
-		$this->renderHelpTip(__('Set the time field to choose when the daily scan runs.', 'avif-local-support'));
+		echo esc_html__('Scan daily and generate missing AVIF files', 'avif-local-support');
 		echo '</label> ';
 		echo '<input id="aviflosu_schedule_time" type="time" name="aviflosu_schedule_time" value="' . esc_attr($time) . '" aria-label="' . esc_attr__('Daily run time', 'avif-local-support') . '" />';
+		$this->renderFieldDescription(__('Set the time field to choose when the daily scan runs.', 'avif-local-support'));
 	}
 
 	public function renderQualityField(): void
@@ -526,7 +526,7 @@ final class Settings
 		$value = (int) get_option('aviflosu_quality', 85);
 		echo '<input id="aviflosu_quality" type="range" name="aviflosu_quality" min="0" max="100" value="' . esc_attr((string) $value) . '" oninput="this.nextElementSibling.innerText=this.value" /> ';
 		echo '<span>' . esc_html((string) $value) . '</span>';
-		$this->renderHelpTip(__('Higher values improve quality and increase file size.', 'avif-local-support'));
+		$this->renderFieldDescription(__('Higher values improve quality and increase file size.', 'avif-local-support'));
 	}
 
 	public function renderSpeedField(): void
@@ -534,7 +534,7 @@ final class Settings
 		$value = max(0, min(8, (int) get_option('aviflosu_speed', 1)));
 		echo '<input id="aviflosu_speed" type="range" name="aviflosu_speed" min="0" max="8" value="' . esc_attr((string) $value) . '" oninput="this.nextElementSibling.innerText=this.value" /> ';
 		echo '<span>' . esc_html((string) $value) . '</span>';
-		$this->renderHelpTip(__('Lower values are slower with better compression. Higher values are faster with larger files.', 'avif-local-support'));
+		$this->renderFieldDescription(__('0 = slowest with the best compression, 8 = fastest with larger files.', 'avif-local-support'));
 	}
 
 	public function renderSubsamplingField(): void
@@ -553,7 +553,7 @@ final class Settings
 			echo '</label>';
 		}
 		echo '</fieldset>';
-		$this->renderHelpTip(__('4:2:0 is usually best for compatibility and size. 4:4:4 preserves more color detail.', 'avif-local-support'));
+		$this->renderFieldDescription(__('4:2:0 is usually best for compatibility and size. 4:4:4 preserves more color detail.', 'avif-local-support'));
 	}
 
 	public function renderBitDepthField(): void
@@ -572,17 +572,17 @@ final class Settings
 			echo '</label>';
 		}
 		echo '</fieldset>';
-		$this->renderHelpTip(__('8-bit is standard. Higher bit depth can increase file size and reduce compatibility.', 'avif-local-support'));
+		$this->renderFieldDescription(__('8-bit is standard. Higher bit depth can increase file size and reduce compatibility.', 'avif-local-support'));
 	}
 
-	public function renderDisableMemoryCheckField(): void
+	public function renderMemoryCheckField(): void
 	{
-		$value = (bool) get_option('aviflosu_disable_memory_check', false);
-		echo '<label for="aviflosu_disable_memory_check">';
-		echo '<input id="aviflosu_disable_memory_check" type="checkbox" name="aviflosu_disable_memory_check" value="1" ' . checked(true, $value, false) . ' /> ';
-		echo esc_html__('Disable memory safety check before conversion', 'avif-local-support');
-		$this->renderHelpTip(__('Only enable this if you trust available server memory; large images may cause fatal errors.', 'avif-local-support'));
+		$value = (bool) get_option('aviflosu_memory_check', true);
+		echo '<label for="aviflosu_memory_check">';
+		echo '<input id="aviflosu_memory_check" type="checkbox" name="aviflosu_memory_check" value="1" ' . checked(true, $value, false) . ' /> ';
+		echo esc_html__('Check available memory before each conversion', 'avif-local-support');
 		echo '</label>';
+		$this->renderFieldDescription(__('Recommended. Skips images too large for available PHP memory instead of risking a fatal error. Only disable if conversions are being skipped and you trust your server has enough memory.', 'avif-local-support'));
 	}
 
 	public function renderEngineModeField(): void
@@ -620,9 +620,9 @@ final class Settings
 
 		// CLI Path.
 		echo '<label for="aviflosu_cli_path">' . esc_html__('ImageMagick binary path', 'avif-local-support');
-		$this->renderHelpTip(__('Choose a detected binary or enter a custom path.', 'avif-local-support'));
 		echo '</label><br>';
 		echo '<input type="text" id="aviflosu_cli_path" name="aviflosu_cli_path" value="' . esc_attr($cliPath) . '" list="aviflosu_cli_path_datalist" placeholder="/usr/local/bin/magick" class="regular-text code" />';
+		$this->renderFieldDescription(__('Choose a detected binary or enter a custom path.', 'avif-local-support'));
 		echo '<datalist id="aviflosu_cli_path_datalist">';
 		foreach ($detected as $bin) {
 			$path = isset($bin['path']) ? (string) $bin['path'] : '';
@@ -634,9 +634,9 @@ final class Settings
 
 		// CLI Args.
 		echo '<p><label for="aviflosu_cli_args">' . esc_html__('Extra ImageMagick flags', 'avif-local-support');
-		$this->renderHelpTip(__('Additional flags passed to ImageMagick (example: -define avif:my-flag=1).', 'avif-local-support'));
 		echo '</label><br>';
 		echo '<input type="text" id="aviflosu_cli_args" name="aviflosu_cli_args" value="' . esc_attr($cliArgs) . '" class="large-text code" /></p>';
+		$this->renderFieldDescription(__('Additional flags passed to ImageMagick (example: -define avif:my-flag=1).', 'avif-local-support'));
 		if ($cliArgs !== $suggestedArgs && '' !== $suggestedArgs) {
 			/* translators: %s: Suggested CLI arguments. */
 			echo '<p class="description"><small>' . sprintf(esc_html__('Suggested: %s', 'avif-local-support'), '<code>' . esc_html($suggestedArgs) . '</code>');
@@ -645,9 +645,9 @@ final class Settings
 
 		// CLI Env.
 		echo '<p><label for="aviflosu_cli_env">' . esc_html__('ImageMagick environment variables', 'avif-local-support');
-		$this->renderHelpTip(__('Environment variables for the CLI process (KEY=VALUE), one per line.', 'avif-local-support'));
 		echo '</label><br>';
 		echo '<textarea id="aviflosu_cli_env" name="aviflosu_cli_env" rows="4" class="large-text code">' . esc_textarea($cliEnv) . '</textarea></p>';
+		$this->renderFieldDescription(__('Environment variables for the CLI process (KEY=VALUE), one per line.', 'avif-local-support'));
 		if ($cliEnv !== $suggestedEnv) {
 			echo '<p class="description"><small>' . esc_html__('Suggested values:', 'avif-local-support');
 			echo ' <a href="#" class="aviflosu-apply-suggestion" data-target="aviflosu_cli_env" data-value="' . esc_attr($suggestedEnv) . '">[' . esc_html__('Use suggested', 'avif-local-support') . ']</a></small></p>';
@@ -661,9 +661,9 @@ final class Settings
 		$value = (bool) get_option('aviflosu_thumbhash_enabled', false);
 		echo '<label for="aviflosu_thumbhash_enabled">';
 		echo '<input id="aviflosu_thumbhash_enabled" type="checkbox" name="aviflosu_thumbhash_enabled" value="1" ' . checked(true, $value, false) . ' /> ';
-		echo esc_html__('Enable LQIP using ThumbHash', 'avif-local-support');
-		$this->renderHelpTip(__('Generates ultra-compact LQIP data decoded client-side while full images load.', 'avif-local-support'));
+		echo esc_html__('Show a tiny placeholder while each image loads', 'avif-local-support');
 		echo '</label>';
+		$this->renderFieldDescription(__('Generates compact ThumbHash data that is decoded in the browser while the full image loads.', 'avif-local-support'));
 	}
 
 	public function renderLqipGenerateOnUploadField(): void
@@ -671,7 +671,7 @@ final class Settings
 		$value = (bool) get_option('aviflosu_lqip_generate_on_upload', true);
 		echo '<label for="aviflosu_lqip_generate_on_upload">';
 		echo '<input id="aviflosu_lqip_generate_on_upload" type="checkbox" name="aviflosu_lqip_generate_on_upload" value="1" ' . checked(true, $value, false) . ' /> ';
-		echo esc_html__('Generate LQIP on upload', 'avif-local-support');
+		echo esc_html__('Generate a placeholder when a JPEG is uploaded', 'avif-local-support');
 		echo '</label>';
 	}
 
@@ -680,9 +680,9 @@ final class Settings
 		$enabled = (bool) get_option('aviflosu_lqip_generate_via_schedule', true);
 		echo '<label for="aviflosu_lqip_generate_via_schedule">';
 		echo '<input id="aviflosu_lqip_generate_via_schedule" type="checkbox" name="aviflosu_lqip_generate_via_schedule" value="1" ' . checked(true, $enabled, false) . ' /> ';
-		echo esc_html__('Scan daily and generate missing LQIP', 'avif-local-support');
-		$this->renderHelpTip(__('Uses the same daily schedule time as AVIF conversion.', 'avif-local-support'));
+		echo esc_html__('Scan daily and generate missing LQIPs', 'avif-local-support');
 		echo '</label>';
+		$this->renderFieldDescription(__('Uses the same daily schedule time as AVIF conversion.', 'avif-local-support'));
 	}
 
 	public function renderLqipFadeField(): void
@@ -690,9 +690,9 @@ final class Settings
 		$value = (bool) get_option('aviflosu_lqip_fade', true);
 		echo '<label for="aviflosu_lqip_fade">';
 		echo '<input id="aviflosu_lqip_fade" type="checkbox" name="aviflosu_lqip_fade" value="1" ' . checked(true, $value, false) . ' /> ';
-		echo esc_html__('Fade in full images', 'avif-local-support');
-		$this->renderHelpTip(__('Adds a smooth transition when the full image replaces the LQIP.', 'avif-local-support'));
+		echo esc_html__('Cross-fade from the placeholder to the full image', 'avif-local-support');
 		echo '</label>';
+		$this->renderFieldDescription(__('Adds a smooth transition when the full image replaces the LQIP.', 'avif-local-support'));
 	}
 
 	public function renderLqipPixelatedField(): void
@@ -701,8 +701,8 @@ final class Settings
 		echo '<label for="aviflosu_lqip_pixelated">';
 		echo '<input id="aviflosu_lqip_pixelated" type="checkbox" name="aviflosu_lqip_pixelated" value="1" ' . checked(true, $value, false) . ' /> ';
 		echo esc_html__('Show pixelated LQIP instead of blur', 'avif-local-support');
-		$this->renderHelpTip(__('Displays chunky pixels instead of a blur for the LQIP style.', 'avif-local-support'));
 		echo '</label>';
+		$this->renderFieldDescription(__('A stylistic alternative to the default blur effect.', 'avif-local-support'));
 	}
 
 	/**

@@ -49,6 +49,13 @@
   margin-bottom: 12px;
 }
 
+/* Keep stat values near their labels. */
+#avif-local-support-stats,
+#aviflosu-fs-scan-stats,
+#aviflosu-thumbhash-stats {
+  max-width: 520px;
+}
+
 /* Shared status row: [spinner/check] [status text] [progress counters]. */
 .avif-result-row {
   display: flex;
@@ -231,17 +238,17 @@
   margin: 0 0 8px;
 }
 
-.avif-help-tip {
-  color: #646970;
-  font-size: 16px;
-  width: 16px;
-  height: 16px;
-  margin-left: 4px;
-  vertical-align: text-bottom;
+/* Destructive buttons: core .button-link-delete color loses to the admin
+   color scheme's .button rules, so re-assert the red at higher specificity. */
+.wp-core-ui .button.button-link-delete {
+  color: #d63638;
+  border-color: #d63638;
 }
 
-.avif-help-tip:hover {
-  color: #2271b1;
+.wp-core-ui .button.button-link-delete:hover,
+.wp-core-ui .button.button-link-delete:focus {
+  color: #b32d2e;
+  border-color: #b32d2e;
 }
 
 /* Increase spacing between inline radio options */
@@ -265,8 +272,6 @@
 }
 
 .avif-logs-container {
-  max-height: 400px;
-  overflow-y: auto;
   border: 1px solid #c3c4c7;
   background: #fff;
   padding: 10px;
@@ -274,7 +279,7 @@
 
 .avif-log-entry {
   margin: 0;
-  padding: 10px 12px;
+  padding: 8px 12px;
   border-bottom: 1px solid #dcdcde;
 }
 
@@ -283,39 +288,52 @@
 }
 
 .avif-log-entry.error {
-  border-left: 3px solid #dc3232;
+  border-left: 3px solid #d63638;
 }
 
 .avif-log-entry.warning {
-  border-left: 3px solid #ffb900;
+  border-left: 3px solid #dba617;
 }
 
 .avif-log-entry.success,
 .avif-log-entry.info {
-  border-left: 3px solid #46b450;
+  border-left: 3px solid #00a32a;
 }
 
-.avif-log-header {
+.avif-log-entry > summary {
+  cursor: pointer;
+}
+
+.avif-log-summary .avif-log-status {
   font-weight: 600;
-  margin-bottom: 4px;
+}
+
+.avif-log-summary .avif-log-time,
+.avif-log-summary .avif-log-meta {
+  color: #646970;
+  font-size: 12px;
+}
+
+.avif-log-body {
+  margin-top: 6px;
 }
 
 .avif-log-status.error {
-  color: #dc3232;
+  color: #d63638;
 }
 
 .avif-log-status.warning {
-  color: #ffb900;
+  color: #996800;
 }
 
 .avif-log-status.success,
 .avif-log-status.info {
-  color: #46b450;
+  color: #008a20;
 }
 
 .avif-log-details {
-  font-size: 11px;
-  color: #666;
+  font-size: 12px;
+  color: #50575e;
   font-family: Consolas, Monaco, monospace;
   line-height: 1.4;
 }

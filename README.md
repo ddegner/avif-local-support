@@ -3,7 +3,7 @@ Contributors: ddegner
 Tags: avif, images, performance, media, optimization
 Requires at least: 6.8
 Tested up to: 7.0
-Stable tag: 0.7.0
+Stable tag: 0.8.0
 Requires PHP: 8.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -18,7 +18,7 @@ Built by a [Boston photographer](https://www.daviddegner.com) for site owners wh
 
 - **Local Processing** — All conversion happens on your server. No subscriptions or external API calls. Works great on a shared CPU with 2GB RAM.
 - **Quality First** — Uses LANCZOS resizing, preserves ICC color profiles, and keeps EXIF/XMP/IPTC metadata intact.
-- **Fully Tunable** — Control quality (0–100), speed (0–10), chroma subsampling (4:2:0, 4:2:2, 4:4:4), and bit depth (8/10/12-bit).
+- **Fully Tunable** — Control quality (0–100), speed (0–8), chroma subsampling (4:2:0, 4:2:2, 4:4:4), and bit depth (8/10/12-bit).
 - **Smart Fallback** — Serves AVIF to supported browsers, JPEG to everyone else via picture elements.
 - **Automatic Conversion** — Convert on upload or via daily scheduled background scans.
 - **LQIP Placeholders** — Generate ThumbHash-based low-quality image placeholders for smooth loading.
@@ -210,6 +210,18 @@ LiteSpeed's open_basedir restriction prevents PHP from detecting executables out
 4. **About** — Quick reference and version info
 
 ## Changelog
+
+### 0.8.0
+
+- Enhancement: Setting explanations are now always visible below each field instead of hidden in hover-only "?" tooltips, making them accessible to keyboard and touch users.
+- Enhancement: Redesigned the Logs panel — each entry is a compact one-line summary (engine, duration, size change) that expands for full details, with accessible status colors and no more scroll trapping.
+- Enhancement: Destructive buttons (Delete All AVIF Files, Delete All LQIPs, Clear Logs, Reset All Plugin Settings) now use red styling, and confirmation dialogs show how many items will be affected.
+- Change: The negated "Disable memory safety check" setting is now a positive "Check available memory before each conversion" (new `aviflosu_memory_check` option); existing settings migrate automatically.
+- Enhancement: Clearer Tools tab — sections scoped as "AVIF Tools: Media Library" and "AVIF Tools: Uploads Folder", the diagnostics panel renamed to "Server Diagnostics", and engine statuses now read "Will be tried" / "Not used" instead of "Attempting" / "Skipped".
+- Enhancement: Unified interface copy — consistent generate/convert verbs, "JPEG" naming, sentence-case labels, typographic dashes and arrows, and count-aware confirmation strings.
+- Enhancement: The Settings Playground loads the preview automatically when a JPEG is selected, and tabs announce the active state to assistive technology.
+- Fix: Corrected the documented encoding speed range from 0–10 to the actual 0–8.
+- Fix: A warning notice pointed to the removed "Upload Test" tool; it now points to the AVIF Settings Playground.
 
 ### 0.7.0
 

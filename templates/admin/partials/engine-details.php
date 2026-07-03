@@ -28,7 +28,7 @@ $df            = (string) ( $system_status['disable_functions'] ?? ini_get( 'dis
 $df_list       = array_filter( array_map( 'trim', explode( ',', $df ) ) );
 $exec_disabled = in_array( 'exec', $df_list, true );
 
-$cli_summary = $cli_will_attempt ? esc_html__( 'Attempting', 'avif-local-support' ) : esc_html__( 'Skipped', 'avif-local-support' );
+$cli_summary = $cli_will_attempt ? esc_html__( 'Will be tried', 'avif-local-support' ) : esc_html__( 'Not used', 'avif-local-support' );
 if ( 'cli' === $engine_mode ) {
 	$cli_summary .= ' <span class="description">(' . esc_html__( 'forced', 'avif-local-support' ) . ')</span>';
 }
@@ -128,7 +128,7 @@ if ( 'cli' === $engine_mode ) {
 <!-- Imagick Details -->
 <?php
 $imagick_will_attempt = ! empty( $system_status['imagick_will_attempt'] );
-$im_summary           = $imagick_will_attempt ? esc_html__( 'Attempting', 'avif-local-support' ) : esc_html__( 'Skipped', 'avif-local-support' );
+$im_summary           = $imagick_will_attempt ? esc_html__( 'Will be tried', 'avif-local-support' ) : esc_html__( 'Not used', 'avif-local-support' );
 if ( 'imagick' === $engine_mode ) {
 	$im_summary .= ' <span class="description">(' . esc_html__( 'forced', 'avif-local-support' ) . ')</span>';
 }
@@ -176,7 +176,7 @@ if ( 'imagick' === $engine_mode ) {
 <!-- GD Details -->
 <?php
 $gd_will_attempt = ! empty( $system_status['gd_will_attempt'] );
-$gd_summary      = $gd_will_attempt ? esc_html__( 'Attempting', 'avif-local-support' ) : esc_html__( 'Skipped', 'avif-local-support' );
+$gd_summary      = $gd_will_attempt ? esc_html__( 'Will be tried', 'avif-local-support' ) : esc_html__( 'Not used', 'avif-local-support' );
 if ( 'gd' === $engine_mode ) {
 	$gd_summary .= ' <span class="description">(' . esc_html__( 'forced', 'avif-local-support' ) . ')</span>';
 }

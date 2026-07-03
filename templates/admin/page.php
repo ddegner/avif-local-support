@@ -19,20 +19,20 @@ $support_level = (string) ( $system_status['avif_support_level'] ?? ( empty( $sy
 
 	<?php if ( $support_level === 'no' ) : ?>
 		<div class="notice notice-error">
-			<p><strong><?php esc_html_e( 'AVIF support not available!', 'avif-local-support' ); ?></strong></p>
+			<p><strong><?php esc_html_e( 'AVIF conversion is not available on this server.', 'avif-local-support' ); ?></strong></p>
 			<p><?php esc_html_e( 'This plugin requires either GD with AVIF support (imageavif) or ImageMagick with AVIF format support.', 'avif-local-support' ); ?>
 			</p>
 		</div>
 	<?php elseif ( $support_level === 'unknown' ) : ?>
 		<div class="notice notice-warning">
 			<p><strong><?php esc_html_e( 'AVIF support is unconfirmed.', 'avif-local-support' ); ?></strong></p>
-			<p><?php esc_html_e( 'The plugin can attempt conversion (usually via CLI), but AVIF capability could not be confirmed. Try the Tools → Upload Test and check Logs for details.', 'avif-local-support' ); ?>
+			<p><?php esc_html_e( 'The plugin can attempt conversion (usually via CLI), but AVIF capability could not be confirmed. Try the AVIF Settings Playground on the Tools tab and check the Logs section for details.', 'avif-local-support' ); ?>
 			</p>
 		</div>
 	<?php endif; ?>
 
 		<h2 class="nav-tab-wrapper">
-			<a href="#settings" class="nav-tab nav-tab-active"
+			<a href="#settings" class="nav-tab nav-tab-active" aria-current="page"
 				id="avif-local-support-tab-link-settings"><?php esc_html_e( 'AVIF Settings', 'avif-local-support' ); ?></a>
 			<a href="#lqip" class="nav-tab"
 				id="avif-local-support-tab-link-lqip"><?php esc_html_e( 'LQIP Settings', 'avif-local-support' ); ?></a>

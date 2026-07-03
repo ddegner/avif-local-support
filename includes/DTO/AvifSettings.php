@@ -21,7 +21,7 @@ final class AvifSettings {
 	public string $bitDepth;
 	public string $engineMode;
 	public string $cliPath;
-	public bool $disableMemoryCheck;
+	public bool $memoryCheck;
 	public bool $lossless;
 	public bool $convertOnUpload;
 	public bool $convertViaSchedule;
@@ -36,7 +36,7 @@ final class AvifSettings {
 		string $bitDepth = '8',
 		string $engineMode = 'auto',
 		string $cliPath = '',
-		bool $disableMemoryCheck = false,
+		bool $memoryCheck = true,
 		bool $lossless = false,
 		bool $convertOnUpload = true,
 		bool $convertViaSchedule = true,
@@ -50,7 +50,7 @@ final class AvifSettings {
 		$this->bitDepth           = $bitDepth;
 		$this->engineMode         = $engineMode;
 		$this->cliPath            = $cliPath;
-		$this->disableMemoryCheck = $disableMemoryCheck;
+		$this->memoryCheck        = $memoryCheck;
 		$this->lossless           = $lossless;
 		$this->convertOnUpload    = $convertOnUpload;
 		$this->convertViaSchedule = $convertViaSchedule;
@@ -61,7 +61,7 @@ final class AvifSettings {
 
 	public static function fromOptions(): self {
 		$quality = max( 0, min( 100, (int) get_option( 'aviflosu_quality', 85 ) ) );
-		$speed   = max( 0, min( 10, (int) get_option( 'aviflosu_speed', 1 ) ) );
+		$speed   = max( 0, min( 8, (int) get_option( 'aviflosu_speed', 1 ) ) );
 
 		$subsampling = (string) get_option( 'aviflosu_subsampling', '420' );
 		if ( ! in_array( $subsampling, array( '420', '422', '444' ), true ) ) {
@@ -73,9 +73,9 @@ final class AvifSettings {
 			$bitDepth = '8';
 		}
 
-		$engineMode         = (string) get_option( 'aviflosu_engine_mode', 'auto' );
-		$cliPath            = (string) get_option( 'aviflosu_cli_path', '' );
-		$disableMemoryCheck = (bool) get_option( 'aviflosu_disable_memory_check', false );
+		$engineMode  = (string) get_option( 'aviflosu_engine_mode', 'auto' );
+		$cliPath     = (string) get_option( 'aviflosu_cli_path', '' );
+		$memoryCheck = (bool) get_option( 'aviflosu_memory_check', true );
 
 		$lossless           = ( $quality >= 100 );
 		$convertOnUpload    = (bool) get_option( 'aviflosu_convert_on_upload', true );
@@ -99,7 +99,7 @@ final class AvifSettings {
 			bitDepth: $bitDepth,
 			engineMode: $engineMode,
 			cliPath: $cliPath,
-			disableMemoryCheck: $disableMemoryCheck,
+			memoryCheck: $memoryCheck,
 			lossless: $lossless,
 			convertOnUpload: $convertOnUpload,
 			convertViaSchedule: $convertViaSchedule,
@@ -116,7 +116,7 @@ final class AvifSettings {
 			'bit_depth'            => $this->bitDepth,
 			'engine_mode'          => $this->engineMode,
 			'cli_path'             => $this->cliPath,
-			'disable_memory_check' => $this->disableMemoryCheck,
+			'memory_check'         => $this->memoryCheck,
 			'lossless'             => $this->lossless,
 			'convert_on_upload'    => $this->convertOnUpload,
 			'convert_via_schedule' => $this->convertViaSchedule,

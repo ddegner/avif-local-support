@@ -15,6 +15,7 @@ $aviflosu_options = array(
 	'aviflosu_speed',
 	'aviflosu_subsampling',
 	'aviflosu_bit_depth',
+	'aviflosu_memory_check',
 	'aviflosu_disable_memory_check',
 	'aviflosu_cache_duration',
 	'aviflosu_engine_mode',

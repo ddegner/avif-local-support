@@ -119,9 +119,14 @@ final class Logger {
 			$summary .= '<span class="avif-log-time">' . esc_html( $timeDisplay ) . '</span> ';
 			$summary .= '<span class="avif-log-message">' . esc_html( $message ) . '</span>';
 
-			$meta = $this->buildLogMeta( $details );
+			$consumed = array();
+			$meta     = $this->buildLogMeta( $details, $consumed );
 			if ( '' !== $meta ) {
 				$summary .= ' <span class="avif-log-meta">' . esc_html( $meta ) . '</span>';
+				// Values already shown in the summary line are not repeated in the expanded body.
+				foreach ( $consumed as $consumedKey ) {
+					unset( $details[ $consumedKey ] );
+				}
 			}
 
 			if ( empty( $details ) ) {
@@ -160,24 +165,31 @@ final class Logger {
 	/**
 	 * Build the compact one-line meta string (engine · duration · size delta) for a log entry.
 	 *
-	 * @param array $details Log entry details (engine_used, duration_ms, source_size, target_size, ...).
+	 * @param array    $details  Log entry details (engine_used, duration_ms, source_size, target_size, ...).
+	 * @param string[] $consumed Receives the detail keys that were rendered into the meta string.
 	 */
-	private function buildLogMeta( array $details ): string {
-		$parts = array();
+	private function buildLogMeta( array $details, array &$consumed ): string {
+		$parts    = array();
+		$consumed = array();
 
 		$engine = isset( $details['engine_used'] ) ? (string) $details['engine_used'] : '';
 		if ( '' !== $engine && 'none' !== $engine ) {
-			$parts[] = $engine;
+			$parts[]    = $engine;
+			$consumed[] = 'engine_used';
 		}
 
 		if ( isset( $details['duration_ms'] ) && is_numeric( $details['duration_ms'] ) ) {
-			$parts[] = number_format_i18n( (float) $details['duration_ms'] ) . ' ms';
+			/* translators: %s: Duration in milliseconds. */
+			$parts[]    = sprintf( __( '%s ms', 'avif-local-support' ), number_format_i18n( (float) $details['duration_ms'] ) );
+			$consumed[] = 'duration_ms';
 		}
 
 		$source = isset( $details['source_size'] ) && is_numeric( $details['source_size'] ) ? (int) $details['source_size'] : 0;
 		$target = isset( $details['target_size'] ) && is_numeric( $details['target_size'] ) ? (int) $details['target_size'] : 0;
 		if ( $source > 0 && $target > 0 ) {
-			$parts[] = size_format( $source ) . ' → ' . size_format( $target );
+			$parts[]    = size_format( $source ) . ' → ' . size_format( $target );
+			$consumed[] = 'source_size';
+			$consumed[] = 'target_size';
 		}
 
 		return implode( ' · ', $parts );

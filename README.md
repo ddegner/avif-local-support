@@ -192,7 +192,7 @@ No. Zero tracking, zero external calls. Everything runs locally.
 
 ### Why do I see "High risk of memory exhaustion"?
 
-The plugin estimates memory before processing to prevent crashes. Try switching to "ImageMagick CLI" engine, increasing PHP memory_limit, or checking "Disable memory check" in settings.
+The plugin estimates memory before processing to prevent crashes. Try switching to "ImageMagick CLI" engine, increasing PHP memory_limit, or unchecking "Check available memory before each conversion" under the advanced conversion settings.
 
 ### AVIF conversions produce empty files on LiteSpeed?
 

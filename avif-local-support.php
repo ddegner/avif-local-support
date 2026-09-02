@@ -96,6 +96,9 @@ if (defined('WP_CLI') && WP_CLI) {
 // Activation / Deactivation
 function aviflosu_activate(): void
 {
+	// Migrate legacy options first so the defaults below cannot overwrite a migrated value.
+	AVIFLOSU_Plugin::maybeUpgrade();
+
 	// Ensure defaults
 	add_option('aviflosu_enable_support', true);
 	add_option('aviflosu_enable_background_images', true);

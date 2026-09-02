@@ -481,7 +481,7 @@ $auto_first_label   = match ( $auto_first_attempt ) {
 			<p class="description">
 				<?php esc_html_e( 'Use this only if you want to return all AVIF and LQIP settings to defaults.', 'avif-local-support' ); ?>
 			</p>
-			<form action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post" onsubmit="return confirm('<?php esc_attr_e( 'Reset all plugin settings to default values?', 'avif-local-support' ); ?>');">
+			<form id="avif-local-support-reset-form" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post">
 				<input type="hidden" name="action" value="aviflosu_reset_defaults" />
 				<?php wp_nonce_field( 'aviflosu_reset_defaults', '_wpnonce', false, true ); ?>
 				<button type="submit" class="button button-link-delete"><?php esc_html_e( 'Reset All Plugin Settings', 'avif-local-support' ); ?></button>

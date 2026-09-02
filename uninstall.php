@@ -7,6 +7,7 @@ if (!defined('WP_UNINSTALL_PLUGIN')) {
 }
 
 $aviflosu_options = array(
+	'aviflosu_version',
 	'aviflosu_enable_support',
 	'aviflosu_convert_on_upload',
 	'aviflosu_convert_via_schedule',

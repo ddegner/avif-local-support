@@ -189,6 +189,7 @@ class CLI {
 		}
 
 		\WP_CLI::line( 'Starting filesystem scan of uploads folder...' );
+		AttachmentBatchRunner::clearStopFlag( Converter::STOP_TRANSIENT );
 		$scanner->run();
 		$progress = $scanner->progress();
 		\WP_CLI::success(

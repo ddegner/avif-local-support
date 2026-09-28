@@ -2,23 +2,23 @@
 # This file is distributed under the GPL v2 or later.
 msgid ""
 msgstr ""
-"Project-Id-Version: AVIF Local Support 0.8.0\n"
+"Project-Id-Version: AVIF Local Support 0.8.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/avif-local-support\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-07-03T01:59:30+00:00\n"
+"POT-Creation-Date: 2026-09-28T00:35:57+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: avif-local-support\n"
 
 #. Plugin Name of the plugin
 #: avif-local-support.php
-#: includes/class-avif-suite.php:212
-#: includes/class-avif-suite.php:213
-#: includes/class-avif-suite.php:432
+#: includes/class-avif-suite.php:219
+#: includes/class-avif-suite.php:220
+#: includes/class-avif-suite.php:439
 #: templates/admin/page.php:18
 msgid "AVIF Local Support"
 msgstr ""
@@ -43,58 +43,55 @@ msgstr ""
 msgid "https://www.daviddegner.com"
 msgstr ""
 
-#: includes/Admin/RestController.php:433
-#: includes/Admin/RestController.php:585
+#: includes/Admin/RestController.php:434
+#: includes/Admin/RestController.php:586
 msgid "No file uploaded."
 msgstr ""
 
-#: includes/Admin/RestController.php:446
-#: includes/Admin/RestController.php:597
+#: includes/Admin/RestController.php:447
+#: includes/Admin/RestController.php:598
 msgid "Only JPEG files are allowed."
 msgstr ""
 
-#: includes/Admin/RestController.php:614
+#: includes/Admin/RestController.php:606
 msgid "Failed to upload test JPEG."
 msgstr ""
 
-#: includes/Admin/RestController.php:639
+#: includes/Admin/RestController.php:631
 msgid "Unable to prepare test image."
 msgstr ""
 
-#: includes/Admin/RestController.php:667
-#: includes/Admin/RestController.php:697
+#: includes/Admin/RestController.php:659
+#: includes/Admin/RestController.php:714
 msgid "Conversion failed. Check the Logs section for details."
 msgstr ""
 
-#: includes/Admin/RestController.php:678
+#: includes/Admin/RestController.php:695
 msgid "Missing preview token."
 msgstr ""
 
-#: includes/Admin/RestController.php:720
+#: includes/Admin/RestController.php:737
 msgid "AVIF settings updated."
 msgstr ""
 
-#: includes/Admin/RestController.php:734
+#: includes/Admin/RestController.php:751
 msgid "Playground session expired. Upload a JPEG again."
 msgstr ""
 
-#: includes/Admin/RestController.php:739
+#: includes/Admin/RestController.php:756
 msgid "This playground session belongs to a different user."
 msgstr ""
 
-#: includes/Admin/RestController.php:744
+#: includes/Admin/RestController.php:761
 msgid "Test JPEG is no longer available. Upload a new one."
 msgstr ""
 
-#: includes/Admin/RestController.php:967
-msgid "Unable to create a preview image path."
-msgstr ""
-
-#: includes/Admin/RestController.php:976
+#: includes/Admin/RestController.php:992
+#: includes/Admin/RestController.php:1003
 msgid "Unable to create preview image."
 msgstr ""
 
-#: includes/Admin/RestController.php:1041
+#: includes/Admin/RestController.php:1052
 msgid "Unable to create a preview image."
 msgstr ""
 
@@ -166,541 +163,541 @@ msgstr ""
 msgid "Show pixelated LQIP"
 msgstr ""
 
-#: includes/Admin/Settings.php:488
+#: includes/Admin/Settings.php:500
 msgid "Serve AVIF files before JPEG files on the front end"
 msgstr ""
 
-#: includes/Admin/Settings.php:497
+#: includes/Admin/Settings.php:509
 msgid "Replace JPEG background images with AVIF when available"
 msgstr ""
 
-#: includes/Admin/Settings.php:499
+#: includes/Admin/Settings.php:511
 msgid "Works with page builders that set background images via CSS."
 msgstr ""
 
-#: includes/Admin/Settings.php:507
+#: includes/Admin/Settings.php:519
 msgid "Convert uploaded JPEG files to AVIF"
 msgstr ""
 
-#: includes/Admin/Settings.php:509
+#: includes/Admin/Settings.php:521
 msgid "Can slow uploads on low-resource servers."
 msgstr ""
 
-#: includes/Admin/Settings.php:518
+#: includes/Admin/Settings.php:530
 msgid "Scan daily and generate missing AVIF files"
 msgstr ""
 
-#: includes/Admin/Settings.php:520
+#: includes/Admin/Settings.php:532
 msgid "Daily run time"
 msgstr ""
 
-#: includes/Admin/Settings.php:521
+#: includes/Admin/Settings.php:533
 msgid "Set the time field to choose when the daily scan runs."
 msgstr ""
 
-#: includes/Admin/Settings.php:529
+#: includes/Admin/Settings.php:541
 msgid "Higher values improve quality and increase file size."
 msgstr ""
 
-#: includes/Admin/Settings.php:537
+#: includes/Admin/Settings.php:549
 msgid "0 = slowest with the best compression, 8 = fastest with larger files."
 msgstr ""
 
-#: includes/Admin/Settings.php:556
+#: includes/Admin/Settings.php:568
 msgid "4:2:0 is usually best for compatibility and size. 4:4:4 preserves more color detail."
 msgstr ""
 
-#: includes/Admin/Settings.php:575
+#: includes/Admin/Settings.php:587
 msgid "8-bit is standard. Higher bit depth can increase file size and reduce compatibility."
 msgstr ""
 
-#: includes/Admin/Settings.php:583
+#: includes/Admin/Settings.php:595
 msgid "Check available memory before each conversion"
 msgstr ""
 
-#: includes/Admin/Settings.php:585
+#: includes/Admin/Settings.php:597
 msgid "Recommended. Skips images too large for available PHP memory instead of risking a fatal error. Only disable if conversions are being skipped and you trust your server has enough memory."
 msgstr ""
 
-#: includes/Admin/Settings.php:592
+#: includes/Admin/Settings.php:604
 msgid "Automatic (try CLI, then Imagick, then GD)"
 msgstr ""
 
-#: includes/Admin/Settings.php:593
+#: includes/Admin/Settings.php:605
 msgid "ImageMagick CLI only"
 msgstr ""
 
-#: includes/Admin/Settings.php:594
+#: includes/Admin/Settings.php:606
 msgid "Imagick PHP extension only"
 msgstr ""
 
-#: includes/Admin/Settings.php:595
+#: includes/Admin/Settings.php:607
 msgid "GD only"
 msgstr ""
 
-#: includes/Admin/Settings.php:622
+#: includes/Admin/Settings.php:634
 msgid "ImageMagick binary path"
 msgstr ""
 
-#: includes/Admin/Settings.php:625
+#: includes/Admin/Settings.php:637
 msgid "Choose a detected binary or enter a custom path."
 msgstr ""
 
-#: includes/Admin/Settings.php:636
+#: includes/Admin/Settings.php:648
 msgid "Extra ImageMagick flags"
 msgstr ""
 
-#: includes/Admin/Settings.php:639
+#: includes/Admin/Settings.php:651
 msgid "Additional flags passed to ImageMagick (example: -define avif:my-flag=1)."
 msgstr ""
 
 #. translators: %s: Suggested CLI arguments.
-#: includes/Admin/Settings.php:642
+#: includes/Admin/Settings.php:654
 #, php-format
 msgid "Suggested: %s"
 msgstr ""
 
-#: includes/Admin/Settings.php:643
-#: includes/Admin/Settings.php:653
+#: includes/Admin/Settings.php:655
+#: includes/Admin/Settings.php:665
 msgid "Use suggested"
 msgstr ""
 
-#: includes/Admin/Settings.php:647
+#: includes/Admin/Settings.php:659
 msgid "ImageMagick environment variables"
 msgstr ""
 
-#: includes/Admin/Settings.php:650
+#: includes/Admin/Settings.php:662
 msgid "Environment variables for the CLI process (KEY=VALUE), one per line."
 msgstr ""
 
-#: includes/Admin/Settings.php:652
+#: includes/Admin/Settings.php:664
 msgid "Suggested values:"
 msgstr ""
 
-#: includes/Admin/Settings.php:664
+#: includes/Admin/Settings.php:676
 msgid "Show a tiny placeholder while each image loads"
 msgstr ""
 
-#: includes/Admin/Settings.php:666
+#: includes/Admin/Settings.php:678
 msgid "Generates compact ThumbHash data that is decoded in the browser while the full image loads."
 msgstr ""
 
-#: includes/Admin/Settings.php:674
+#: includes/Admin/Settings.php:686
 msgid "Generate a placeholder when a JPEG is uploaded"
 msgstr ""
 
-#: includes/Admin/Settings.php:683
+#: includes/Admin/Settings.php:695
 msgid "Scan daily and generate missing LQIPs"
 msgstr ""
 
-#: includes/Admin/Settings.php:685
+#: includes/Admin/Settings.php:697
 msgid "Uses the same daily schedule time as AVIF conversion."
 msgstr ""
 
-#: includes/Admin/Settings.php:693
+#: includes/Admin/Settings.php:705
 msgid "Cross-fade from the placeholder to the full image"
 msgstr ""
 
-#: includes/Admin/Settings.php:695
+#: includes/Admin/Settings.php:707
 msgid "Adds a smooth transition when the full image replaces the LQIP."
 msgstr ""
 
-#: includes/Admin/Settings.php:703
+#: includes/Admin/Settings.php:715
 msgid "Show pixelated LQIP instead of blur"
 msgstr ""
 
-#: includes/Admin/Settings.php:705
+#: includes/Admin/Settings.php:717
 msgid "A stylistic alternative to the default blur effect."
 msgstr ""
 
-#: includes/class-avif-suite.php:107
+#: includes/class-avif-suite.php:114
 msgid "Delete all AVIF files generated by this plugin?"
 msgstr ""
 
-#: includes/class-avif-suite.php:108
+#: includes/class-avif-suite.php:115
 msgid "Delete all generated LQIPs?"
 msgstr ""
 
-#: includes/class-avif-suite.php:109
+#: includes/class-avif-suite.php:116
 msgid "Clear all logs?"
 msgstr ""
 
 #. translators: %d: Number of AVIF files that will be deleted.
-#: includes/class-avif-suite.php:111
+#: includes/class-avif-suite.php:118
 #, php-format
 msgid "Delete all AVIF files generated by this plugin? (%d found)"
 msgstr ""
 
 #. translators: %d: Number of LQIP placeholders that will be deleted.
-#: includes/class-avif-suite.php:113
+#: includes/class-avif-suite.php:120
 #, php-format
 msgid "Delete all generated LQIPs? (%d found)"
 msgstr ""
 
 #. translators: %d: Number of log entries that will be cleared.
-#: includes/class-avif-suite.php:115
+#: includes/class-avif-suite.php:122
 #, php-format
 msgid "Clear all logs? (%d entries)"
 msgstr ""
 
-#: includes/class-avif-suite.php:116
+#: includes/class-avif-suite.php:123
 msgid "AVIF generation stopped."
 msgstr ""
 
-#: includes/class-avif-suite.php:117
+#: includes/class-avif-suite.php:124
 msgid "Could not stop AVIF generation."
 msgstr ""
 
-#: includes/class-avif-suite.php:118
+#: includes/class-avif-suite.php:125
 msgid "Generating missing AVIF files:"
 msgstr ""
 
-#: includes/class-avif-suite.php:119
+#: includes/class-avif-suite.php:126
 msgid "AVIF generation complete."
 msgstr ""
 
-#: includes/class-avif-suite.php:120
+#: includes/class-avif-suite.php:127
 msgid "AVIF generation is continuing in the background."
 msgstr ""
 
-#: includes/class-avif-suite.php:121
+#: includes/class-avif-suite.php:128
 msgid "AVIF generation failed."
 msgstr ""
 
-#: includes/class-avif-suite.php:122
+#: includes/class-avif-suite.php:129
 msgid "Deleting AVIF files…"
 msgstr ""
 
-#: includes/class-avif-suite.php:123
+#: includes/class-avif-suite.php:130
 msgid "Deleted AVIF files:"
 msgstr ""
 
-#: includes/class-avif-suite.php:124
-#: includes/class-avif-suite.php:132
+#: includes/class-avif-suite.php:131
+#: includes/class-avif-suite.php:139
 msgid "Failed:"
 msgstr ""
 
-#: includes/class-avif-suite.php:125
+#: includes/class-avif-suite.php:132
 msgid "Stopping LQIP generation…"
 msgstr ""
 
-#: includes/class-avif-suite.php:126
+#: includes/class-avif-suite.php:133
 msgid "LQIP generation stopped."
 msgstr ""
 
-#: includes/class-avif-suite.php:127
+#: includes/class-avif-suite.php:134
 msgid "Could not stop LQIP generation."
 msgstr ""
 
-#: includes/class-avif-suite.php:128
+#: includes/class-avif-suite.php:135
 msgid "Generating missing LQIPs:"
 msgstr ""
 
-#: includes/class-avif-suite.php:129
+#: includes/class-avif-suite.php:136
 msgid "LQIP generation complete."
 msgstr ""
 
-#: includes/class-avif-suite.php:130
+#: includes/class-avif-suite.php:137
 msgid "Generated:"
 msgstr ""
 
-#: includes/class-avif-suite.php:131
+#: includes/class-avif-suite.php:138
 msgid "Skipped:"
 msgstr ""
 
-#: includes/class-avif-suite.php:133
+#: includes/class-avif-suite.php:140
 msgid "LQIP generation failed."
 msgstr ""
 
-#: includes/class-avif-suite.php:134
+#: includes/class-avif-suite.php:141
 msgid "Deleting LQIPs…"
 msgstr ""
 
-#: includes/class-avif-suite.php:135
+#: includes/class-avif-suite.php:142
 msgid "Deleted LQIPs:"
 msgstr ""
 
-#: includes/class-avif-suite.php:136
+#: includes/class-avif-suite.php:143
 msgid "entries"
 msgstr ""
 
-#: includes/class-avif-suite.php:137
+#: includes/class-avif-suite.php:144
 msgid "LQIP generation is continuing in the background…"
 msgstr ""
 
-#: includes/class-avif-suite.php:138
+#: includes/class-avif-suite.php:145
 msgid "Starting filesystem scan…"
 msgstr ""
 
-#: includes/class-avif-suite.php:139
+#: includes/class-avif-suite.php:146
 msgid "Waiting for the background scan to start…"
 msgstr ""
 
-#: includes/class-avif-suite.php:140
+#: includes/class-avif-suite.php:147
 msgid "Scanning uploads folder:"
 msgstr ""
 
-#: includes/class-avif-suite.php:141
+#: includes/class-avif-suite.php:148
 msgid "Scan complete."
 msgstr ""
 
-#: includes/class-avif-suite.php:142
+#: includes/class-avif-suite.php:149
 msgid "Scan stopped."
 msgstr ""
 
-#: includes/class-avif-suite.php:143
+#: includes/class-avif-suite.php:150
 msgid "Could not stop scan."
 msgstr ""
 
-#: includes/class-avif-suite.php:144
+#: includes/class-avif-suite.php:151
 msgid "Scan is continuing in the background."
 msgstr ""
 
-#: includes/class-avif-suite.php:145
+#: includes/class-avif-suite.php:152
 msgid "The scan has not started yet. It may have been stopped — try again."
 msgstr ""
 
-#: includes/class-avif-suite.php:146
+#: includes/class-avif-suite.php:153
 msgid "Could not start scan."
 msgstr ""
 
-#: includes/class-avif-suite.php:147
+#: includes/class-avif-suite.php:154
 msgid "Skipped directories"
 msgstr ""
 
-#: includes/class-avif-suite.php:148
+#: includes/class-avif-suite.php:155
 msgid "(uploads root)"
 msgstr ""
 
-#: includes/class-avif-suite.php:149
+#: includes/class-avif-suite.php:156
 msgid "Could not refresh logs. Please try again."
 msgstr ""
 
-#: includes/class-avif-suite.php:150
+#: includes/class-avif-suite.php:157
 msgid "Could not clear logs. Please try again."
 msgstr ""
 
-#: includes/class-avif-suite.php:151
+#: includes/class-avif-suite.php:158
 #: includes/Logger.php:106
 msgid "No logs available."
 msgstr ""
 
-#: includes/class-avif-suite.php:152
+#: includes/class-avif-suite.php:159
 msgid "Running ImageMagick check…"
 msgstr ""
 
-#: includes/class-avif-suite.php:153
+#: includes/class-avif-suite.php:160
 msgid "Exit code"
 msgstr ""
 
-#: includes/class-avif-suite.php:154
+#: includes/class-avif-suite.php:161
 msgid "Selected binary:"
 msgstr ""
 
-#: includes/class-avif-suite.php:155
+#: includes/class-avif-suite.php:162
 msgid "(auto)"
 msgstr ""
 
-#: includes/class-avif-suite.php:156
+#: includes/class-avif-suite.php:163
 msgid "Define strategy:"
 msgstr ""
 
-#: includes/class-avif-suite.php:157
+#: includes/class-avif-suite.php:164
 msgid "Hint:"
 msgstr ""
 
-#: includes/class-avif-suite.php:158
+#: includes/class-avif-suite.php:165
 msgid "ImageMagick check failed."
 msgstr ""
 
-#: includes/class-avif-suite.php:159
+#: includes/class-avif-suite.php:166
 msgid "Please choose a JPEG file first."
 msgstr ""
 
-#: includes/class-avif-suite.php:160
+#: includes/class-avif-suite.php:167
 msgid "Uploading playground JPEG…"
 msgstr ""
 
-#: includes/class-avif-suite.php:161
+#: includes/class-avif-suite.php:168
 msgid "Playground image ready."
 msgstr ""
 
-#: includes/class-avif-suite.php:162
+#: includes/class-avif-suite.php:169
 msgid "Failed to load playground image."
 msgstr ""
 
-#: includes/class-avif-suite.php:163
+#: includes/class-avif-suite.php:170
 msgid "Rendering AVIF preview…"
 msgstr ""
 
-#: includes/class-avif-suite.php:164
+#: includes/class-avif-suite.php:171
 msgid "AVIF preview updated."
 msgstr ""
 
-#: includes/class-avif-suite.php:165
+#: includes/class-avif-suite.php:172
 msgid "Could not render AVIF preview."
 msgstr ""
 
-#: includes/class-avif-suite.php:166
+#: includes/class-avif-suite.php:173
 msgid "Saving AVIF settings…"
 msgstr ""
 
-#: includes/class-avif-suite.php:167
+#: includes/class-avif-suite.php:174
 msgid "Plugin AVIF settings updated."
 msgstr ""
 
-#: includes/class-avif-suite.php:168
+#: includes/class-avif-suite.php:175
 msgid "Could not update plugin settings."
 msgstr ""
 
-#: includes/class-avif-suite.php:169
-#: includes/class-avif-suite.php:171
-#: includes/class-avif-suite.php:172
-#: includes/class-avif-suite.php:175
-#: includes/class-avif-suite.php:190
+#: includes/class-avif-suite.php:176
+#: includes/class-avif-suite.php:178
+#: includes/class-avif-suite.php:179
+#: includes/class-avif-suite.php:182
+#: includes/class-avif-suite.php:197
 #: templates/admin/tab-tools.php:274
 msgid "JPEG"
 msgstr ""
 
-#: includes/class-avif-suite.php:170
-#: includes/class-avif-suite.php:173
-#: includes/class-avif-suite.php:174
-#: includes/class-avif-suite.php:176
-#: includes/class-avif-suite.php:192
+#: includes/class-avif-suite.php:177
+#: includes/class-avif-suite.php:180
+#: includes/class-avif-suite.php:181
+#: includes/class-avif-suite.php:183
+#: includes/class-avif-suite.php:199
 msgid "AVIF"
 msgstr ""
 
-#: includes/class-avif-suite.php:177
+#: includes/class-avif-suite.php:184
 msgid "JPEG quality"
 msgstr ""
 
-#: includes/class-avif-suite.php:178
+#: includes/class-avif-suite.php:185
 msgid "JPEG quality: original upload (not recompressed)"
 msgstr ""
 
-#: includes/class-avif-suite.php:179
+#: includes/class-avif-suite.php:186
 msgid "Uploading JPEG test file…"
 msgstr ""
 
-#: includes/class-avif-suite.php:180
+#: includes/class-avif-suite.php:187
 msgid "Converting test sizes…"
 msgstr ""
 
-#: includes/class-avif-suite.php:181
+#: includes/class-avif-suite.php:188
 msgid "Test conversion complete."
 msgstr ""
 
-#: includes/class-avif-suite.php:182
+#: includes/class-avif-suite.php:189
 msgid "Unable to load test conversion status."
 msgstr ""
 
-#: includes/class-avif-suite.php:183
+#: includes/class-avif-suite.php:190
 msgid "Error:"
 msgstr ""
 
-#: includes/class-avif-suite.php:184
+#: includes/class-avif-suite.php:191
 msgid "Unknown error"
 msgstr ""
 
-#: includes/class-avif-suite.php:185
+#: includes/class-avif-suite.php:192
 msgid "Test upload failed."
 msgstr ""
 
-#: includes/class-avif-suite.php:186
+#: includes/class-avif-suite.php:193
 msgid "Upload timed out or failed. Check the Logs section for details."
 msgstr ""
 
-#: includes/class-avif-suite.php:187
+#: includes/class-avif-suite.php:194
 msgid "Test results for attachment:"
 msgstr ""
 
-#: includes/class-avif-suite.php:188
+#: includes/class-avif-suite.php:195
 msgid "Size"
 msgstr ""
 
-#: includes/class-avif-suite.php:189
+#: includes/class-avif-suite.php:196
 msgid "Dimensions"
 msgstr ""
 
-#: includes/class-avif-suite.php:191
+#: includes/class-avif-suite.php:198
 msgid "JPEG size"
 msgstr ""
 
-#: includes/class-avif-suite.php:193
+#: includes/class-avif-suite.php:200
 msgid "AVIF size"
 msgstr ""
 
-#: includes/class-avif-suite.php:194
+#: includes/class-avif-suite.php:201
 msgid "Status"
 msgstr ""
 
-#: includes/class-avif-suite.php:195
+#: includes/class-avif-suite.php:202
 msgid "View"
 msgstr ""
 
-#: includes/class-avif-suite.php:196
+#: includes/class-avif-suite.php:203
 msgid "Converted"
 msgstr ""
 
-#: includes/class-avif-suite.php:197
+#: includes/class-avif-suite.php:204
 msgid "Failed"
 msgstr ""
 
-#: includes/class-avif-suite.php:198
+#: includes/class-avif-suite.php:205
 msgid "Processing…"
 msgstr ""
 
-#: includes/class-avif-suite.php:199
+#: includes/class-avif-suite.php:206
 msgid "Pending"
 msgstr ""
 
-#: includes/class-avif-suite.php:200
+#: includes/class-avif-suite.php:207
 msgid "No sizes found."
 msgstr ""
 
-#: includes/class-avif-suite.php:222
+#: includes/class-avif-suite.php:229
 msgid "You do not have permission to access this page."
 msgstr ""
 
-#: includes/class-avif-suite.php:302
-#: includes/class-avif-suite.php:382
+#: includes/class-avif-suite.php:309
+#: includes/class-avif-suite.php:389
 msgid "You do not have permission to do this."
 msgstr ""
 
-#: includes/class-avif-suite.php:423
+#: includes/class-avif-suite.php:430
 msgid "Settings"
 msgstr ""
 
-#: includes/class-avif-suite.php:435
+#: includes/class-avif-suite.php:442
 msgid "WordPress allows AVIF uploads"
 msgstr ""
 
-#: includes/class-avif-suite.php:439
+#: includes/class-avif-suite.php:446
 msgid "WordPress image editor supports AVIF"
 msgstr ""
 
-#: includes/class-avif-suite.php:443
+#: includes/class-avif-suite.php:450
 msgid "WordPress registers the AVIF MIME type"
 msgstr ""
 
-#: includes/class-avif-suite.php:453
+#: includes/class-avif-suite.php:460
 msgid "Yes"
 msgstr ""
 
-#: includes/class-avif-suite.php:453
+#: includes/class-avif-suite.php:460
 msgid "No"
 msgstr ""
 
-#: includes/class-converter.php:374
-#: includes/class-converter.php:793
+#: includes/class-converter.php:373
+#: includes/class-converter.php:776
 msgid "Source file not found"
 msgstr ""
 
-#: includes/class-converter.php:377
+#: includes/class-converter.php:376
 msgid "Only JPEG source files are supported."
 msgstr ""
 
-#: includes/class-converter.php:808
+#: includes/class-converter.php:791
 msgid "Unknown error (conversion skipped)"
 msgstr ""
 

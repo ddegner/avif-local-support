@@ -1,0 +1,18 @@
+/* Keep the generated wrapper in core's existing gallery flex layout. */
+.wp-block-gallery.has-nested-images figure.wp-block-image .aviflosu-picture {
+	/* The LQIP decoder sets display:block inline while the image is loading. */
+	display: flex !important;
+	flex-direction: column;
+	flex-grow: 1;
+	min-width: 0;
+}
+
+/* The native lightbox measures the image's parent as its media box. */
+.wp-lightbox-container > .aviflosu-picture {
+	display: block;
+	line-height: 0;
+}
+
+.wp-lightbox-container > .aviflosu-picture:hover + .lightbox-trigger {
+	opacity: 1;
+}

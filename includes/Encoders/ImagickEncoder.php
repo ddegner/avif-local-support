@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Ddegner\AvifLocalSupport\Encoders;
 
+use Ddegner\AvifLocalSupport\AvifFile;
 use Ddegner\AvifLocalSupport\Contracts\AvifEncoderInterface;
 use Ddegner\AvifLocalSupport\DTO\AvifSettings;
 use Ddegner\AvifLocalSupport\DTO\ConversionResult;
@@ -148,7 +149,7 @@ class ImagickEncoder implements AvifEncoderInterface {
 			$im->writeImage( $destination );
 			$im->destroy();
 
-			if ( file_exists( $destination ) && filesize( $destination ) > 512 ) {
+			if ( AvifFile::isValid( $destination ) ) {
 				return ConversionResult::success();
 			}
 

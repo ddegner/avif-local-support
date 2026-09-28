@@ -45,6 +45,13 @@ final class Plugin {
 			delete_option( 'aviflosu_disable_memory_check' );
 		}
 
+		// Older settings forms saved this invisible field as zero, making positive
+		// file-existence entries permanent. Repair the value and its stale cache.
+		if ( (int) get_option( 'aviflosu_cache_duration', 3600 ) <= 0 ) {
+			update_option( 'aviflosu_cache_duration', 3600 );
+			delete_transient( 'aviflosu_file_cache' );
+		}
+
 		// Settings page + Settings API.
 		add_action( 'admin_menu', array( $this, 'add_admin_menu' ) );
 		add_action( 'admin_init', array( $this->settings, 'register' ) );

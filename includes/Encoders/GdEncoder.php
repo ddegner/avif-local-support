@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Ddegner\AvifLocalSupport\Encoders;
 
+use Ddegner\AvifLocalSupport\AvifFile;
 use Ddegner\AvifLocalSupport\Contracts\AvifEncoderInterface;
 use Ddegner\AvifLocalSupport\DTO\AvifSettings;
 use Ddegner\AvifLocalSupport\DTO\ConversionResult;
@@ -81,7 +82,6 @@ class GdEncoder implements AvifEncoderInterface {
 		if ( $dimensions && isset( $dimensions['width'], $dimensions['height'] ) ) {
 			$resized = $this->resizeAndCrop( $gd, (int) $dimensions['width'], (int) $dimensions['height'] );
 			if ( $resized ) {
-				imagedestroy( $gd );
 				$gd = $resized;
 			}
 		}
@@ -93,10 +93,11 @@ class GdEncoder implements AvifEncoderInterface {
 		// PHP 8.1+ supports the $speed param. Plugin requires PHP 8.3+.
 		$success = @imageavif( $gd, $destination, $settings->quality, $speed );
 
-		imagedestroy( $gd );
+		// GD images are objects on supported PHP versions; release references.
+		unset( $gd, $resized );
 
-		// Same 512-byte validity threshold as the CLI and Imagick encoders.
-		if ( $success && file_exists( $destination ) && filesize( $destination ) > 512 ) {
+		// Confirm the generated image format and dimensions.
+		if ( $success && AvifFile::isValid( $destination ) ) {
 			return ConversionResult::success();
 		}
 
@@ -144,7 +145,6 @@ class GdEncoder implements AvifEncoderInterface {
 		$ok = imagecopyresampled( $target, $source, 0, 0, $cropX, $cropY, $targetW, $targetH, $cropW, $cropH );
 
 		if ( ! $ok ) {
-			imagedestroy( $target );
 			return null;
 		}
 

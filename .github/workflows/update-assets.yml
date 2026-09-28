@@ -6,8 +6,6 @@ on:
       - main
     paths:
       - '.wordpress-org/**'
-      - 'README.md'
-      - '.github/workflows/update-assets.yml'
   workflow_dispatch:
 
 concurrency:

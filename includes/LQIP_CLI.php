@@ -213,7 +213,7 @@ class LQIP_CLI
 		}
 
 		\WP_CLI::line("Generating LQIP for attachment ID {$attachmentId}...");
-		$hashes = ThumbHash::generateForAttachment($attachmentId);
+		$hashes = ThumbHash::generateForAttachment($attachmentId, $force);
 
 		// Verify it was generated with valid 'full' entry
 		if (ThumbHash::isValidHashSet($hashes)) {
@@ -310,7 +310,7 @@ class LQIP_CLI
 			$hashes = null;
 			try {
 				$memoryBefore = memory_get_usage(true);
-				$hashes = ThumbHash::generateForAttachment((int) $attachmentId);
+				$hashes = ThumbHash::generateForAttachment((int) $attachmentId, $force);
 				$memoryAfter = memory_get_usage(true);
 
 				// Check for memory issues
@@ -383,6 +383,8 @@ class LQIP_CLI
 		$stats = ThumbHash::getStats();
 
 		if ($stats['with_hash'] === 0) {
+			// Also cancel a queued scan that has not produced its first hash yet.
+			ThumbHash::deleteAll();
 			\WP_CLI::line('No LQIP data to delete.');
 			return;
 		}

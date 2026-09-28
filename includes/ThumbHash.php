@@ -24,6 +24,7 @@ final class ThumbHash {
 	 */
 	private const META_KEY = '_aviflosu_thumbhash';
 	private const STOP_TRANSIENT = 'aviflosu_stop_lqip_generation';
+	private const GENERATION_OPTION = 'aviflosu_lqip_generation';
 
 	/**
 	 * Cron hook that runs one slice of the bulk LQIP generation scan.
@@ -235,6 +236,12 @@ final class ThumbHash {
 			return null;
 		}
 
+		// imagecolorat() returns a palette index for indexed GIF/PNG images.
+		// Normalize even small images that will not pass through the resize path.
+		if ( ! imageistruecolor( $image ) && ! imagepalettetotruecolor( $image ) ) {
+			return null;
+		}
+
 		$width  = imagesx( $image );
 		$height = imagesy( $image );
 
@@ -309,11 +316,12 @@ final class ThumbHash {
 	/**
 	 * Generate and store ThumbHashes for all sizes of an attachment.
 	 *
-	 * @param int $attachmentId WordPress attachment ID.
+	 * @param int  $attachmentId WordPress attachment ID.
+	 * @param bool $force Generate even when display of placeholders is disabled.
 	 * @return array<string, string>|null Hash array keyed by size name, or null on failure.
 	 */
-	public static function generateForAttachment( int $attachmentId ): ?array {
-		if ( ! self::isEnabled() ) {
+	public static function generateForAttachment( int $attachmentId, bool $force = false ): ?array {
+		if ( ! $force && ! self::isEnabled() ) {
 			return null;
 		}
 
@@ -493,6 +501,8 @@ final class ThumbHash {
 	 * @return array<string, string>|null Hash array or null on failure.
 	 */
 	private static function doGenerateForAttachment( int $attachmentId ): ?array {
+		self::$lastError = null;
+		$generation = self::getGeneration();
 		$metadata = \wp_get_attachment_metadata( $attachmentId );
 		if ( ! is_array( $metadata ) || empty( $metadata['file'] ) ) {
 			// Fall back to the attached file so attachments with broken or
@@ -505,8 +515,7 @@ final class ThumbHash {
 			$hash = self::generate( $attached );
 			if ( $hash ) {
 				$hashes = array( 'full' => $hash );
-				\update_post_meta( $attachmentId, self::META_KEY, $hashes );
-				return $hashes;
+				return self::storeHashes( $attachmentId, $hashes, $generation );
 			}
 			return null;
 		}
@@ -561,11 +570,43 @@ final class ThumbHash {
 		}
 
 		if ( ! empty( $hashes ) ) {
-			\update_post_meta( $attachmentId, self::META_KEY, $hashes );
-			return $hashes;
+			return self::storeHashes( $attachmentId, $hashes, $generation );
 		}
 
 		return null;
+	}
+
+	/**
+	 * Read cancellation state freshly, including across requests with object caching.
+	 */
+	private static function getGeneration(): int {
+		\wp_cache_delete( self::GENERATION_OPTION, 'options' );
+		\wp_cache_delete( 'notoptions', 'options' );
+		return (int) \get_option( self::GENERATION_OPTION, 0 );
+	}
+
+	/**
+	 * Do not repopulate hashes if a bulk delete happened while this image encoded.
+	 *
+	 * @param int                  $attachmentId Attachment ID.
+	 * @param array<string,string> $hashes Generated placeholders.
+	 * @param int                  $generation Cancellation revision at encode start.
+	 * @return array<string,string>|null
+	 */
+	private static function storeHashes( int $attachmentId, array $hashes, int $generation ): ?array {
+		if ( self::getGeneration() !== $generation ) {
+			self::$lastError = 'LQIP generation was cancelled by a bulk delete.';
+			return null;
+		}
+		\update_post_meta( $attachmentId, self::META_KEY, $hashes );
+		// A delete can also arrive between the check and the metadata write.
+		// Remove only this value, leaving a different newer result untouched.
+		if ( self::getGeneration() !== $generation ) {
+			\delete_post_meta( $attachmentId, self::META_KEY, $hashes );
+			self::$lastError = 'LQIP generation was cancelled by a bulk delete.';
+			return null;
+		}
+		return $hashes;
 	}
 
 	/**
@@ -575,6 +616,11 @@ final class ThumbHash {
 	 */
 	public static function deleteAll(): int {
 		global $wpdb;
+
+		// Cancel first, even when the queued scan has not saved any hashes yet.
+		self::requestStop();
+		\update_option( self::GENERATION_OPTION, self::getGeneration() + 1, false );
+		\delete_transient( self::PROGRESS_TRANSIENT );
 
 		// Get all attachment IDs that have ThumbHash data
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
@@ -588,10 +634,6 @@ final class ThumbHash {
 		if ( empty( $postIds ) ) {
 			return 0;
 		}
-
-		// A paused generation scan must not resume past freshly-deleted hashes.
-		\delete_transient( self::CURSOR_TRANSIENT );
-		\delete_transient( self::PROGRESS_TRANSIENT );
 
 		// Delete the meta data directly
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching

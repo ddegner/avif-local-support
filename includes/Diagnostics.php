@@ -142,7 +142,7 @@ final class Diagnostics
 					$seenJpegs[$real] = true;
 					++$total;
 					$avif = (string) preg_replace('/\.(jpe?g)$/i', '.avif', $real);
-					if ($avif && file_exists($avif) && filesize($avif) > 512) {
+					if (AvifFile::isValid($avif)) {
 						++$existing;
 					} else {
 						++$missing;
@@ -174,7 +174,7 @@ final class Diagnostics
 						$seenJpegs[$realP] = true;
 						++$total;
 						$avif = (string) preg_replace('/\.(jpe?g)$/i', '.avif', $realP);
-						if ($avif && file_exists($avif) && filesize($avif) > 512) {
+						if (AvifFile::isValid($avif)) {
 							++$existing;
 						} else {
 							++$missing;

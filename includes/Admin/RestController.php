@@ -6,6 +6,7 @@ namespace Ddegner\AvifLocalSupport\Admin;
 
 use Ddegner\AvifLocalSupport\AttachmentBatchRunner;
 use Ddegner\AvifLocalSupport\AttachmentQuery;
+use Ddegner\AvifLocalSupport\AvifFile;
 use Ddegner\AvifLocalSupport\Converter;
 use Ddegner\AvifLocalSupport\Diagnostics;
 use Ddegner\AvifLocalSupport\ThumbHash;
@@ -597,16 +598,7 @@ final class RestController
 			return new \WP_REST_Response(array('message' => __('Only JPEG files are allowed.', 'avif-local-support')), 400);
 		}
 
-		$upload = wp_handle_sideload(
-			$rawFile,
-			array(
-				'test_form' => false,
-				'mimes' => array(
-					'jpg' => 'image/jpeg',
-					'jpeg' => 'image/jpeg',
-				),
-			)
-		);
+		$upload = $this->sideloadPlaygroundJpeg($rawFile);
 
 		if (!is_array($upload) || !empty($upload['error']) || empty($upload['file'])) {
 			$message = is_array($upload) ? (string) ($upload['error'] ?? '') : '';
@@ -669,6 +661,31 @@ final class RestController
 		set_transient($this->getPlaygroundStateKey($token), $state, DAY_IN_SECONDS);
 
 		return rest_ensure_response($this->buildPlaygroundResponse($token, $state, $settings, $error));
+	}
+
+	/**
+	 * Upload only the source JPEG; the playground encodes its resized preview.
+	 */
+	private function sideloadPlaygroundJpeg(array $file): array
+	{
+		$callback = array($this->converter, 'convertOriginalOnUpload');
+		$priority = has_filter('wp_handle_upload', $callback);
+		if (false !== $priority) {
+			remove_filter('wp_handle_upload', $callback, $priority);
+		}
+		try {
+			return wp_handle_sideload(
+				$file,
+				array(
+					'test_form' => false,
+					'mimes' => array('jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg'),
+				)
+			);
+		} finally {
+			if (false !== $priority) {
+				add_filter('wp_handle_upload', $callback, $priority);
+			}
+		}
 	}
 
 	public function playgroundPreview(\WP_REST_Request $request): \WP_REST_Response
@@ -946,7 +963,6 @@ final class RestController
 			require_once ABSPATH . 'wp-admin/includes/image.php';
 		}
 
-		$jpegQuality = $this->getWordPressJpegQuality();
 		$targetWidth = max(0, (int) ($sizeConfig['width'] ?? 0));
 		$targetHeight = max(0, (int) ($sizeConfig['height'] ?? 0));
 		$crop = $sizeConfig['crop'] ?? false;
@@ -962,10 +978,21 @@ final class RestController
 			$targetWidth = 1024;
 		}
 
-		$previewPath = (string) preg_replace('/\.(jpe?g)$/i', '-playground.jpg', $sourcePath);
-		if ('' === $previewPath) {
-			return new \WP_Error('aviflosu_playground_resize', __('Unable to create a preview image path.', 'avif-local-support'));
+		// Reserve an entire session directory atomically. A unique JPEG name
+		// alone would not protect an existing AVIF with the same basename.
+		$previewDirectory = '';
+		for ($attempt = 0; $attempt < 5; ++$attempt) {
+			$candidate = dirname($sourcePath) . '/aviflosu-playground-' . wp_generate_password(24, false, false);
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Atomic reservation must fail when the directory already exists.
+			if (@mkdir($candidate)) {
+				$previewDirectory = $candidate;
+				break;
+			}
 		}
+		if ('' === $previewDirectory) {
+			return new \WP_Error('aviflosu_playground_resize', __('Unable to create preview image.', 'avif-local-support'));
+		}
+		$previewPath = $previewDirectory . '/preview.jpg';
 
 		$sourceSize = @getimagesize($sourcePath);
 		$sourceWidth = (int) ($sourceSize[0] ?? 0);
@@ -973,6 +1000,8 @@ final class RestController
 
 		if ($this->shouldUseOriginalPlaygroundJpeg($sourceWidth, $sourceHeight, $targetWidth, $targetHeight, $crop)) {
 			if (!@copy($sourcePath, $previewPath)) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only the empty directory atomically reserved above.
+				@rmdir($previewDirectory);
 				return new \WP_Error('aviflosu_playground_resize', __('Unable to create preview image.', 'avif-local-support'));
 			}
 			return array(
@@ -985,6 +1014,12 @@ final class RestController
 				'jpeg_quality_source' => 'original',
 			);
 		}
+
+		$resizeDimensions = image_resize_dimensions($sourceWidth, $sourceHeight, $targetWidth, $targetHeight, $crop);
+		$jpegQuality = $this->getWordPressJpegQuality(array(
+			'width' => is_array($resizeDimensions) ? (int) $resizeDimensions[4] : $sourceWidth,
+			'height' => is_array($resizeDimensions) ? (int) $resizeDimensions[5] : $sourceHeight,
+		));
 
 		// Prefer the editor path for more reliable resizing from side-loaded images.
 		$editor = wp_get_image_editor($sourcePath);
@@ -1011,33 +1046,12 @@ final class RestController
 			}
 		}
 
-		$resized = image_make_intermediate_size($sourcePath, $targetWidth, $targetHeight, $crop);
-		if (is_array($resized)) {
-			$resizedPath = '';
-			if (!empty($resized['path'])) {
-				$resizedPath = (string) $resized['path'];
-			} elseif (!empty($resized['file'])) {
-				$resizedPath = trailingslashit((string) dirname($sourcePath)) . ltrim((string) $resized['file'], '/\\');
-			}
-				if ('' !== $resizedPath && file_exists($resizedPath)) {
-					if ($resizedPath !== $previewPath && @copy($resizedPath, $previewPath)) {
-						wp_delete_file($resizedPath);
-						$resizedPath = $previewPath;
-					}
-				$resizedSize = @getimagesize($resizedPath);
-				return array(
-					'path' => $resizedPath,
-					'width' => (int) ($resizedSize[0] ?? ($resized['width'] ?? 0)),
-					'height' => (int) ($resizedSize[1] ?? ($resized['height'] ?? 0)),
-					'target_width' => $targetWidth,
-					'target_height' => $targetHeight,
-					'jpeg_quality' => $jpegQuality,
-					'jpeg_quality_source' => 'wp',
-				);
-			}
-		}
-
+		// If resizing fails, keep the original within this session. Core's
+		// intermediate-size helper writes beside the source and could collide
+		// with existing media, so it is not a safe fallback for this workflow.
 		if (!@copy($sourcePath, $previewPath)) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only the empty directory atomically reserved above.
+			@rmdir($previewDirectory);
 			return new \WP_Error('aviflosu_playground_resize', __('Unable to create a preview image.', 'avif-local-support'));
 		}
 
@@ -1053,10 +1067,13 @@ final class RestController
 		);
 	}
 
-	private function getWordPressJpegQuality(): int
+	private function getWordPressJpegQuality(array $dimensions = array('width' => 0, 'height' => 0)): int
 	{
 		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Core WordPress hook.
-		$quality = (int) apply_filters('wp_editor_set_quality', 82, 'image/jpeg');
+		$quality = (int) apply_filters('wp_editor_set_quality', 82, 'image/jpeg', $dimensions);
+		// Match the legacy filter also applied by WP_Image_Editor::set_quality().
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Core WordPress hook.
+		$quality = (int) apply_filters('jpeg_quality', $quality, 'image_resize');
 		return max(1, min(100, $quality));
 	}
 
@@ -1090,7 +1107,7 @@ final class RestController
 		}
 
 		$jpegExists = '' !== $jpegPath && file_exists($jpegPath);
-		$avifExists = '' !== $avifPath && file_exists($avifPath);
+		$avifExists = '' !== $avifPath && AvifFile::isValid($avifPath);
 
 		$size = $jpegExists ? @getimagesize($jpegPath) : false;
 		$jpegUrl = $jpegExists ? $this->uploadPathToUrl($jpegPath) : '';

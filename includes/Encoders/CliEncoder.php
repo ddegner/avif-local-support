@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Ddegner\AvifLocalSupport\Encoders;
 
+use Ddegner\AvifLocalSupport\AvifFile;
 use Ddegner\AvifLocalSupport\Contracts\AvifEncoderInterface;
 use Ddegner\AvifLocalSupport\DTO\AvifSettings;
 use Ddegner\AvifLocalSupport\DTO\ConversionResult;
@@ -263,9 +264,9 @@ class CliEncoder implements AvifEncoderInterface {
 			return $this->analyzeError();
 		}
 
-		if ( ! file_exists( $destination ) || filesize( $destination ) <= 512 ) {
+		if ( ! AvifFile::isValid( $destination ) ) {
 			return ConversionResult::failure(
-				'CLI reported success but file is missing or empty.',
+				'CLI reported success but did not produce a valid AVIF image.',
 				'Verify that your ImageMagick build supports AVIF writing.'
 			);
 		}

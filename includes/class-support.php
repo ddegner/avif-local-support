@@ -32,11 +32,17 @@ final class Support {
 		add_filter( 'the_content', array( $this, 'wrapContentImages' ), 15 );
 		add_filter( 'post_thumbnail_html', array( $this, 'wrapContentImages' ), 15 );
 		add_action( 'shutdown', array( $this, 'saveCache' ) );
+		add_action( 'wp_enqueue_scripts', array( $this, 'enqueueBlockStyles' ) );
 
 		// Enqueue ThumbHash decoder if enabled - inline in head for early execution.
 		if ( ThumbHash::isEnabled() && ! \is_admin() ) {
 			add_action( 'wp_head', array( $this, 'inlineThumbHashDecoder' ), 1 );
 		}
+	}
+
+	/** Preserve the media box expected by core Gallery and Image blocks. */
+	public function enqueueBlockStyles(): void {
+		wp_enqueue_style( 'aviflosu-block-images', AVIFLOSU_PLUGIN_URL . 'assets/frontend.css', array(), AVIFLOSU_VERSION );
 	}
 
 	/**
@@ -89,9 +95,15 @@ final class Support {
 			return $html;
 		}
 
-		$avifSrc = $this->avifUrlFor( $imageSrc[0] );
-
-		$srcset     = \wp_get_attachment_image_srcset( $attachmentId, $size );
+		// Core has already applied custom attributes, lazy-image auto sizes, and
+		// responsive-image filters. Use the final markup rather than recalculating
+		// a different candidate list and slot width for the AVIF source.
+		$processor = new \WP_HTML_Tag_Processor( $html );
+		if ( ! $processor->next_tag( 'IMG' ) ) {
+			return $html;
+		}
+		$avifSrc    = $this->avifUrlFor( (string) $processor->get_attribute( 'src' ) );
+		$srcset     = (string) $processor->get_attribute( 'srcset' );
 		$avifSrcset = $srcset ? $this->convertSrcsetToAvif( $srcset ) : '';
 
 		// Ensure single AVIF candidates have width descriptors for responsive selection.
@@ -100,7 +112,7 @@ final class Support {
 			$avifSrcset = $w > 0 ? ( $avifSrc . ' ' . $w . 'w' ) : $avifSrc;
 		}
 
-		$sizes = \wp_get_attachment_image_sizes( $attachmentId, $size ) ?: '';
+		$sizes = (string) $processor->get_attribute( 'sizes' );
 
 		// Get ThumbHash for LQIP if enabled.
 		$sizeName  = is_array( $size ) ? 'full' : (string) $size;
@@ -167,9 +179,9 @@ final class Support {
 		if ( isset( $this->fileCache[ $filePath ] ) && true === $this->fileCache[ $filePath ] ) {
 			return true;
 		}
-		// Tiny files are invalid leftovers from failed conversions (same 512-byte rule
-		// as the encoders and Diagnostics) — never serve them to browsers.
-		$exists = file_exists( $filePath ) && filesize( $filePath ) > 512;
+		// Small images can be valid AVIFs. Inspect the format and dimensions rather
+		// than using file size as a proxy for a successful conversion.
+		$exists = AvifFile::isValid( $filePath );
 		if ( $exists ) {
 			$this->fileCache[ $filePath ] = true;
 			$this->cacheDirty             = true;
@@ -226,7 +238,7 @@ final class Support {
 			return $imgHtml;
 		}
 
-		return sprintf( '<picture><source type="image/avif" srcset="%s"%s>%s</picture>', \esc_attr( $srcset ), $sizesAttr, $imgHtml );
+		return sprintf( '<picture class="aviflosu-picture"><source type="image/avif" srcset="%s"%s>%s</picture>', \esc_attr( $srcset ), $sizesAttr, $imgHtml );
 	}
 
 	private function isInsidePicture( \DOMNode $node ): bool {
@@ -257,6 +269,7 @@ final class Support {
 		}
 
 		$picture = $dom->createElement( 'picture' );
+		$picture->setAttribute( 'class', 'aviflosu-picture' );
 		$source  = $dom->createElement( 'source' );
 		$source->setAttribute( 'type', 'image/avif' );
 		$source->setAttribute( 'srcset', $avifSrcset );
@@ -296,7 +309,7 @@ final class Support {
 			while ( $ancestor instanceof \DOMElement ) {
 				if ( 'a' === strtolower( $ancestor->nodeName ) ) {
 					$href = (string) $ancestor->getAttribute( 'href' );
-					if ( preg_match( '/\.(jpe?g)$/i', $href ) ) {
+					if ( (bool) \get_option( 'aviflosu_enable_support', true ) && preg_match( '/\.(jpe?g)$/i', $href ) ) {
 						$avifHref = $this->avifUrlFor( $href );
 						if ( $avifHref ) {
 							$ancestor->setAttribute( 'href', $avifHref );

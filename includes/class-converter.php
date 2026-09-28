@@ -255,9 +255,7 @@ final class Converter {
 			return null;
 		}
 		$avifPath = (string) preg_replace( '/\.(jpe?g)$/i', '.avif', $path );
-		// Treat tiny files as invalid leftovers from failed conversions (same 512-byte
-		// rule as Diagnostics::computeMissingCounts) so they get reconverted, not skipped.
-		if ( '' !== $avifPath && file_exists( $avifPath ) && filesize( $avifPath ) > 512 ) {
+		if ( AvifFile::isValid( $avifPath ) ) {
 			return null; // Already converted.
 		}
 
@@ -274,15 +272,6 @@ final class Converter {
 		$dir = dirname( $avifPath );
 		if ( ! is_dir( $dir ) ) {
 			wp_mkdir_p( $dir );
-		}
-
-		// Memory Check.
-		if ( $settings->memoryCheck ) {
-			$memoryWarning = $this->check_memory_safe( $sourcePath );
-			if ( $memoryWarning ) {
-				$this->log_conversion( 'error', $sourcePath, $avifPath, 'none', $start_time, $memoryWarning, $settings->toArray() );
-				return ConversionResult::failure( $memoryWarning );
-			}
 		}
 
 		// Select Encoders.
@@ -332,6 +321,16 @@ final class Converter {
 		foreach ( $encodersToTry as $encoder ) {
 			$engineUsed = $encoder->getName();
 
+			// PHP's memory_limit applies to in-process decoders, not ImageMagick's
+			// external CLI process. Keep guarding PHP fallbacks if CLI fails.
+			if ( $settings->memoryCheck && 'cli' !== $engineUsed ) {
+				$memoryWarning = $this->check_memory_safe( $sourcePath );
+				if ( null !== $memoryWarning ) {
+					$lastResult = ConversionResult::failure( $memoryWarning );
+					continue;
+				}
+			}
+
 			$result = $encoder->convert( $sourcePath, $avifPath, $settings, $targetDimensions );
 
 			if ( $result->success ) {
@@ -349,7 +348,7 @@ final class Converter {
 		// Remove any invalid partial output a failed encoder left behind so it is not
 		// later mistaken for a completed conversion and served to visitors.
 		clearstatcache( true, $avifPath );
-		if ( file_exists( $avifPath ) && filesize( $avifPath ) <= 512 ) {
+		if ( file_exists( $avifPath ) && ! AvifFile::isValid( $avifPath ) ) {
 			wp_delete_file( $avifPath );
 		}
 
@@ -449,59 +448,39 @@ final class Converter {
 	}
 
 	private function getConversionData( string $jpegPath ): array {
-		// Always use WordPress logic to avoid double-resizing
-		$useWpLogic = true;
-		$sourcePath = $jpegPath;
-		$target     = null;
-		if ( $useWpLogic ) {
-			$filename  = basename( $jpegPath );
-			$directory = dirname( $jpegPath );
-			if ( preg_match( '/^(.+)-(\d+)x(\d+)\.(jpe?g)$/i', $filename, $m ) ) {
-				$base       = $m[1];
-				$w          = (int) $m[2];
-				$h          = (int) $m[3];
-				$ext        = $m[4];
-				$candidates = array(
-					$directory . '/' . $base . '.' . $ext,
-					$directory . '/' . $base . '-scaled.' . $ext,
-				);
-				foreach ( $candidates as $candidate ) {
-					if ( file_exists( $candidate ) ) {
-						$srcReal = @realpath( $candidate );
-						$tgtReal = @realpath( $jpegPath );
-						if ( $srcReal && $tgtReal && $srcReal !== $tgtReal ) {
-							$sourcePath = $candidate;
-							$target     = array(
-								'width'  => $w,
-								'height' => $h,
-							);
-							break;
-						}
-					}
-				}
-			} elseif ( preg_match( '/^(.+)-scaled\.(jpe?g)$/i', $filename, $m ) ) {
-				// Handle -scaled images: try to find the non-scaled original
-				$base      = $m[1];
-				$ext       = $m[2];
-				$candidate = $directory . '/' . $base . '.' . $ext;
-				if ( file_exists( $candidate ) ) {
-					$srcReal = @realpath( $candidate );
-					$tgtReal = @realpath( $jpegPath );
-					if ( $srcReal && $tgtReal && $srcReal !== $tgtReal ) {
-						$sourcePath = $candidate;
-						// Use dimensions of the scaled file as target to ensure we don't produce a huge AVIF
-						$info = @getimagesize( $jpegPath );
-						if ( $info ) {
-							$target = array(
-								'width'  => $info[0],
-								'height' => $info[1],
-							);
-						}
-					}
-				}
-			}
+		// A dimension suffix does not record the crop anchor or image-editor
+		// filters used by WordPress. The generated JPEG is authoritative: using
+		// its original with a center crop can silently change the pictured subject.
+		$filename = basename( $jpegPath );
+		if ( ! preg_match( '/^(.+)-scaled\.(jpe?g)$/i', $filename, $matches ) ) {
+			return array( $jpegPath, null );
 		}
-		return array( $sourcePath, $target );
+
+		// Preserve original-source encoding for WordPress's proportional scaled
+		// image, but only when its dimensions agree with that operation.
+		$candidate = dirname( $jpegPath ) . '/' . $matches[1] . '.' . $matches[2];
+		if ( ! is_file( $candidate ) || realpath( $candidate ) === realpath( $jpegPath ) ) {
+			return array( $jpegPath, null );
+		}
+		$source = @getimagesize( $candidate );
+		$target = @getimagesize( $jpegPath );
+		if ( ! $source || ! $target || $source[0] <= 0 || $source[1] <= 0 ) {
+			return array( $jpegPath, null );
+		}
+		if ( ! function_exists( 'exif_read_data' ) ) {
+			// Without orientation information we cannot prove the original has
+			// the same aspect ratio after the encoders auto-orient it.
+			return array( $jpegPath, null );
+		}
+		$exif = @exif_read_data( $candidate );
+		if ( is_array( $exif ) && in_array( (int) ( $exif['Orientation'] ?? 1 ), array( 5, 6, 7, 8 ), true ) ) {
+			[$source[0], $source[1]] = array( $source[1], $source[0] );
+		}
+		$scale = min( $target[0] / $source[0], $target[1] / $source[1] );
+		if ( $scale >= 1 || abs( $source[0] * $scale - $target[0] ) > 1 || abs( $source[1] * $scale - $target[1] ) > 1 ) {
+			return array( $jpegPath, null );
+		}
+		return array( $candidate, array( 'width' => $target[0], 'height' => $target[1] ) );
 	}
 
 	/**
@@ -526,15 +505,14 @@ final class Converter {
 	// Optional: WP-CLI bulk conversion (synchronous — CLI has no request timeout).
 	public function cliConvertAll(): void {
 		// Clear any previous stop flag when starting.
-		\delete_transient( self::STOP_TRANSIENT );
+		AttachmentBatchRunner::clearStopFlag( self::STOP_TRANSIENT );
 
 		$count = 0;
 		foreach ( AttachmentQuery::allIds() as $attachmentId ) {
-			if ( \get_transient( self::STOP_TRANSIENT ) ) {
+			if ( AttachmentBatchRunner::isStopped( self::STOP_TRANSIENT ) ) {
 				if ( defined( 'WP_CLI' ) && \WP_CLI ) {
 					\WP_CLI::warning( "Conversion stopped by user after {$count} attachments." );
 				}
-				\delete_transient( self::STOP_TRANSIENT );
 				return;
 			}
 
@@ -613,7 +591,7 @@ final class Converter {
 				'height'         => $height,
 				'jpeg_size'      => file_exists( $jpegAbs ) ? (int) filesize( $jpegAbs ) : 0,
 				'avif_size'      => file_exists( $avifAbs ) ? (int) filesize( $avifAbs ) : 0,
-				'existed_before' => file_exists( $avifAbs ),
+				'existed_before' => AvifFile::isValid( $avifAbs ),
 				'converted'      => false,
 			);
 		};
@@ -642,7 +620,7 @@ final class Converter {
 		// Perform conversion for each row using the same pipeline
 		foreach ( $results['sizes'] as &$row ) {
 			$this->checkMissingAvif( $row['jpeg_path'] );
-			$row['converted'] = file_exists( $row['avif_path'] );
+			$row['converted'] = AvifFile::isValid( $row['avif_path'] );
 			// Refresh sizes after conversion
 			$row['jpeg_size'] = file_exists( $row['jpeg_path'] ) ? (int) filesize( $row['jpeg_path'] ) : 0;
 			$row['avif_size'] = file_exists( $row['avif_path'] ) ? (int) filesize( $row['avif_path'] ) : 0;
@@ -693,6 +671,11 @@ final class Converter {
 		}
 
 		foreach ( $paths as $jpegPath ) {
+			// JPEG attachments can have WebP/AVIF files in their metadata when
+			// another image editor changes the output format. Never delete those.
+			if ( ! preg_match( '/\.(jpe?g)$/i', $jpegPath ) ) {
+				continue;
+			}
 			$avifPath = (string) preg_replace( '/\.(jpe?g)$/i', '.avif', $jpegPath );
 			if ( file_exists( $avifPath ) ) {
 				++$result['attempted'];
@@ -744,7 +727,7 @@ final class Converter {
 			$avifRel            = (string) preg_replace( '/\.(jpe?g)$/i', '.avif', $jpegRel );
 			$jpegUrl            = $jpegRel !== '' ? $baseUrl . $jpegRel : '';
 			$avifUrl            = $avifRel !== '' ? $baseUrl . $avifRel : '';
-			$avifExists         = file_exists( $avifAbs );
+			$avifExists         = AvifFile::isValid( $avifAbs );
 			$results['sizes'][] = array(
 				'name'      => $label,
 				'jpeg_path' => $jpegAbs,
@@ -801,7 +784,7 @@ final class Converter {
 		}
 
 		$avifPath = (string) preg_replace( '/\.(jpe?g)$/i', '.avif', $jpegPath );
-		if ( file_exists( $avifPath ) && filesize( $avifPath ) > 512 ) {
+		if ( AvifFile::isValid( $avifPath ) ) {
 			return ConversionResult::success();
 		}
 

@@ -2,8 +2,8 @@
 Contributors: ddegner
 Tags: avif, images, performance, media, optimization
 Requires at least: 6.8
-Tested up to: 7.0
-Stable tag: 0.8.0
+Tested up to: 7.1
+Stable tag: 0.8.1
 Requires PHP: 8.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -210,6 +210,17 @@ LiteSpeed's open_basedir restriction prevents PHP from detecting executables out
 4. **About** — Quick reference and version info
 
 ## Changelog
+
+### 0.8.1
+
+- Fix: Preserve WebP and other non-JPEG files when deleting companion AVIFs, and isolate playground previews so existing media cannot be overwritten.
+- Fix: Support WordPress's three-argument image-quality filter, final responsive image attributes, cropped galleries, and native lightbox controls.
+- Fix: Keep CSS background media queries, gradients, multiple layers, and stylesheet ordering intact, including pages whose backgrounds appear only in linked CSS.
+- Fix: Preserve custom thumbnail crops, accept valid compact AVIF files, and apply PHP memory limits only to encoders running inside PHP.
+- Fix: Preserve resumable job progress across delayed cron runs, cancel queued LQIP generation on deletion, and prevent active workers from restoring deleted placeholders.
+- Fix: Preserve the file-cache lifetime when saving settings, avoid unused playground conversions, respect disabled AVIF delivery, generate accurate palette-image placeholders, and honor LQIP CLI `--force`.
+- Fix: Avoid deprecated GD cleanup calls on PHP 8.5.
+- Tests: Added portable regression suites and disposable WordPress integration coverage; see the [GitHub test documentation](https://github.com/ddegner/avif-local-support/blob/main/tests/README.md).
 
 ### 0.8.0
 

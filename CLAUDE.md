@@ -49,7 +49,7 @@ PSR-4 under `Ddegner\AvifLocalSupport\` mapped to `includes/`. A custom autoload
 
 **Support layer** (`includes/class-support.php`): Front-end HTML rewriting. Hooks into `wp_get_attachment_image`, `the_content`, and `post_thumbnail_html`. Finds `.avif` neighbors for JPEG URLs in the uploads directory, wraps `<img>` in `<picture>` elements, rewrites parent `<a>` hrefs for lightbox compatibility. Caches file existence in transient `aviflosu_file_cache`.
 
-**Conversion layer** (`includes/class-converter.php`): AVIF generation pipeline. Hooks into `wp_generate_attachment_metadata` and `wp_update_attachment_metadata` for on-upload conversion, plus scheduled/on-demand bulk scans. Sources from the original/`-scaled` file for derived sizes to avoid double-resizing. Deletion hooks clean up companion `.avif` files.
+**Conversion layer** (`includes/class-converter.php`): AVIF generation pipeline. Hooks into `wp_generate_attachment_metadata` and `wp_update_attachment_metadata` for on-upload conversion, plus scheduled/on-demand bulk scans. Dimension-suffixed derivatives are encoded from their existing JPEG to preserve custom crops. Proportional `-scaled` images may use the original when dimensions and orientation match. Deletion hooks clean up companion `.avif` files.
 
 ### Encoder Strategy (priority: CLI → Imagick → GD)
 All encoders implement `Contracts\AvifEncoderInterface`:
@@ -87,7 +87,7 @@ All encoders implement `Contracts\AvifEncoderInterface`:
 
 ## Testing Workflow
 
-No automated test suite. Manual testing checklist:
+Standalone regression suites and disposable WordPress integration tests are documented in `tests/README.md`. Manual testing checklist:
 1. Upload JPEG with "Convert on upload" enabled → verify `.avif` created for original + sizes
 2. Tools → Convert Now → verify missing counts drop
 3. Front-end: verify `<picture>` elements appear only when `.avif` exists

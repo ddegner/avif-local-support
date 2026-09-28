@@ -1,407 +1,420 @@
 <?php
+/**
+ * Local AVIF background-image serving.
+ *
+ * @package Ddegner\AvifLocalSupport
+ */
 
 declare(strict_types=1);
 
 namespace Ddegner\AvifLocalSupport;
 
-// Prevent direct access.
-\defined('ABSPATH') || exit;
+defined( 'ABSPATH' ) || exit;
 
-/**
- * Handles AVIF replacement for CSS background images.
- *
- * Uses output buffering to scan page HTML for background-image CSS rules
- * containing JPEG URLs, then injects style overrides with AVIF equivalents.
- */
-final class BackgroundImages
-{
-
+/** Serves local AVIF backgrounds without changing the authored CSS cascade. */
+final class BackgroundImages {
 	/**
-	 * Upload directory information.
+	 * Upload URL and filesystem roots.
 	 *
-	 * @var array{baseurl: string, basedir: string}
+	 * @var array
 	 */
 	private array $uploadsInfo = array();
-
 	/**
-	 * Whether buffering has been started.
+	 * Whether this instance owns an output buffer.
+	 *
+	 * @var bool
 	 */
 	private bool $bufferingStarted = false;
 
-	/**
-	 * Collected JPEG to AVIF URL mappings from inline styles.
-	 *
-	 * Note: Currently unused. Inline style="background-image: url(...)" attributes
-	 * cannot be overridden via injected CSS without modifying the HTML directly.
-	 * This data is collected for potential future direct HTML rewriting.
-	 *
-	 * @var array<string, string>
-	 */
-	private array $urlMappings = array();
-
-	/**
-	 * CSS selector to AVIF URL mappings for external stylesheets.
-	 *
-	 * @var array<string, array{jpeg:string,avif:string}>
-	 */
-	private array $selectorOverrides = array();
-
-	/**
-	 * Check if background image AVIF replacement is enabled.
-	 */
-	public static function isEnabled(): bool
-	{
-		return (bool) \get_option('aviflosu_enable_background_images', true);
+	/** Whether background serving is enabled. */
+	public static function isEnabled(): bool {
+		return (bool) get_option( 'aviflosu_enable_background_images', true );
 	}
 
-	/**
-	 * Initialize the background images handler.
-	 */
-	public function init(): void
-	{
-		if (!\is_admin() && self::isEnabled()) {
-			$this->uploadsInfo = \wp_upload_dir();
-			// Start output buffering early in template loading
-			add_action('template_redirect', array($this, 'startBuffering'), 1);
+	/** Register frontend output processing. */
+	public function init(): void {
+		if ( ! is_admin() && self::isEnabled() ) {
+			$this->uploadsInfo = wp_upload_dir();
+			add_action( 'template_redirect', array( $this, 'startBuffering' ), 1 );
 		}
 	}
 
-	/**
-	 * Start output buffering to capture the page HTML.
-	 */
-	public function startBuffering(): void
-	{
-		// Don't buffer admin, AJAX, REST, or feed requests
-		if (\is_admin() || \wp_doing_ajax() || (\defined('REST_REQUEST') && REST_REQUEST) || \is_feed()) {
+	/** Start buffering eligible HTML requests. */
+	public function startBuffering(): void {
+		if ( is_admin() || wp_doing_ajax() || ( defined( 'REST_REQUEST' ) && REST_REQUEST ) || is_feed() ) {
 			return;
 		}
-
 		$this->bufferingStarted = true;
-		ob_start(array($this, 'processBuffer'));
+		ob_start( array( $this, 'processBuffer' ) );
 	}
 
 	/**
-	 * Process the output buffer and inject AVIF overrides.
+	 * Rewrite eligible backgrounds in a complete HTML document.
 	 *
-	 * @param string $buffer The complete page HTML.
-	 * @return string Modified HTML with AVIF CSS overrides injected.
+	 * @param string $buffer Buffered page HTML.
 	 */
-	public function processBuffer(string $buffer): string
-	{
-		if ('' === $buffer || !$this->bufferingStarted) {
+	public function processBuffer( string $buffer ): string {
+		if ( '' === $buffer || ! $this->bufferingStarted || false === stripos( $buffer, '</head>' ) ) {
 			return $buffer;
 		}
-
-		// Skip if no </head> tag (not a full HTML document)
-		if (false === stripos($buffer, '</head>')) {
-			return $buffer;
-		}
-
-		// Early exit: skip if no JPEG background images in any CSS
-		if (false === stripos($buffer, '.jpg') && false === stripos($buffer, '.jpeg')) {
-			return $buffer;
-		}
-
-		// Process inline styles and style blocks
-		$this->processInlineStyles($buffer);
-		$this->processStyleBlocks($buffer);
-
-		// Process external stylesheets (linked CSS files)
-		$this->processLinkedStylesheets($buffer);
-
-		// Generate and inject the override CSS
-		$overrideCss = $this->generateOverrideCss();
-		if ('' === $overrideCss) {
-			return $buffer;
-		}
-
-		// Inject before </head>
-		$styleTag = '<style id="aviflosu-bg-overrides">' . $overrideCss . '</style>';
-		$buffer = str_ireplace('</head>', $styleTag . '</head>', $buffer);
-
-		return $buffer;
-	}
-
-	/**
-	 * Process inline style attributes for background-image URLs.
-	 *
-	 * @param string $html Page HTML.
-	 */
-	private function processInlineStyles(string $html): void
-	{
-		// Match style attributes containing background-image
-		$pattern = '/style\s*=\s*["\']([^"\']*background[^"\']*)["\']/i';
-		if (!preg_match_all($pattern, $html, $matches)) {
-			return;
-		}
-
-		foreach ($matches[1] as $styleValue) {
-			$this->extractBackgroundUrls($styleValue);
-		}
-	}
-
-	/**
-	 * Process <style> blocks for background-image URLs.
-	 *
-	 * @param string $html Page HTML.
-	 */
-	private function processStyleBlocks(string $html): void
-	{
-		// Match <style> tag contents
-		$pattern = '/<style[^>]*>(.*?)<\/style>/is';
-		if (!preg_match_all($pattern, $html, $matches)) {
-			return;
-		}
-
-		foreach ($matches[1] as $cssContent) {
-			$this->processCssContent($cssContent);
-		}
-	}
-
-	/**
-	 * Process linked external stylesheets.
-	 *
-	 * @param string $html Page HTML.
-	 */
-	private function processLinkedStylesheets(string $html): void
-	{
-		// Match <link rel="stylesheet" href="..."> tags
-		$pattern = '/<link[^>]+rel\s*=\s*["\']stylesheet["\'][^>]+href\s*=\s*["\']([^"\']+)["\'][^>]*>/i';
-		if (!preg_match_all($pattern, $html, $matches)) {
-			// Also try href before rel
-			$pattern2 = '/<link[^>]+href\s*=\s*["\']([^"\']+)["\'][^>]+rel\s*=\s*["\']stylesheet["\'][^>]*>/i';
-			if (!preg_match_all($pattern2, $html, $matches)) {
-				return;
+		$processor    = new \WP_HTML_Tag_Processor( $buffer );
+		$linkedStyles = array();
+		$requestPath  = '/' . ltrim( sanitize_url( wp_unslash( $_SERVER['REQUEST_URI'] ?? '/' ) ), '/' );
+		$documentUrl  = $this->resolveUrl( $requestPath, home_url( '/' ) );
+		while ( $processor->next_tag() ) {
+			$inline = $processor->get_attribute( 'style' );
+			if ( is_string( $inline ) ) {
+				$changed = false;
+				$updated = $this->rewriteDeclarations( $inline, $documentUrl, false, $changed );
+				if ( $changed && null !== $updated ) {
+					$processor->set_attribute( 'style', $updated );
+				}
 			}
-		}
-
-		$uploadsUrl = $this->uploadsInfo['baseurl'] ?? '';
-
-		foreach ($matches[1] as $cssUrl) {
-			// Only process CSS files from our uploads directory (page builder CSS)
-			if ('' === $uploadsUrl || !str_contains($cssUrl, $uploadsUrl)) {
-				// Also check for /wp-content/uploads/ path pattern
-				if (!str_contains($cssUrl, '/wp-content/uploads/')) {
+			if ( 'STYLE' === $processor->get_tag() ) {
+				$changed = false;
+				$updated = $this->rewriteStylesheet( $processor->get_modifiable_text(), $documentUrl, false, $changed );
+				if ( $changed && null !== $updated ) {
+					$processor->set_modifiable_text( $updated );
+				}
+			} elseif ( 'LINK' === $processor->get_tag() ) {
+				$rel = strtolower( trim( (string) $processor->get_attribute( 'rel' ) ) );
+				// Alternate/disabled sheets retain browser-controlled activation.
+				if ( 'stylesheet' !== $rel || null !== $processor->get_attribute( 'disabled' ) || null !== $processor->get_attribute( 'title' ) ) {
 					continue;
 				}
+				$url  = $this->resolveUrl( (string) $processor->get_attribute( 'href' ), $documentUrl );
+				$path = $this->urlToLocalPath( $url );
+				if ( null === $path || ! is_readable( $path ) || 'css' !== strtolower( pathinfo( $path, PATHINFO_EXTENSION ) ) ) {
+					continue;
+				}
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Verified local uploads file, never a remote request.
+				$css = file_get_contents( $path );
+				if ( ! is_string( $css ) ) {
+					continue;
+				}
+				$changed = false;
+				$updated = $this->rewriteStylesheet( $css, $url, true, $changed );
+				// External CSS must not be able to close the injected HTML style tag.
+				if ( ! $changed || null === $updated || false !== stripos( $updated, '</style' ) ) {
+					continue;
+				}
+				$marker                  = uniqid( 'aviflosu-', false );
+				$media                   = $processor->get_attribute( 'media' );
+				$linkedStyles[ $marker ] = '<style class="aviflosu-bg-overrides"'
+					. ( is_string( $media ) ? ' media="' . esc_attr( $media ) . '"' : '' )
+					. '>' . $updated . '</style>';
+				$processor->set_attribute( 'data-aviflosu-background', $marker );
 			}
+		}
+		$buffer = $processor->get_updated_html();
+		if ( empty( $linkedStyles ) ) {
+			return $buffer;
+		}
+		// Only real LINK tokens received these markers. Keep each mirror next to
+		// its source link so later stylesheets retain their cascade precedence.
+		return (string) preg_replace_callback(
+			'~<link\b(?:[^>"\']|"[^"]*"|\'[^\']*\')*>~i',
+			static function ( array $matches ) use ( $linkedStyles ): string {
+				if ( ! preg_match( '/ data-aviflosu-background="([^"]+)"/', $matches[0], $marker ) || ! isset( $linkedStyles[ $marker[1] ] ) ) {
+					return $matches[0];
+				}
+				return str_replace( $marker[0], '', $matches[0] ) . $linkedStyles[ $marker[1] ];
+			},
+			$buffer
+		);
+	}
 
-			// Convert URL to local path
-			$cssPath = $this->urlToLocalPath($cssUrl);
-			if (null === $cssPath || !file_exists($cssPath)) {
+	/**
+	 * Mirror all background declarations, including unchanged longhands and
+	 * later background:none rules, under their original conditional wrappers.
+	 * Unsupported grammar returns null so the original CSS remains untouched.
+	 *
+	 * @param string $css Stylesheet source.
+	 * @param string $baseUrl URL against which relative image URLs resolve.
+	 * @param bool   $mirror Whether to keep only background declarations.
+	 * @param bool   $changed Set when an AVIF companion is used.
+	 */
+	private function rewriteStylesheet( string $css, string $baseUrl, bool $mirror, bool &$changed ): ?string {
+		$tokens = $this->cssDelimiters( $css );
+		if ( null === $tokens ) {
+			return null;
+		}
+		$out   = '';
+		$start = 0;
+		$count = count( $tokens );
+		for ( $i = 0; $i < $count; ++$i ) {
+			[ $offset, $delimiter ] = $tokens[ $i ];
+			if ( ';' === $delimiter ) {
+				$statement = substr( $css, $start, $offset - $start + 1 );
+				$clean     = trim( (string) preg_replace( '~/\*.*?\*/~s', '', $statement ) );
+				if ( $mirror && preg_match( '/^@(import|namespace)\b/i', $clean ) ) {
+					return null;
+				}
+				if ( ! $mirror || preg_match( '/^@layer\b/i', $clean ) ) {
+					$out .= $statement;
+				}
+				$start = $offset + 1;
 				continue;
 			}
-
-			// Read and process the CSS file
-			$cssContent = file_get_contents($cssPath);
-			if (false !== $cssContent && '' !== $cssContent) {
-				$this->processCssContent($cssContent);
+			if ( '{' !== $delimiter ) {
+				return null;
 			}
-		}
-	}
-
-	/**
-	 * Convert a URL to a local file path.
-	 *
-	 * @param string $url The URL to convert.
-	 * @return string|null The local file path, or null if not in uploads.
-	 */
-	private function urlToLocalPath(string $url): ?string
-	{
-		$uploadsUrl = $this->uploadsInfo['baseurl'] ?? '';
-		$uploadsDir = $this->uploadsInfo['basedir'] ?? '';
-
-		if ('' === $uploadsUrl || '' === $uploadsDir) {
-			return null;
-		}
-
-		// Strip query string from URL
-		$url = strtok($url, '?');
-		if (false === $url || '' === $url) {
-			return null;
-		}
-
-		// Handle absolute URLs
-		if (str_starts_with($url, $uploadsUrl)) {
-			$relativePath = substr($url, strlen($uploadsUrl));
-			return $uploadsDir . $relativePath;
-		}
-
-		// Handle relative URLs - try to find /wp-content/uploads/ segment
-		$uploadPathSegment = '/wp-content/uploads/';
-		$pos = strpos($url, $uploadPathSegment);
-		if (false !== $pos) {
-			$relativePath = substr($url, $pos + strlen($uploadPathSegment));
-			return $uploadsDir . '/' . ltrim($relativePath, '/');
-		}
-
-		return null;
-	}
-
-	/**
-	 * Process CSS content and extract background images with their selectors.
-	 *
-	 * @param string $css CSS content to process.
-	 */
-	private function processCssContent(string $css): void
-	{
-		// Pattern to match CSS rules with background-image containing JPEG URLs
-		// Captures: selector { ... background(-image): url(*.jpg) ... }
-		$rulePattern = '/([^{}]+)\{([^{}]*background(?:-image)?\s*:\s*[^;}]*url\s*\([^)]+\.jpe?g[^)]*\)[^;}]*)[;}]/i';
-
-		if (!preg_match_all($rulePattern, $css, $ruleMatches, PREG_SET_ORDER)) {
-			return;
-		}
-
-		foreach ($ruleMatches as $match) {
-			$selector = trim($match[1]);
-			$declarationBlock = $match[2];
-
-			// Extract the background-image URL from this declaration
-			$urlPattern = '/background(?:-image)?\s*:\s*[^;]*url\s*\(\s*["\']?([^"\')\s?#]+\.jpe?g)(?:[?#][^"\')\s]*)?["\']?\s*\)/i';
-			if (preg_match($urlPattern, $declarationBlock, $urlMatch)) {
-				$jpegUrl = $this->resolveUrl($urlMatch[1]);
-				$avifUrl = $this->getAvifUrl($jpegUrl);
-
-				if (null !== $avifUrl) {
-					// Store selector -> source/AVIF URL mapping.
-					$this->selectorOverrides[$selector] = array(
-						'jpeg' => $jpegUrl,
-						'avif' => $avifUrl,
-					);
+			$header = substr( $css, $start, $offset - $start );
+			$depth  = 1;
+			for ( $j = $i + 1; $j < $count; ++$j ) {
+				$depth += '{' === $tokens[ $j ][1] ? 1 : ( '}' === $tokens[ $j ][1] ? -1 : 0 );
+				if ( 0 === $depth ) {
+					break;
 				}
 			}
+			if ( $j === $count ) {
+				return null;
+			}
+			$end         = $tokens[ $j ][0];
+			$body        = substr( $css, $offset + 1, $end - $offset - 1 );
+			$cleanHeader = trim( (string) preg_replace( '~/\*.*?\*/~s', '', $header ) );
+			if ( $mirror && preg_match( '/^@(layer|scope)\s*$/i', $cleanHeader ) ) {
+				// Anonymous layers cannot be reopened, and an implicit scope can
+				// acquire a different root when moved into an inline style element.
+				return null;
+			}
+			if ( preg_match( '/^@(media|supports|container|layer|scope|starting-style)\b/i', $cleanHeader ) ) {
+				$rewritten = $this->rewriteStylesheet( $body, $baseUrl, $mirror, $changed );
+			} elseif ( str_starts_with( $cleanHeader, '@' ) ) {
+				$rewritten = $mirror ? '' : $body;
+			} else {
+				$rewritten = $this->rewriteDeclarations( $body, $baseUrl, $mirror, $changed );
+			}
+			if ( null === $rewritten ) {
+				return null;
+			}
+			if ( ! $mirror || '' !== $rewritten ) {
+				$out .= $header . '{' . $rewritten . '}';
+			}
+			$start = $end + 1;
+			$i     = $j;
 		}
-
-		// Also extract standalone URLs for inline style processing
-		$this->extractBackgroundUrls($css);
+		$tail = substr( $css, $start );
+		if ( '' !== trim( (string) preg_replace( '~/\*.*?\*/~s', '', $tail ) ) ) {
+			return null;
+		}
+		return $out . ( $mirror ? '' : $tail );
 	}
 
 	/**
-	 * Extract background-image URLs from CSS text.
+	 * Find structural delimiters outside strings, comments and functions.
 	 *
-	 * @param string $css CSS text to scan.
+	 * @param string $css CSS source.
 	 */
-	private function extractBackgroundUrls(string $css): void
-	{
-		// Match background-image: url(...) or background: ... url(...)
-		$pattern = '/background(?:-image)?\s*:\s*[^;]*url\s*\(\s*["\']?([^"\')\s?#]+\.jpe?g)(?:[?#][^"\')\s]*)?["\']?\s*\)/i';
-
-		if (!preg_match_all($pattern, $css, $matches)) {
-			return;
-		}
-
-		foreach ($matches[1] as $jpegUrl) {
-			$resolvedUrl = $this->resolveUrl($jpegUrl);
-			$avifUrl = $this->getAvifUrl($resolvedUrl);
-			if (null !== $avifUrl) {
-				$this->urlMappings[$resolvedUrl] = $avifUrl;
+	private function cssDelimiters( string $css ): ?array {
+		$tokens      = array();
+		$length      = strlen( $css );
+		$parentheses = 0;
+		$brackets    = 0;
+		for ( $i = 0; $i < $length; ++$i ) {
+			$char = $css[ $i ];
+			if ( '/' === $char && '*' === ( $css[ $i + 1 ] ?? '' ) ) {
+				$end = strpos( $css, '*/', $i + 2 );
+				if ( false === $end ) {
+					return null;
+				}
+				$i = $end + 1;
+				continue;
+			}
+			if ( '"' === $char || "'" === $char ) {
+				$quote = $char;
+				for ( $quoteOffset = $i + 1; $quoteOffset < $length; ++$quoteOffset ) {
+					if ( '\\' === $css[ $quoteOffset ] ) {
+						++$quoteOffset;
+					} elseif ( $quote === $css[ $quoteOffset ] ) {
+						break;
+					}
+				}
+				$i = $quoteOffset;
+				if ( $i >= $length ) {
+					return null;
+				}
+				continue;
+			}
+			if ( '\\' === $char ) {
+				++$i;
+				continue;
+			}
+			$parentheses += '(' === $char ? 1 : ( ')' === $char ? -1 : 0 );
+			$brackets    += '[' === $char ? 1 : ( ']' === $char ? -1 : 0 );
+			if ( $parentheses < 0 || $brackets < 0 ) {
+				return null;
+			}
+			if ( 0 === $parentheses && 0 === $brackets && str_contains( '{};', $char ) ) {
+				$tokens[] = array( $i, $char );
 			}
 		}
+		return 0 === $parentheses && 0 === $brackets ? $tokens : null;
 	}
 
 	/**
-	 * Resolve a potentially relative URL to an absolute URL.
+	 * Replace image URLs within their original declarations and layers.
 	 *
-	 * @param string $url The URL to resolve.
-	 * @return string The resolved absolute URL.
+	 * @param string $css Declaration list.
+	 * @param string $baseUrl Source stylesheet or document URL.
+	 * @param bool   $mirror Whether to keep only background declarations.
+	 * @param bool   $changed Set when an AVIF companion is used.
 	 */
-	private function resolveUrl(string $url): string
-	{
-		// Already absolute
-		if (str_starts_with($url, 'http://') || str_starts_with($url, 'https://') || str_starts_with($url, '//')) {
+	private function rewriteDeclarations( string $css, string $baseUrl, bool $mirror, bool &$changed ): ?string {
+		$tokens = $this->cssDelimiters( $css );
+		if ( null === $tokens ) {
+			return null;
+		}
+		$tokens[] = array( strlen( $css ), '' );
+		$out      = '';
+		$start    = 0;
+		foreach ( $tokens as [ $offset, $delimiter ] ) {
+			if ( '{' === $delimiter || '}' === $delimiter ) {
+				return null; // CSS nesting needs a selector parser; retain original CSS.
+			}
+			$declaration = substr( $css, $start, $offset - $start );
+			$start       = $offset + 1;
+			if ( ! preg_match( '~^(\s*(?:/\*.*?\*/\s*)*)([-\w]+)(\s*:\s*)(.*)$~s', $declaration, $parts ) ) {
+				$out .= $mirror ? '' : $declaration . $delimiter;
+				continue;
+			}
+			$property = strtolower( $parts[2] );
+			if ( $mirror && 'all' === $property ) {
+				return null;
+			}
+			if ( 'background' !== $property && ! str_starts_with( $property, 'background-' ) ) {
+				$out .= $mirror ? '' : $declaration . $delimiter;
+				continue;
+			}
+			$prefix = $parts[1] . $parts[2] . $parts[3];
+			$value  = $parts[4];
+			if ( $mirror && str_contains( $value, '\\' ) ) {
+				return null; // Escaped relative URLs cannot be safely relocated to HTML.
+			}
+			$didConvert = false;
+			$fallback   = $mirror ? $this->rewriteUrls( $value, $baseUrl, false, $didConvert ) : $value;
+			$converted  = ( 'background' === $property || 'background-image' === $property )
+				? $this->rewriteUrls( $value, $baseUrl, true, $didConvert ) : $fallback;
+			$out       .= $prefix . $fallback . $delimiter;
+			if ( $didConvert ) {
+				$changed = true;
+				// Retain a JPEG declaration for browsers without image-set().
+				$out .= ( '' === $delimiter ? ';' : '' ) . $prefix . $converted . $delimiter;
+			}
+		}
+		return $out;
+	}
+
+	/**
+	 * Resolve URLs and optionally add format-aware AVIF/JPEG alternatives.
+	 *
+	 * @param string $value CSS declaration value.
+	 * @param string $baseUrl Source stylesheet or document URL.
+	 * @param bool   $convert Whether to introduce AVIF alternatives.
+	 * @param bool   $didConvert Set when an AVIF companion is used.
+	 */
+	private function rewriteUrls( string $value, string $baseUrl, bool $convert, bool &$didConvert ): string {
+		$canConvert = $convert && ! preg_match( '/(?:-webkit-)?image-set\s*\(/i', $value );
+		return (string) preg_replace_callback(
+			'~url\(\s*(?:"([^"\\\\]*(?:\\\\.[^"\\\\]*)*)"|\'([^\'\\\\]*(?:\\\\.[^\'\\\\]*)*)\'|([^\s)]+))\s*\)~i',
+			function ( array $matches ) use ( $baseUrl, $canConvert, &$didConvert ): string {
+				$url = '' !== $matches[1] ? $matches[1] : ( ! empty( $matches[2] ) ? $matches[2] : ( $matches[3] ?? '' ) );
+				if ( '' === $url || str_contains( $url, '\\' ) || preg_match( '/^(?:data:|#)/i', $url ) ) {
+					return $matches[0];
+				}
+				$absolute = $this->resolveUrl( $url, $baseUrl );
+				$jpeg     = 'url("' . $this->cssString( $absolute ) . '")';
+				$avif     = $canConvert ? $this->getAvifUrl( $absolute ) : null;
+				if ( null === $avif ) {
+					return $jpeg;
+				}
+				$didConvert = true;
+				return 'image-set(url("' . $this->cssString( $avif ) . '") type("image/avif"),' . $jpeg . ' type("image/jpeg"))';
+			},
+			$value
+		);
+	}
+
+	/**
+	 * Escape a double-quoted CSS string, including HTML's style closing token.
+	 *
+	 * @param string $value Unescaped URL.
+	 */
+	private function cssString( string $value ): string {
+		return str_replace( array( '\\', '"', "\n", "\r", '<' ), array( '\\\\', '\\"', '\\a ', '\\d ', '\\3c ' ), $value );
+	}
+
+	/**
+	 * Resolve a CSS URL without normalizing its query string or fragment.
+	 *
+	 * @param string $url Absolute or relative reference.
+	 * @param string $baseUrl Source stylesheet or document URL.
+	 */
+	private function resolveUrl( string $url, string $baseUrl ): string {
+		if ( preg_match( '~^[a-z][a-z0-9+.-]*:~i', $url ) ) {
 			return $url;
 		}
-
-		// Relative to site
-		if (str_starts_with($url, '/')) {
-			return \home_url($url);
+		$base = wp_parse_url( $baseUrl );
+		if ( ! is_array( $base ) || empty( $base['host'] ) ) {
+			return $url;
 		}
-
-		// Relative path - assume relative to uploads
-		$uploadsUrl = $this->uploadsInfo['baseurl'] ?? '';
-		return $uploadsUrl . '/' . ltrim($url, '/');
+		$scheme = $base['scheme'] ?? 'https';
+		if ( str_starts_with( $url, '//' ) ) {
+			return $scheme . ':' . $url;
+		}
+		$origin       = $scheme . '://' . $base['host'] . ( isset( $base['port'] ) ? ':' . $base['port'] : '' );
+		$suffixOffset = strcspn( $url, '?#' );
+		$relativePath = substr( $url, 0, $suffixOffset );
+		$suffix       = substr( $url, $suffixOffset );
+		$path         = '' === $relativePath ? ( $base['path'] ?? '/' )
+			: ( str_starts_with( $relativePath, '/' ) ? $relativePath : dirname( $base['path'] ?? '/' ) . '/' . $relativePath );
+		$segments     = array();
+		foreach ( explode( '/', $path ) as $segment ) {
+			if ( '..' === $segment ) {
+				array_pop( $segments );
+			} elseif ( '' !== $segment && '.' !== $segment ) {
+				$segments[] = $segment;
+			}
+		}
+		$normalized = '/' . implode( '/', $segments );
+		if ( '/' !== $normalized && str_ends_with( $path, '/' ) ) {
+			$normalized .= '/';
+		}
+		return $origin . $normalized . $suffix;
 	}
 
 	/**
-	 * Get the AVIF URL for a JPEG URL if the AVIF exists.
+	 * Resolve an existing same-origin uploads file, rejecting path traversal.
 	 *
-	 * @param string $jpegUrl The JPEG URL.
-	 * @return string|null The AVIF URL, or null if AVIF doesn't exist.
+	 * @param string $url Absolute file URL.
 	 */
-	private function getAvifUrl(string $jpegUrl): ?string
-	{
-		$uploadsUrl = $this->uploadsInfo['baseurl'] ?? '';
-		$uploadsDir = $this->uploadsInfo['basedir'] ?? '';
-
-		if ('' === $uploadsUrl || '' === $uploadsDir) {
+	private function urlToLocalPath( string $url ): ?string {
+		$uploads = wp_parse_url( $this->uploadsInfo['baseurl'] ?? '' );
+		$parts   = wp_parse_url( $url );
+		if ( ! is_array( $uploads ) || ! is_array( $parts ) || ( $parts['host'] ?? '' ) !== ( $uploads['host'] ?? '' ) || ( $parts['port'] ?? null ) !== ( $uploads['port'] ?? null ) ) {
 			return null;
 		}
-
-		// Strip query string and fragment from URL
-		$jpegUrlClean = preg_replace('/[?#].*$/', '', $jpegUrl);
-		if ('' === $jpegUrlClean) {
+		$prefix = rtrim( $uploads['path'] ?? '', '/' ) . '/';
+		if ( ! str_starts_with( $parts['path'] ?? '', $prefix ) ) {
 			return null;
 		}
-
-		// Check if URL is in uploads directory
-		if (!str_contains($jpegUrlClean, $uploadsUrl) && !str_contains($jpegUrlClean, '/wp-content/uploads/')) {
-			return null;
-		}
-
-		// Build AVIF URL
-		$avifUrl = (string) preg_replace('/\.jpe?g$/i', '.avif', $jpegUrlClean);
-
-		// Build local path to check existence
-		$localPath = $this->urlToLocalPath($avifUrl);
-		if (null === $localPath) {
-			// Try alternative path resolution
-			$relativePath = str_replace($uploadsUrl, '', $avifUrl);
-			$localPath = $uploadsDir . $relativePath;
-		}
-
-		// Check if AVIF file exists
-		if (!file_exists($localPath)) {
-			return null;
-		}
-
-		return $avifUrl;
+		$root = realpath( $this->uploadsInfo['basedir'] ?? '' );
+		$path = $root ? realpath( $root . '/' . rawurldecode( substr( $parts['path'], strlen( $prefix ) ) ) ) : false;
+		return $path && str_starts_with( $path, $root . DIRECTORY_SEPARATOR ) ? $path : null;
 	}
 
 	/**
-	 * Generate the CSS override rules.
+	 * Find a valid local AVIF companion while preserving the URL suffix.
 	 *
-	 * @return string CSS rules to inject.
+	 * @param string $jpegUrl Absolute JPEG URL.
 	 */
-	private function generateOverrideCss(): string
-	{
-		$rules = array();
-
-		// Add selector-based overrides (from external stylesheets)
-		foreach ($this->selectorOverrides as $selector => $urls) {
-			// Sanitize selector to prevent XSS (strip any HTML tags)
-			$safeSelector = wp_strip_all_tags(trim($selector));
-			if ('' === $safeSelector) {
-				continue;
-			}
-
-			$jpegUrl = '';
-			$avifUrl = '';
-			if (is_array($urls)) {
-				$jpegUrl = isset($urls['jpeg']) ? (string) $urls['jpeg'] : '';
-				$avifUrl = isset($urls['avif']) ? (string) $urls['avif'] : '';
-			}
-
-			if ('' === $jpegUrl || '' === $avifUrl) {
-				continue;
-			}
-
-			// Keep JPEG as fallback for browsers without AVIF support, then prefer AVIF via image-set().
-			$rules[] = $safeSelector
-				. '{background-image:url("' . \esc_url($jpegUrl) . '") !important;'
-				. 'background-image:image-set(url("' . \esc_url($avifUrl) . '") type("image/avif"),url("' . \esc_url($jpegUrl) . '") type("image/jpeg")) !important;}';
+	private function getAvifUrl( string $jpegUrl ): ?string {
+		$parts = wp_parse_url( $jpegUrl );
+		if ( ! is_array( $parts ) || ! preg_match( '/\.jpe?g$/i', $parts['path'] ?? '' ) ) {
+			return null;
 		}
-
-		return implode('', $rules);
+		$avifUrl = (string) preg_replace( '/\.jpe?g(?=[?#]|$)/i', '.avif', $jpegUrl, 1 );
+		$path    = $this->urlToLocalPath( $avifUrl );
+		return null !== $path && AvifFile::isValid( $path ) ? $avifUrl : null;
 	}
 }

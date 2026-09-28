@@ -145,7 +145,7 @@ final class Settings
 			array(
 				'type' => 'integer',
 				'default' => 3600,
-				'sanitize_callback' => 'absint',
+				'sanitize_callback' => array( $this, 'sanitizeCacheDuration' ),
 				'show_in_rest' => true,
 			)
 		);
@@ -446,6 +446,18 @@ final class Settings
 	public function sanitizeSpeed($value): int
 	{
 		return max(0, min(8, (int) ($value ?? 1)));
+	}
+
+	/**
+	 * Preserve the configured lifetime when the settings form omits this field.
+	 *
+	 * @param mixed $value Submitted lifetime, or null for an absent form field.
+	 */
+	public function sanitizeCacheDuration( $value ): int {
+		// This setting has no form field. options.php supplies null when saving
+		// the visible controls, so preserve its configured value in that case.
+		$duration = (int) ( $value ?? get_option( 'aviflosu_cache_duration', 3600 ) );
+		return $duration > 0 ? $duration : 3600;
 	}
 
 	public function sanitizeSubsampling($value): string

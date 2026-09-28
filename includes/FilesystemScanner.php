@@ -105,7 +105,7 @@ final class FilesystemScanner {
 			foreach ( $this->iterateJpegs( $baseDir, $skipped ) as $jpegPath ) {
 				++$result['found'];
 				$avifPath = $this->avifPathFor( $jpegPath );
-				if ( '' !== $avifPath && file_exists( $avifPath ) && filesize( $avifPath ) > 512 ) {
+				if ( AvifFile::isValid( $avifPath ) ) {
 					++$result['already_have_avif'];
 					continue;
 				}
@@ -146,8 +146,12 @@ final class FilesystemScanner {
 			return;
 		}
 
-		// Clear any previous stop flag so a fresh scan isn't instantly aborted.
-		delete_transient( self::STOP_TRANSIENT );
+		// Only an explicit queue/CLI start clears cancellation. A cron request
+		// that was already dequeued when Stop was pressed must still honor it.
+		if ( AttachmentBatchRunner::isStopped( self::STOP_TRANSIENT ) ) {
+			$this->markStopped();
+			return;
+		}
 
 		if ( function_exists( 'wp_raise_memory_limit' ) ) {
 			wp_raise_memory_limit( 'image' );
@@ -166,16 +170,13 @@ final class FilesystemScanner {
 		);
 		$this->writeProgress( $progress );
 
-		$skipped      = array();
-		$lastFlush    = microtime( true );
-		$checkCounter = 0;
-		$stopped      = false;
+		$skipped   = array();
+		$lastFlush = microtime( true );
+		$stopped   = false;
 
 		try {
 			foreach ( $this->iterateJpegs( $baseDir, $skipped ) as $jpegPath ) {
-				++$checkCounter;
-				// Check stop flag every 25 files.
-				if ( ( $checkCounter % 25 ) === 0 && get_transient( self::STOP_TRANSIENT ) ) {
+				if ( AttachmentBatchRunner::isStopped( self::STOP_TRANSIENT ) ) {
 					$stopped = true;
 					break;
 				}
@@ -184,7 +185,7 @@ final class FilesystemScanner {
 				++$progress['scanned'];
 
 				$avifPath = $this->avifPathFor( $jpegPath );
-				if ( '' !== $avifPath && file_exists( $avifPath ) && filesize( $avifPath ) > 512 ) {
+				if ( AvifFile::isValid( $avifPath ) ) {
 					++$progress['already_had'];
 					++$progress['skipped'];
 				} else {
@@ -209,14 +210,12 @@ final class FilesystemScanner {
 			$progress['error'] = $e->getMessage();
 		}
 
+		$stopped                  = $stopped || AttachmentBatchRunner::isStopped( self::STOP_TRANSIENT );
 		$progress['done']         = true;
 		$progress['finished_at']  = time();
 		$progress['state']        = $stopped ? 'stopped' : 'complete';
 		$progress['skipped_dirs'] = $this->formatSkipped( $skipped, $baseDir );
 		$this->writeProgress( $progress );
-
-		// Clear stop flag if it was set, so subsequent runs aren't blocked.
-		delete_transient( self::STOP_TRANSIENT );
 	}
 
 	/**

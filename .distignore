@@ -36,6 +36,8 @@ yarn.lock
 tests
 vendor
 node_modules
+/_build/
+/.rsync_ignore
 *.sql
 *.tar.gz
 *.zip

@@ -704,7 +704,7 @@ final class Settings
 		echo '<input id="aviflosu_lqip_fade" type="checkbox" name="aviflosu_lqip_fade" value="1" ' . checked(true, $value, false) . ' /> ';
 		echo esc_html__('Cross-fade from the placeholder to the full image', 'avif-local-support');
 		echo '</label>';
-		$this->renderFieldDescription(__('Adds a smooth transition when the full image replaces the LQIP.', 'avif-local-support'));
+		$this->renderFieldDescription(__('Fades decoded images below the initial viewport over 180ms. First-screen, high-priority and already loaded images appear normally. Respects reduced motion.', 'avif-local-support'));
 	}
 
 	public function renderLqipPixelatedField(): void

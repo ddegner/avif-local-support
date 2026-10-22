@@ -2,14 +2,14 @@
 # This file is distributed under the GPL v2 or later.
 msgid ""
 msgstr ""
-"Project-Id-Version: AVIF Local Support 0.8.1\n"
+"Project-Id-Version: AVIF Local Support 0.8.2\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/avif-local-support\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-28T00:35:57+00:00\n"
+"POT-Creation-Date: 2026-10-22T02:57:18+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: avif-local-support\n"
@@ -86,12 +86,12 @@ msgstr ""
 msgid "Test JPEG is no longer available. Upload a new one."
 msgstr ""
 
-#: includes/Admin/RestController.php:992
-#: includes/Admin/RestController.php:1003
+#: includes/Admin/RestController.php:993
+#: includes/Admin/RestController.php:1005
 msgid "Unable to create preview image."
 msgstr ""
 
-#: includes/Admin/RestController.php:1052
+#: includes/Admin/RestController.php:1055
 msgid "Unable to create a preview image."
 msgstr ""
 
@@ -299,7 +299,7 @@ msgid "Cross-fade from the placeholder to the full image"
 msgstr ""
 
 #: includes/Admin/Settings.php:707
-msgid "Adds a smooth transition when the full image replaces the LQIP."
+msgid "Fades decoded images below the initial viewport over 180ms. First-screen, high-priority and already loaded images appear normally. Respects reduced motion."
 msgstr ""
 
 #: includes/Admin/Settings.php:715

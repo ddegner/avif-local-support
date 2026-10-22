@@ -11,8 +11,10 @@ define('ABSPATH', $wpRoot . '/');
 define('WPINC', 'wp-includes');
 define('HOUR_IN_SECONDS', 3600);
 define('AVIFLOSU_PLUGIN_URL', 'https://example.test/wp-content/plugins/avif-local-support/');
+define('AVIFLOSU_PLUGIN_DIR', dirname(__DIR__) . '/');
 define('AVIFLOSU_VERSION', 'test');
 $options = ['blog_charset' => 'UTF-8', 'aviflosu_enable_support' => true];
+$actions = [];
 $fixtures = sys_get_temp_dir() . '/avif-frontend-regression-' . bin2hex(random_bytes(6));
 mkdir($fixtures . '/css', 0777, true);
 $base = 'https://example.test/wp-content/uploads';
@@ -20,7 +22,7 @@ $checks = 0;
 function get_option($key, $default = false) { return $GLOBALS['options'][$key] ?? $default; }
 function get_transient($key) { return false; }
 function add_filter(...$args) {}
-function add_action(...$args) {}
+function add_action($hook, $callback, ...$args) { $GLOBALS['actions'][$hook][] = $callback; }
 function apply_filters($hook, $value, ...$args) { return $value; }
 function is_admin() { return false; }
 function wp_doing_ajax() { return false; }
@@ -69,8 +71,43 @@ function background(string $html): string {
 	return $service->processBuffer($html);
 }
 function page(string $head, string $body = ''): string { return '<html><head>' . $head . '</head><body>' . $body . '</body></html>'; }
+function thumbhashHead(): string {
+	$GLOBALS['actions'] = [];
+	(new Ddegner\AvifLocalSupport\Support())->init();
+	ob_start();
+	foreach ($GLOBALS['actions']['wp_head'] ?? [] as $callback) { $callback(); }
+	return (string) ob_get_clean();
+}
 
 try {
+	// Exercise the actual PHP-to-browser configuration without reading or writing a database.
+	$options['aviflosu_thumbhash_enabled'] = true;
+	foreach ([false, 0, '0', '', true, 1, '1'] as $savedFade) {
+		$options['aviflosu_lqip_fade'] = $savedFade;
+		$before = $options;
+		$head = thumbhashHead();
+		$tags = new WP_HTML_Tag_Processor($head);
+		check($tags->next_tag('SCRIPT'), 'ThumbHash enabled must emit its decoder');
+		check($tags->get_attribute('id') === 'aviflosu-thumbhash-decoder', 'Decoder must retain its integration identifier');
+		check($tags->get_attribute('data-fade') === ((bool) $savedFade ? '1' : '0'), 'Saved fade choice must be passed explicitly to the decoder');
+		check($options === $before, 'Rendering the decoder must preserve every saved option');
+		preg_match_all('/<style\b[^>]*>(.*?)<\/style>/s', $head, $styles);
+		preg_match_all('/([^{}]+)\{([^{}]*)\}/', implode("\n", $styles[1]), $rules, PREG_SET_ORDER);
+		$blanketFade = false;
+		foreach ($rules as $rule) {
+			$selectors = array_map('trim', explode(',', $rule[1]));
+			$blanketFade = $blanketFade || (in_array('img[data-thumbhash]', $selectors, true) && preg_match('/(?:opacity|transition)\s*:/i', $rule[2]));
+		}
+		check(!$blanketFade, 'ThumbHash images must not receive blanket opacity or transition CSS');
+	}
+	unset($options['aviflosu_lqip_fade']);
+	$head = thumbhashHead();
+	$tags = new WP_HTML_Tag_Processor($head);
+	check($tags->next_tag('SCRIPT') && $tags->get_attribute('data-fade') === '1', 'Missing fade option must retain the existing enabled default');
+	check(!array_key_exists('aviflosu_lqip_fade', $options), 'Rendering must not create or migrate the fade option');
+	$options['aviflosu_thumbhash_enabled'] = false;
+	check(thumbhashHead() === '', 'Disabling ThumbHash must emit neither its decoder nor its fade styles');
+
 	$support = new Ddegner\AvifLocalSupport\Support();
 	$support->init();
 	$html = '<img src="' . $base . '/custom.jpg" srcset="' . $base . '/custom.jpg 300w, ' . $base . '/photo.jpg 1200w" sizes="auto, 300px" loading="lazy" alt="A view" data-wp-on--click="actions.showLightbox">';

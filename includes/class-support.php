@@ -55,21 +55,19 @@ final class Support {
 			return;
 		}
 		$script = file_get_contents( $scriptPath );
+		$fade = (bool) get_option( 'aviflosu_lqip_fade', true );
 		if ( $script ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Inline JS from trusted local file.
-			echo '<script id="aviflosu-thumbhash-decoder">' . $script . '</script>' . "\n";
+			echo '<script id="aviflosu-thumbhash-decoder" data-fade="' . ( $fade ? '1' : '0' ) . '">' . $script . '</script>' . "\n";
 		}
 
 		// Inject CSS for fading if enabled.
-		if ( (bool) get_option( 'aviflosu_lqip_fade', true ) ) {
-			// CSS explanation:
-			// 1. img[data-thumbhash] starts visible (opacity 1) with a transition.
-			// 2. While loading, JS adds .thumbhash-loading to the parent <picture> so the image is hidden (opacity 0).
-			// It is never added to a bare img: opacity 0 there would hide the img's own background placeholder.
-			// 3. When JS removes .thumbhash-loading, the image fades in over the LQIP background.
-			// 4. The LQIP background is cleared after the fade completes to avoid a white flash.
-			$css = 'img[data-thumbhash]{opacity:1;transition:opacity 400ms ease-out;}'
-				. '.thumbhash-loading img[data-thumbhash]{opacity:0;}';
+		if ( $fade ) {
+			// Only JS-armed images with a decoded preview may be hidden. First-screen,
+			// cached and uncertain images never receive either of these classes.
+			$css = 'img[data-thumbhash].thumbhash-pending{opacity:0;transition:none;}'
+				. 'img[data-thumbhash].thumbhash-revealing{opacity:1;transition:opacity 180ms ease-out;}'
+				. '@media(prefers-reduced-motion:reduce){img[data-thumbhash].thumbhash-revealing{transition:none;}}';
 			// Optionally render placeholders as sharp pixels instead of smooth blur.
 			// .thumbhash-bg marks whichever element carries the placeholder background.
 			if ( (bool) get_option( 'aviflosu_lqip_pixelated', false ) ) {

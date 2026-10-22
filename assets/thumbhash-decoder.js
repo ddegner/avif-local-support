@@ -23,8 +23,18 @@
     // Reusable canvas for encoding
     var canvas, ctx;
 
-    // Track page load time - images loading within first 2 seconds skip the fade
-    var pageLoadTime = Date.now();
+    // The existing saved option is explicit; missing configuration fails open.
+    var script = doc.currentScript,
+        fadeEnabled = !!script && script.getAttribute('data-fade') === '1',
+        initialWidth = window.innerWidth,
+        initialHeight = window.innerHeight,
+        initialView = window.scrollX === 0 && window.scrollY === 0,
+        motion = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+
+    // A late classification after scrolling/restoration or resizing is uncertain.
+    function changedView() { initialView = false; }
+    window.addEventListener('scroll', changedView, { once: true, passive: true });
+    window.addEventListener('resize', changedView, { once: true, passive: true });
 
     function decode(hash) {
         // Decode base64 only once
@@ -34,6 +44,8 @@
             i;
 
         for (i = 0; i < len; i++) bytes[i] = bin.charCodeAt(i);
+
+        if (len < 5 || !(bytes[3] & 7)) throw new Error('Invalid ThumbHash header');
 
         var h24 = bytes[0] | bytes[1] << 8 | bytes[2] << 16,
             h16 = bytes[3] | bytes[4] << 8,
@@ -64,6 +76,7 @@
                 // Original triangular iteration: cx starts at 1 when cy=0, else 0
                 // Continues while cx * ny < nx * (ny - cy)
                 for (cx = cy ? 0 : 1; cx * ny < nx * (ny - cy); cx++) {
+                    if (ac_start + (ac_idx >> 1) >= len) throw new Error('Truncated ThumbHash');
                     nibble = ac_idx & 1 ? bytes[ac_start + (ac_idx >> 1)] >> 4 : bytes[ac_start + (ac_idx >> 1)] & 15;
                     ac.push((nibble / 7.5 - 1) * scale);
                     ac_idx++;
@@ -189,83 +202,211 @@
         img._th = 1;
 
         var hash = img.getAttribute('data-thumbhash');
-        if (!hash) return;
-
+        if (!hash || (img.complete && img.naturalWidth)) return;
         var url = toDataURL(hash);
         if (!url) return;
 
         var el = img.closest('picture') || img,
             isPicture = el.tagName === 'PICTURE',
-            s = el.style;
+            s = el.style,
+            saved = [],
+            done = false,
+            loaded = false,
+            hidden = false,
+            revealing = false,
+            classified = false,
+            eligible = false,
+            previewReady = false,
+            generation = 0,
+            timer = 0,
+            observer,
+            preview;
 
-        s.backgroundImage = 'url(' + url + ')';
-        s.backgroundSize = 'cover';
-        s.backgroundPosition = 'center';
-        s.backgroundRepeat = 'no-repeat';
-        if (el.classList) el.classList.add('thumbhash-bg');
-        if (isPicture) s.display = 'block';
+        // Capture the first rendered position, before even installing the preview.
+        // A once-visible or unmeasurable image can never become a fade candidate.
+        var initiallyBelow = belowViewport(),
+            highPriority = (img.getAttribute('fetchpriority') || '').toLowerCase() === 'high',
+            photoRendering = window.getComputedStyle(img).imageRendering;
 
-        function clearBackground() {
-            s.backgroundImage = s.backgroundSize = s.backgroundPosition = s.backgroundRepeat = '';
-            if (el.classList) el.classList.remove('thumbhash-bg');
-            if (isPicture) s.display = '';
+        function setStyle(name, value, target) {
+            target = target || s;
+            var old = target.getPropertyValue(name), priority = target.getPropertyPriority(name);
+            target.setProperty(name, value);
+            saved.push({ style: target, name: name, value: old, priority: priority, applied: target.getPropertyValue(name) });
         }
 
-        function startFade() {
-            // Slow load - fade in the image, then clear the LQIP background
-            // Remove the loading class to trigger opacity 0 -> 1 transition (400ms)
-            if (isPicture && el.classList) el.classList.remove('thumbhash-loading');
-            // Clear background after image is fully visible (transition complete)
-            setTimeout(clearBackground, 420);
+        function cancelFade() {
+            generation++;
+            eligible = false;
+            hidden = revealing = false;
+            clearTimeout(timer);
+            img.removeEventListener('transitionend', onTransition);
+            img.removeEventListener('transitioncancel', onTransition);
+            img.classList.remove('thumbhash-pending', 'thumbhash-revealing');
         }
 
-        function doInstantReveal() {
-            // Fast load - disable CSS transition and show immediately
-            img.style.transition = 'none';
-            if (isPicture && el.classList) el.classList.remove('thumbhash-loading');
-            clearBackground();
+        // Idempotent fail-open cleanup. Stale decodes/timers cannot hide the image
+        // again or erase styles subsequently changed by another owner.
+        function finish() {
+            if (done) return;
+            done = true;
+            cancelFade();
+            img.removeEventListener('load', onReady);
+            img.removeEventListener('error', finish);
+            doc.removeEventListener('DOMContentLoaded', classify);
+            window.removeEventListener('resize', onResize);
+            if (motion && motion.removeEventListener) motion.removeEventListener('change', onMotion);
+            if (observer) observer.disconnect();
+            if (preview) preview.onload = preview.onerror = null;
+            el.classList.remove('thumbhash-bg');
+            saved.forEach(function (item) {
+                var target = item.style;
+                if (target.getPropertyValue(item.name) !== item.applied || target.getPropertyPriority(item.name)) return;
+                if (item.value) target.setProperty(item.name, item.value, item.priority);
+                else target.removeProperty(item.name);
+            });
         }
 
-        function instantReveal() {
-            // Wait for image to be decoded before revealing to prevent white flash
-            if (img.decode) {
-                img.decode().then(doInstantReveal).catch(doInstantReveal);
-            } else {
-                doInstantReveal();
-            }
+        function onTransition(event) {
+            if (event.target === img && event.propertyName === 'opacity' && revealing) finish();
         }
 
-        if (img.complete && img.naturalWidth) {
-            // Already loaded (cached) - clear background and return, no animation needed
-            clearBackground();
-            return;
+        function onMotion() {
+            if (motion.matches && revealing) finish();
         }
 
-        // Image still loading - hide it behind the placeholder. Only when the
-        // background sits on an ancestor (<picture>): opacity:0 on a bare img
-        // would hide its own background placeholder too.
-        if (isPicture && el.classList) el.classList.add('thumbhash-loading');
+        function reveal() {
+            if (done) return;
+            if (!hidden || (motion && motion.matches)) { finish(); return; }
+            // Commit the starting opacity even if load follows initialization quickly.
+            if (window.getComputedStyle(img).opacity !== '0') { finish(); return; }
+            revealing = true;
+            img.addEventListener('transitionend', onTransition);
+            img.addEventListener('transitioncancel', onTransition);
+            img.classList.replace('thumbhash-pending', 'thumbhash-revealing');
+            // transitionend normally cleans up. This bound covers detached nodes,
+            // suppressed transitions and background tabs without relying on scrolling.
+            timer = setTimeout(finish, 300);
+        }
+
+        function source() { return img.currentSrc || img.src; }
 
         function onReady() {
-            // Skip fade animation if page loaded recently (within 2 seconds)
-            // For fast initial loads, animation feels sluggish
-            var timeSincePageLoad = Date.now() - pageLoadTime;
-
-            if (timeSincePageLoad < 2000) {
-                // Fast load - instant reveal, no fade needed
-                instantReveal();
-            } else {
-                // Slow load - use smooth fade transition
-                if (img.decode) {
-                    img.decode().then(startFade).catch(startFade);
-                } else {
-                    startFade();
-                }
-            }
+            if (done) return;
+            loaded = true;
+            var token = ++generation, selected = source();
+            function current() { return !done && token === generation && selected === source(); }
+            function decoded() { if (current()) reveal(); }
+            function rejected() { if (current()) finish(); }
+            // A responsive change may start another load during an older decode.
+            if (img.decode) {
+                try { img.decode().then(decoded, rejected); }
+                catch (e) { rejected(); }
+            } else decoded();
         }
 
-        img.addEventListener('load', onReady, { once: true });
-        img.addEventListener('error', doInstantReveal, { once: true });
+        function onResize() {
+            // Preserve the genuine preview if a replacement is still downloading.
+            // Once visible, a photograph is never hidden again for another source.
+            cancelFade();
+            if (img.complete && img.naturalWidth) onReady();
+        }
+
+        function belowViewport() {
+            var rect = img.getBoundingClientRect();
+            return initialView && window.scrollX === 0 && window.scrollY === 0
+                && window.innerWidth === initialWidth && window.innerHeight === initialHeight
+                && img.isConnected && img.getClientRects().length && rect.width > 0 && rect.height > 0
+                && isFinite(rect.top) && rect.top >= initialHeight
+                && rect.left < initialWidth && rect.right > 0;
+        }
+
+        function arm() {
+            if (done || !eligible || !previewReady || loaded || hidden) return;
+            // It must still be pending and offscreen when the tiny preview is ready.
+            if (img.complete || !belowViewport() || (img.getAttribute('fetchpriority') || '').toLowerCase() === 'high') return;
+            var rect = img.getBoundingClientRect(), box = el.getBoundingClientRect(), background = window.getComputedStyle(el);
+            if (background.backgroundImage.indexOf(url) === -1 || background.visibility !== 'visible' || background.opacity !== '1') return;
+            if (box.width <= 0 || box.height <= 0 || box.top > rect.top || box.bottom < rect.bottom
+                || box.left > rect.left || box.right < rect.right) return;
+            hidden = true;
+            img.classList.add('thumbhash-pending');
+            if (window.getComputedStyle(img).opacity !== '0') cancelFade();
+        }
+
+        function classify() {
+            if (done || classified) return;
+            classified = true;
+            // Do not guess layout with outstanding stylesheets. Read geometry before
+            // adding opacity classes; this decision is never revisited on scroll.
+            var sheets = doc.querySelectorAll('link[rel~="stylesheet"]'), i;
+            for (i = 0; i < sheets.length; i++) {
+                if (!sheets[i].disabled && !sheets[i].sheet
+                    && (!sheets[i].media || !window.matchMedia || window.matchMedia(sheets[i].media).matches)) return;
+            }
+            var style = window.getComputedStyle(img);
+            eligible = fadeEnabled && isPicture && initiallyBelow && !highPriority
+                && (img.getAttribute('fetchpriority') || '').toLowerCase() !== 'high'
+                && style.visibility === 'visible' && style.opacity === '1' && belowViewport();
+            arm();
+        }
+
+        // Loading handlers are ready before any possibility of hiding.
+        img.addEventListener('load', onReady);
+        img.addEventListener('error', finish);
+        window.addEventListener('resize', onResize, { passive: true });
+        if (motion && motion.addEventListener) motion.addEventListener('change', onMotion);
+        observer = new MutationObserver(function (mutations) {
+            for (var i = 0; i < mutations.length; i++) {
+                if (mutations[i].type === 'childList' || mutations[i].target === img || mutations[i].target.tagName === 'SOURCE') {
+                    cancelFade();
+                    if (img.complete) {
+                        if (img.naturalWidth) onReady();
+                        else finish();
+                    }
+                    return;
+                }
+            }
+        });
+        // Ignore loading/sizes: the independent loading buffer temporarily changes
+        // both, and neither determines initial-viewport eligibility.
+        observer.observe(el, { attributes: true, attributeFilter: ['src', 'srcset', 'media', 'type'], childList: true, subtree: isPicture });
+
+        setStyle('background-image', 'url(' + url + ')');
+        setStyle('background-size', 'cover');
+        setStyle('background-position', 'center');
+        setStyle('background-repeat', 'no-repeat');
+        el.classList.add('thumbhash-bg');
+        // The optional pixelated-preview rule is inherited. Keep it from changing
+        // the photograph's authored rendering during the crossfade.
+        if (isPicture && window.getComputedStyle(img).imageRendering !== photoRendering) {
+            setStyle('image-rendering', photoRendering, img.style);
+        }
+        if (isPicture && window.getComputedStyle(el).display === 'inline') setStyle('display', 'block');
+
+        if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', classify, { once: true });
+        else classify();
+
+        // Decode the actual ThumbHash PNG before hiding the foreground. Its background
+        // stays underneath until the foreground's own opacity transition completes.
+        if (fadeEnabled && isPicture) {
+            preview = new Image();
+            function readyPreview() { if (!done) { previewReady = true; arm(); } }
+            preview.onerror = finish;
+            preview.onload = readyPreview;
+            preview.src = url;
+            if (preview.decode) {
+                preview.onload = null;
+                try { preview.decode().then(readyPreview, finish); }
+                catch (e) { finish(); }
+            } else if (preview.complete && preview.naturalWidth) readyPreview();
+        }
+
+        // Catch load/error events that raced setup, including cached failures.
+        if (img.complete) {
+            if (img.naturalWidth) onReady();
+            else finish();
+        }
     }
 
     function process(node) {

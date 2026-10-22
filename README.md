@@ -3,7 +3,7 @@ Contributors: ddegner
 Tags: avif, images, performance, media, optimization
 Requires at least: 6.8
 Tested up to: 7.1
-Stable tag: 0.8.1
+Stable tag: 0.8.2
 Requires PHP: 8.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -30,6 +30,8 @@ Built by a [Boston photographer](https://www.daviddegner.com) for site owners wh
 **Conversion:** Uses ImageMagick CLI (fastest), Imagick PHP extension (high quality), or GD Library (fallback) to convert JPEGs to AVIF on upload or via background jobs.
 
 **LQIP:** Generates compact (~30 byte) ThumbHash placeholders that display instantly while images load.
+
+The existing **Fade in full images** setting adds a 180ms opacity crossfade from the ThumbHash to the decoded photograph for eligible images initially below the viewport. First-screen images, high-priority images, and images already loaded remain visible normally. The preview stays underneath until the transition finishes, including when the image finishes loading offscreen. Reduced-motion preferences reveal the image immediately when ready. The saved setting is preserved: disabling fading keeps placeholders without adding animations. This setting does not change image quality, dimensions, responsive sources, or loading distance.
 
 ## Installation
 
@@ -210,6 +212,13 @@ LiteSpeed's open_basedir restriction prevents PHP from detecting executables out
 4. **About** — Quick reference and version info
 
 ## Changelog
+
+### 0.8.2
+
+- Enhancement: The existing full-image fade setting now uses a 180ms opacity crossfade only for eligible images initially below the viewport; first-screen, high-priority, and already loaded images appear normally.
+- Fix: Keep the ThumbHash visible through image decoding and the actual transition, with safe cleanup for cached images, errors, responsive source changes, and reduced-motion preferences.
+- Fix: Preserve saved fade settings and authored picture styles, keep pixelated placeholders from affecting photograph rendering, and retain compatibility with independent image-loading buffers.
+- Tests: Added Chromium and WebKit coverage at desktop and mobile sizes for loading races, visual transitions, and unchanged image delivery and layout.
 
 ### 0.8.1
 
